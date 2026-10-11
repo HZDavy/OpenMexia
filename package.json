@@ -1,0 +1,64 @@
+{
+  "name": "mijia-widget",
+  "productName": "米家小组件",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows 桌面版米家小组件：常驻小窗展示并控制米家设备",
+  "author": "HZDavy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HZDavy/mijia-widget.git"
+  },
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.hzdavy.mijia-widget",
+    "productName": "米家小组件",
+    "copyright": "Copyright © 2026 HZDavy",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "米家小组件",
+      "uninstallDisplayName": "米家小组件"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "@zythum02/mijia-api": "^0.1.5",
+    "node-mihome": "^0.0.32",
+    "qrcode": "^1.5.4"
+  }
+}
