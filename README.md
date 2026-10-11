@@ -1,10 +1,24 @@
-# 米家小组件
+# OpenMijia
 
-Windows 桌面版米家小组件：一个常驻桌面的小窗，实时展示并控制你的米家设备。基于 Electron 构建。
+**开源米家客户端，多平台一致体验。** 用米家 App 扫码登录后，灯、风扇、空调、传感器在任何设备上都是同一套卡片、同一份实时状态，随手可控。
+
+项目当前提供 **Windows 桌面版**（基于 Electron，常驻小窗 + 瀑布流设备卡片）；**macOS、iOS、Android 已列入路线图**，目标是让账号、卡片与交互在各平台保持一致，只做平台原生的适配，不重做体验。
 
 官网：https://hzdavy.github.io/OpenMijia/ （站点源码在 `gh-pages` 分支）
 
-## 功能
+## 平台支持与路线图
+
+| 平台 | 状态 | 说明 |
+|---|---|---|
+| Windows 10 / 11（x64） | ✅ 已发布 v0.1.0 | NSIS 安装包，见 [Releases](https://github.com/HZDavy/OpenMijia/releases) |
+| macOS | 🚧 规划中 | 桌面端基于 Electron，是下一个目标平台 |
+| iOS（iPhone / iPad） | 📋 计划中 | 复用同一套设备核心，保持卡片交互一致 |
+| Android（手机 / 平板） | 📋 计划中 | 同 iOS |
+| Linux | — | 暂未列入近期计划 |
+
+路线进展与讨论见 [GitHub Issues](https://github.com/HZDavy/OpenMijia/issues)，欢迎参与贡献。
+
+## Windows 版功能
 
 - **米家账号扫码登录**，设备列表与状态自动同步
 - **设备卡片瀑布流布局**，支持拖动排序、双击（或右键）收折
@@ -17,7 +31,7 @@ Windows 桌面版米家小组件：一个常驻桌面的小窗，实时展示并
 
 ## 下载安装
 
-到 [Releases](../../releases) 页面下载 `米家小组件 Setup x.x.x.exe`，运行后按提示安装（可自选安装目录）。
+到 [Releases](https://github.com/HZDavy/OpenMijia/releases) 页面下载 `OpenMijia-Setup-x.x.x.exe`，运行后按提示安装（可自选安装目录）。
 
 > **关于 SmartScreen 提示**：本软件为个人开源项目，安装包暂未购买代码签名证书。首次运行时 Windows 可能弹出「已保护你的电脑」，点击「更多信息」→「仍要运行」即可。软件完全开源，可自行审计源码或从源码构建。
 
@@ -37,7 +51,7 @@ npm install
 npm run dist
 ```
 
-产物输出在 `release/` 目录（NSIS 安装包，x64）。
+产物输出在 `release/` 目录（当前构建脚本仅打包 Windows x64 NSIS 安装包；macOS / 移动端构建将随对应平台支持一同提供）。
 
 ## 隐私说明
 

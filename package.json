@@ -3,7 +3,7 @@
   "productName": "米家小组件",
   "version": "0.1.0",
   "private": true,
-  "description": "Windows 桌面版米家小组件：常驻小窗展示并控制米家设备",
+  "description": "OpenMijia：开源米家客户端，多平台一致的米家设备体验（Windows 已发布，macOS / iOS / Android 规划中）",
   "author": "HZDavy",
   "license": "AGPL-3.0-or-later",
   "repository": {
