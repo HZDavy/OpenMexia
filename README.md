@@ -48,4 +48,16 @@ npm run dist
 
 ## License
 
-[MIT](LICENSE)
+本项目基于 **GNU AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)。
+
+之所以采用 AGPL 而非宽松协议，是因为本项目依赖 GPL-3.0-or-later 的 [`@zythum02/mijia-api`](https://github.com/zythum/mijia-api)，作为衍生作品须以 GPL 兼容协议分发。这意味着：你可以自由使用、修改和再分发，但**修改后的版本（包括通过网络提供服务的情形）必须同样以 AGPL 开源并提供完整源码**。
+
+### 第三方开源组件
+
+| 组件 | 许可证 |
+|---|---|
+| [@zythum02/mijia-api](https://github.com/zythum/mijia-api) | GPL-3.0-or-later |
+| [node-mihome](https://github.com/maxinminax/node-mihome) | MIT |
+| [qrcode](https://github.com/soldair/node-qrcode) | MIT |
+| [Electron](https://github.com/electron/electron) | MIT |
+
