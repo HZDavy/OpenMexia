@@ -2,7 +2,7 @@
 
 Windows 桌面版米家小组件：一个常驻桌面的小窗，实时展示并控制你的米家设备。基于 Electron 构建。
 
-官网：https://hzdavy.github.io/mijia-widget/ （站点源码在 `gh-pages` 分支）
+官网：https://hzdavy.github.io/OpenMijia/ （站点源码在 `gh-pages` 分支）
 
 ## 功能
 
@@ -37,7 +37,7 @@ npm install
 npm run dist
 ```
 
-产物输出在 `dist/` 目录（NSIS 安装包，x64）。
+产物输出在 `release/` 目录（NSIS 安装包，x64）。
 
 ## 隐私说明
 

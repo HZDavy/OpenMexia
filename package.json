@@ -8,7 +8,7 @@
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/HZDavy/mijia-widget.git"
+    "url": "https://github.com/HZDavy/OpenMijia.git"
   },
   "main": "main.js",
   "scripts": {
@@ -20,7 +20,7 @@
     "productName": "米家小组件",
     "copyright": "Copyright © 2026 HZDavy",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
       "main.js",
