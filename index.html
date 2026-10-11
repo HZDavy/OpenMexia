@@ -3,508 +3,499 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>米家小组件 · 把米家设备钉在 Windows 桌面上</title>
-<meta name="description" content="米家小组件：Windows 桌面常驻小窗，扫码登录米家账号，灯、风扇、空调、传感器实时状态卡片化展示与控制。开源免费，支持拖动排序、双击收折、置顶、全屏与多显示器。">
+<title>米家小组件 · 米家设备，尽在桌面</title>
+<meta name="description" content="米家小组件：Windows 桌面常驻小窗，扫码登录米家账号，灯、风扇、空调、传感器实时状态卡片化展示与控制。免费开源。">
 <link rel="icon" href="docs/favicon.svg" type="image/svg+xml">
 <style>
 :root{
-  --bg:#0B0B0F;
-  --bg-elev:#111117;
-  --surface:#15151D;
-  --surface-hover:#1C1C26;
-  --border:rgba(255,255,255,0.06);
-  --border-strong:rgba(255,255,255,0.1);
-  --text:#E8E8ED;
-  --text-dim:#8C8C98;
-  --text-muted:#5C5C68;
-  --accent:#1AC886;
-  --accent-hover:#3DD8A6;
-  --accent-glow:rgba(26,200,134,0.16);
-  --radius:14px;
-  --radius-sm:9px;
-  --max-w:1160px;
+  --bg:#ffffff;
+  --bg-soft:#f6f7f7;
+  --bg-deep:#f2f3f3;
+  --ink:#141414;
+  --ink-2:#5c5c5c;
+  --ink-3:#9a9a9a;
+  --line:#ececec;
+  --green:#1ac886;
+  --green-deep:#0aa871;
+  --green-tint:#effaf5;
+  --dark:#101312;
+  --radius:20px;
+  --w:1226px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  background:var(--bg);color:var(--text);
-  font-family:"Adobe Clean",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
 }
 a{color:inherit;text-decoration:none}
-img{max-width:100%;display:block}
-.wrap{max-width:var(--max-w);margin:0 auto;padding:0 28px}
+img{display:block;max-width:100%}
+.w{max-width:var(--w);margin:0 auto;padding:0 24px}
 
-/* ---------- lang ---------- */
+/* ---------- i18n ---------- */
 .hidden-en{display:none !important}
 body.lang-en .hidden-zh{display:none !important}
 body.lang-en span.hidden-en,body.lang-en a.hidden-en{display:inline !important}
 body.lang-en h1.hidden-en,body.lang-en h2.hidden-en,body.lang-en h3.hidden-en,
-body.lang-en p.hidden-en,body.lang-en div.hidden-en,body.lang-en li.hidden-en{display:block !important}
+body.lang-en p.hidden-en,body.lang-en div.hidden-en,body.lang-en li.hidden-en,
+body.lang-en label.hidden-en,summary.hidden-en{display:block !important}
 
 /* ---------- nav ---------- */
-nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  background:rgba(11,11,15,0.78);backdrop-filter:saturate(140%) blur(14px);
-  border-bottom:1px solid var(--border);
-}
-.nav-in{max-width:var(--max-w);margin:0 auto;padding:0 28px;height:60px;display:flex;align-items:center;gap:26px}
-.brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:16px;letter-spacing:-0.01em}
-.brand img{width:30px;height:30px;border-radius:8px}
-.brand small{display:block;font-size:10px;font-weight:500;letter-spacing:1.8px;color:var(--text-muted)}
-.nav-links{display:flex;gap:24px;margin-left:auto;font-size:13.5px;color:var(--text-dim)}
-.nav-links a{transition:color .15s}
-.nav-links a:hover{color:var(--text)}
-.lang-switch{display:flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden}
-.lang-switch button{
-  background:transparent;border:0;color:var(--text-muted);font:inherit;font-size:12px;font-weight:600;
-  padding:4px 10px;cursor:pointer;transition:all .15s;
-}
-.lang-switch button.active{background:var(--accent);color:#06281c}
-.btn{
-  display:inline-flex;align-items:center;gap:8px;border-radius:var(--radius-sm);font-weight:600;
-  font-size:14px;padding:10px 18px;transition:background .15s,border-color .15s,transform .15s;cursor:pointer;border:1px solid transparent;white-space:nowrap;
-}
-.btn-primary{background:var(--accent);color:#06281c}
-.btn-primary:hover{background:var(--accent-hover)}
-.btn-ghost{background:transparent;border-color:var(--border-strong);color:var(--text)}
-.btn-ghost:hover{background:var(--surface)}
-.btn svg{width:16px;height:16px}
-.nav-cta{padding:7px 14px;font-size:13px}
+header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.92);border-bottom:1px solid var(--line)}
+.nav-in{height:64px;display:flex;align-items:center;gap:34px}
+.logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.logo img{width:30px;height:30px}
+.nav-menu{display:flex;gap:30px;margin-left:10px;font-size:14.5px;color:var(--ink-2)}
+.nav-menu a{padding:4px 0;transition:color .15s}
+.nav-menu a:hover{color:var(--green-deep)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:20px}
+.lang{font-size:13px;color:var(--ink-3);display:flex;gap:8px;user-select:none}
+.lang button{background:none;border:0;padding:0;font:inherit;color:var(--ink-3);cursor:pointer}
+.lang button.on{color:var(--ink);font-weight:600}
+.lang i{width:1px;height:12px;background:var(--line);align-self:center}
+.gh-link{color:var(--ink-2);display:flex;transition:color .15s}
+.gh-link:hover{color:var(--ink)}
+.gh-link svg{width:21px;height:21px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;font-size:14.5px;font-weight:500;padding:10px 22px;transition:background .15s,border-color .15s,color .15s;cursor:pointer;white-space:nowrap}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-dark:hover{background:#333}
+.btn-line{border:1px solid #d6d6d6;color:var(--ink);background:#fff}
+.btn-line:hover{border-color:var(--ink)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:var(--green-deep)}
+.btn-lg{padding:14px 34px;font-size:16px;border-radius:10px}
 
 /* ---------- hero ---------- */
-.hero{position:relative;padding:138px 0 74px;text-align:center}
-.hero-glow{position:absolute;top:-180px;left:50%;transform:translateX(-50%);width:900px;height:620px;background:radial-gradient(ellipse at center,var(--accent-glow) 0%,transparent 62%);pointer-events:none}
-.hero-eyebrow{
-  display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:0.14em;
-  text-transform:uppercase;color:var(--accent);border:1px solid rgba(26,200,134,0.28);
-  padding:6px 14px;border-radius:100px;background:rgba(26,200,134,0.06);margin-bottom:26px;
-}
-.hero h1{font-size:clamp(40px,5.6vw,72px);font-weight:700;letter-spacing:-0.04em;line-height:1.06;margin-bottom:22px}
-.gradient-text{background:linear-gradient(135deg,#fff 0%,#D6F7E8 58%,#1AC886 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.hero p.lead{font-size:clamp(15px,1.4vw,18px);color:var(--text-dim);max-width:660px;margin:0 auto 34px;line-height:1.75}
-.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
-.hero-actions .btn{padding:13px 26px;font-size:15px}
-.hero-meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.chip{font-size:12.5px;color:var(--text-dim);border:1px solid var(--border);background:var(--bg-elev);padding:5px 13px;border-radius:100px}
+.hero{background:var(--bg-soft)}
+.hero-in{display:grid;grid-template-columns:44% 56%;align-items:center;gap:30px;padding:72px 24px 80px;max-width:var(--w);margin:0 auto}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.22em;color:var(--green-deep);margin-bottom:20px}
+.hero h1{font-size:clamp(38px,4.4vw,58px);line-height:1.12;letter-spacing:-.03em;font-weight:700;margin-bottom:22px}
+.hero p.sub{font-size:17px;color:var(--ink-2);line-height:1.75;max-width:470px;margin-bottom:36px}
+.hero-acts{display:flex;align-items:center;gap:26px;margin-bottom:30px}
+.hero-acts .more{font-size:15px;color:var(--ink);display:inline-flex;gap:7px;align-items:center;border-bottom:1px solid var(--ink);padding-bottom:2px;transition:gap .15s}
+.hero-acts .more:hover{gap:11px;color:var(--green-deep);border-color:var(--green-deep)}
+.hero-meta{font-size:13px;color:var(--ink-3);display:flex;gap:16px;flex-wrap:wrap}
+.hero-meta b{color:var(--ink-2);font-weight:400}
+.hero-shot{border-radius:14px;overflow:hidden;border:1px solid #e6e6e6;background:#171717;box-shadow:0 14px 44px rgba(0,0,0,.08)}
+.hero-shot img{width:100%}
 
-/* ---------- marquee ---------- */
-.marquee-wrap{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-elev);overflow:hidden;padding:15px 0}
-.marquee-track{display:flex;width:max-content;animation:marquee 36s linear infinite}
-.marquee-track:hover{animation-play-state:paused}
-.marquee-item{display:flex;align-items:center;gap:22px;padding:0 22px;font-size:12.5px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;white-space:nowrap}
-.marquee-item .k{color:var(--text-dim)}
-.marquee-item .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
-@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+/* ---------- values strip ---------- */
+.values{border-bottom:1px solid var(--line)}
+.values-in{display:grid;grid-template-columns:repeat(4,1fr)}
+.value{padding:44px 32px 42px;display:flex;gap:15px;border-left:1px solid var(--line)}
+.values-in .value:first-child{border-left:0}
+.value svg{width:25px;height:25px;color:var(--green-deep);flex:none;margin-top:3px}
+.value h3{font-size:15.5px;font-weight:600;margin-bottom:4px}
+.value p{font-size:13px;color:var(--ink-3);line-height:1.55}
 
-/* ---------- section common ---------- */
-section{padding:92px 0}
-.section-header{max-width:680px;margin-bottom:52px}
-.section-header.center{margin-left:auto;margin-right:auto;text-align:center}
-.label{font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:block}
-h2{font-size:clamp(30px,3.6vw,44px);font-weight:700;letter-spacing:-0.03em;line-height:1.12;margin-bottom:16px}
-.section-header p{color:var(--text-dim);font-size:15.5px}
+/* ---------- section heading ---------- */
+section{padding:96px 0}
+.sec-head{text-align:center;margin-bottom:54px}
+.sec-head h2{font-size:clamp(30px,3.2vw,42px);font-weight:700;letter-spacing:-.025em;margin-bottom:14px}
+.sec-head p{font-size:16px;color:var(--ink-2)}
 
-/* ---------- gallery ---------- */
-.gallery-shot{border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden;background:#171717}
-.gallery-shot img{width:100%}
-.gallery-cap{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12.5px;color:var(--text-muted)}
+/* ---------- bento ---------- */
+.bento{display:grid;gap:20px}
+.bento-row1{grid-template-columns:1.92fr 1fr;display:grid;gap:20px}
+.bento-row2{grid-template-columns:repeat(3,1fr);display:grid;gap:20px}
+.tile{position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg-soft)}
+.tile-big{height:496px}
+.tile-tall{height:496px;background:var(--green-tint)}
+.tile-sm{height:316px;padding:42px 40px;display:flex;flex-direction:column}
+.tile-copy{position:relative;z-index:2}
+.tile-big .tile-copy{position:absolute;top:44px;left:48px;max-width:330px}
+.tile h3{font-size:23px;font-weight:700;letter-spacing:-.015em;margin-bottom:10px}
+.tile .d{font-size:14px;color:var(--ink-2);line-height:1.65}
+.tile-big .imgwrap img{width:100%;display:block}
+.tile-big .imgwrap{position:absolute;left:40px;right:40px;bottom:34px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e4;box-shadow:0 10px 36px rgba(0,0,0,.07);background:#171717}
+.tile-tall .tile-copy{padding:40px 38px 0}
+.tile-tall .imgwrap{position:absolute;left:0;right:0;bottom:0;height:74%;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.tile-tall .imgwrap img{height:100%;border-radius:14px 14px 0 0;border:1px solid #d8efe5;border-bottom:0}
+.tile-sm .ic{width:46px;height:46px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--green-deep);margin-bottom:auto}
+.tile-sm .ic svg{width:23px;height:23px}
+.tile-sm h3{font-size:19px;margin:20px 0 8px}
+.tile-sm .d{font-size:13.5px}
 
-/* ---------- features ---------- */
-.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.feature{position:relative;background:var(--bg);padding:32px 28px;transition:background .18s}
-.feature:hover{background:var(--surface)}
-.accent-bar{position:absolute;top:0;left:0;height:2px;width:0;background:var(--accent);transition:width .35s cubic-bezier(.4,0,.2,1)}
-.feature:hover .accent-bar{width:100%}
-.feature-num{font-size:11.5px;color:var(--text-muted);letter-spacing:0.12em;font-weight:600;margin-bottom:16px}
-.feature-icon{width:38px;height:38px;border-radius:9px;background:rgba(26,200,134,0.12);color:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
-.feature-icon svg{width:19px;height:19px}
-.feature h3{font-size:18px;font-weight:600;margin-bottom:9px;letter-spacing:-0.01em}
-.feature p{font-size:13.8px;color:var(--text-dim);line-height:1.65}
+/* ---------- dark device section ---------- */
+.dark{background:var(--dark);color:#fff}
+.dark .sec-head p{color:rgba(255,255,255,.55)}
+.dark .eyebrow{color:var(--green)}
+.devs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);overflow:hidden}
+.dev{background:var(--dark);padding:40px 34px;display:flex;flex-direction:column;gap:14px;transition:background .2s}
+.dev:hover{background:#161a18}
+.dev .ic{width:42px;height:42px;border-radius:11px;background:rgba(26,200,134,.13);color:var(--green);display:flex;align-items:center;justify-content:center}
+.dev .ic svg{width:21px;height:21px}
+.dev h3{font-size:16.5px;font-weight:600}
+.dev p{font-size:13px;color:rgba(255,255,255,.45);line-height:1.6}
+.dark-note{text-align:center;margin-top:40px;font-size:13.5px;color:rgba(255,255,255,.4)}
 
-/* ---------- how ---------- */
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
-.step{position:relative}
-.step-num{width:46px;height:46px;border-radius:50%;background:rgba(26,200,134,0.12);color:var(--accent);font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;border:1px solid rgba(26,200,134,0.25)}
-.step h3{font-size:17px;font-weight:600;margin-bottom:8px}
-.step p{font-size:13.5px;color:var(--text-dim)}
-.step::after{content:"";position:absolute;top:23px;left:64px;right:-13px;height:1px;background:var(--border-strong)}
-.step:last-child::after{display:none}
-
-/* ---------- specs ---------- */
-.specs-wrap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.spec-row{display:flex;align-items:center;gap:18px;background:var(--bg);padding:19px 26px}
-.specs-k{font-size:11.5px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;color:var(--text-dim);background:var(--bg-elev);border:1px solid var(--border);padding:7px 14px;border-radius:8px;flex:none;min-width:128px;text-align:center}
-.specs-v{font-size:14px;color:var(--text)}
+/* ---------- steps ---------- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:60px}
+.step .no{font-size:52px;font-weight:700;color:#e3e3e3;letter-spacing:-.03em;line-height:1;margin-bottom:24px}
+.dark .step .no{color:rgba(255,255,255,.14)}
+.step h3{font-size:20px;font-weight:600;margin-bottom:10px;letter-spacing:-.01em}
+.step p{font-size:14.5px;color:var(--ink-2);line-height:1.7}
+.steps-shot{margin-top:64px;border-radius:var(--radius);overflow:hidden;border:1px solid #e6e6e6;background:var(--bg-soft);text-align:center}
+.steps-shot img{width:100%;margin:0 auto}
 
 /* ---------- faq ---------- */
-.faq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.faq{background:var(--bg);padding:28px 26px}
-.faq h3{font-size:15.5px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:9px}
-.faq h3::before{content:"Q";display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:6px;background:rgba(26,200,134,0.12);color:var(--accent);font-size:12px;font-weight:700;flex:none}
-.faq p{font-size:13.4px;color:var(--text-dim)}
-.faq a{color:var(--accent-hover)}
-.faq a:hover{text-decoration:underline}
+.faq{background:var(--bg-soft)}
+.faq-list{max-width:860px;margin:0 auto}
+details{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+details[open]{border-color:#dedede}
+summary{list-style:none;cursor:pointer;padding:24px 30px;font-size:16.5px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:20px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:24px;font-weight:300;color:var(--ink-3);transition:transform .2s;flex:none}
+details[open] summary::after{transform:rotate(45deg)}
+.faq-body{padding:0 30px 26px;font-size:14.5px;color:var(--ink-2);line-height:1.75}
+.faq-body a{color:var(--green-deep);border-bottom:1px solid rgba(10,168,113,.3)}
 
 /* ---------- download ---------- */
-.download-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:74px}
-.dcard{position:relative;background:var(--bg);padding:34px 28px;display:flex;flex-direction:column}
-.dcard.featured{background:var(--surface)}
-.dcard.featured::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-hover))}
-.dcard .tag{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;color:var(--text-muted);margin-bottom:14px}
-.dcard.featured .tag{color:var(--accent)}
-.dcard h3{font-size:19px;font-weight:600;margin-bottom:7px}
-.dcard .sub{font-size:13px;color:var(--text-dim);margin-bottom:24px;flex:1}
-.dcard .btn{justify-content:center}
-.cta{position:relative;text-align:center;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elev);padding:74px 28px;overflow:hidden}
-.cta-glow{position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:640px;height:400px;background:radial-gradient(ellipse at center,var(--accent-glow) 0%,transparent 65%);pointer-events:none}
-.cta h2{position:relative}
-.cta p{position:relative;color:var(--text-dim);margin-bottom:30px;font-size:15.5px}
-.cta .hero-actions{position:relative;margin-bottom:0}
+.dl-card{background:var(--bg-soft);border-radius:28px;text-align:center;padding:96px 30px}
+.dl-card h2{font-size:clamp(30px,3.4vw,44px);font-weight:700;letter-spacing:-.025em;margin-bottom:16px}
+.dl-card .s{font-size:16px;color:var(--ink-2);margin-bottom:40px}
+.dl-card .btn{margin-bottom:22px}
+.dl-meta{font-size:13px;color:var(--ink-3)}
+.dl-warn{max-width:560px;margin:26px auto 0;font-size:13px;color:var(--ink-3);line-height:1.7;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 22px}
 
 /* ---------- footer ---------- */
-footer{border-top:1px solid var(--border);padding:52px 0 38px;background:var(--bg-elev)}
-.foot-top{display:flex;align-items:flex-start;justify-content:space-between;gap:30px;flex-wrap:wrap;margin-bottom:34px}
-.foot-links{display:flex;gap:26px;font-size:13.5px;color:var(--text-dim);flex-wrap:wrap}
-.foot-links a:hover{color:var(--text)}
-.foot-bottom{border-top:1px solid var(--border);padding-top:24px;font-size:12.3px;color:var(--text-muted);line-height:1.8}
+footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0 34px;margin-top:96px}
+.foot-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:40px;margin-bottom:50px}
+.foot-brand img{width:34px;height:34px;margin-bottom:14px}
+.foot-brand .nm{font-size:16px;font-weight:700;margin-bottom:8px}
+.foot-brand p{font-size:13px;color:var(--ink-3);max-width:280px;line-height:1.7}
+.foot-col h4{font-size:13.5px;font-weight:600;margin-bottom:16px}
+.foot-col a{display:block;font-size:13.5px;color:var(--ink-3);padding:5px 0;transition:color .15s}
+.foot-col a:hover{color:var(--ink)}
+.foot-bottom{border-top:1px solid var(--line);padding-top:26px;font-size:12.5px;color:var(--ink-3);line-height:1.85}
 
 /* ---------- reveal ---------- */
-.reveal{opacity:0;transform:translateY(16px);transition:all .6s cubic-bezier(.4,0,.2,1)}
-.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal{opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease}
+.reveal.visible{opacity:1;transform:none}
 
-@media (max-width:900px){
-  .grid-3,.faq-grid,.download-grid{grid-template-columns:1fr}
-  .steps{grid-template-columns:1fr 1fr;gap:34px}
-  .step::after{display:none}
-  .specs-wrap{grid-template-columns:1fr}
-  .nav-links{display:none}
+@media (max-width:980px){
+  .nav-menu{display:none}
+  .hero-in{grid-template-columns:1fr;padding:52px 24px 60px}
+  .hero-shot{order:-1}
+  .values-in{grid-template-columns:1fr 1fr}
+  .value:nth-child(3){border-left:0}
+  .value{border-top:1px solid var(--line)}
+  .values-in .value:nth-child(-n+2){border-top:0}
+  .bento-row1,.bento-row2{grid-template-columns:1fr}
+  .tile-big,.tile-tall{height:auto;min-height:440px}
+  .tile-tall .imgwrap{position:static;height:380px;margin-top:20px}
+  .tile-tall .imgwrap img{border-radius:14px}
+  .devs{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr;gap:40px}
+  .foot-grid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
 <body>
 
-<!-- ============ NAV ============ -->
-<nav>
-  <div class="nav-in">
-    <a class="brand" href="#top">
-      <img src="docs/favicon.svg" alt="logo">
-      <span>
-        <span class="hidden-zh">米家小组件</span>
-        <span class="hidden-en">Mijia Widget</span>
-        <small>MIJIA WIDGET</small>
-      </span>
+<!-- ================= NAV ================= -->
+<header class="nav">
+  <div class="w nav-in">
+    <a class="logo" href="#top">
+      <img src="docs/favicon.svg" alt="">
+      <span class="hidden-zh">米家小组件</span><span class="hidden-en">Mijia Widget</span>
     </a>
-    <div class="nav-links">
-      <a href="#features"><span class="hidden-zh">功能</span><span class="hidden-en">Features</span></a>
-      <a href="#how"><span class="hidden-zh">上手</span><span class="hidden-en">How it works</span></a>
-      <a href="#specs"><span class="hidden-zh">参数</span><span class="hidden-en">Specs</span></a>
+    <nav class="nav-menu">
+      <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
+      <a href="#devices"><span class="hidden-zh">设备支持</span><span class="hidden-en">Devices</span></a>
+      <a href="#start"><span class="hidden-zh">快速上手</span><span class="hidden-en">Get started</span></a>
       <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
-      <a href="#download"><span class="hidden-zh">下载</span><span class="hidden-en">Download</span></a>
-    </div>
-    <div class="lang-switch">
-      <button class="active" onclick="switchLang('zh')">中</button>
-      <button onclick="switchLang('en')">EN</button>
-    </div>
-    <a class="btn btn-ghost nav-cta" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-      GitHub
-    </a>
-  </div>
-</nav>
-
-<!-- ============ HERO ============ -->
-<header class="hero" id="top">
-  <div class="hero-glow"></div>
-  <div class="wrap">
-    <div class="hero-eyebrow"><span class="hidden-zh">米家桌面小组件 · Windows 原生</span><span class="hidden-en">Mi Home Desktop Widget · Native for Windows</span></div>
-    <h1>
-      <span class="gradient-text hidden-zh">把米家设备<br>钉在桌面上</span>
-      <span class="gradient-text hidden-en">Pin your smart home<br>right on the desktop</span>
-    </h1>
-    <p class="lead">
-      <span class="hidden-zh">扫码登录米家账号，灯、风扇、空调、净饮机、传感器……全部变成桌面上可自由拖动的小卡片。实时状态，随手控制，不用再掏手机打开 App。</span>
-      <span class="hidden-en">Sign in with your Mi Home account. Lights, fans, ACs, water purifiers and sensors become floating cards on your desktop — live status, instant control, no phone needed.</span>
-    </p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span class="hidden-zh">下载 Windows 版</span><span class="hidden-en">Download for Windows</span>
+    </nav>
+    <div class="nav-right">
+      <div class="lang">
+        <button class="on" onclick="switchLang('zh')">简体</button><i></i><button onclick="switchLang('en')">EN</button>
+      </div>
+      <a class="gh-link" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
       </a>
-      <a class="btn btn-ghost" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        <span class="hidden-zh">查看源码</span><span class="hidden-en">View source</span>
+      <a class="btn btn-dark" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
+        <span class="hidden-zh">立即下载</span><span class="hidden-en">Download</span>
       </a>
-    </div>
-    <div class="hero-meta">
-      <span class="chip">Windows 10 / 11 · x64</span>
-      <span class="chip">v0.1.0 · 109 MB</span>
-      <span class="chip hidden-zh">免费 · AGPL-3.0 开源</span><span class="chip hidden-en">Free · AGPL-3.0</span>
-      <span class="chip hidden-zh">凭据仅存本机</span><span class="chip hidden-en">Credentials stay local</span>
     </div>
   </div>
 </header>
 
-<!-- ============ MARQUEE ============ -->
-<div class="marquee-wrap">
-  <div class="marquee-track" id="mq-zh">
-    <div class="marquee-item"><span class="k">扫码登录</span><span class="dot"></span><span class="k">瀑布流卡片</span><span class="dot"></span><span class="k">拖动排序</span><span class="dot"></span><span class="k">双击收折</span><span class="dot"></span><span class="k">灯光亮度色温</span><span class="dot"></span><span class="k">风扇风速模式</span><span class="dot"></span><span class="k">空调温度</span><span class="dot"></span><span class="k">实时状态</span><span class="dot"></span><span class="k">常驻置顶</span><span class="dot"></span><span class="k">开机自启</span><span class="dot"></span><span class="k">全屏模式</span><span class="dot"></span><span class="k">多显示器</span><span class="dot"></span></div>
-    <div class="marquee-item"><span class="k">扫码登录</span><span class="dot"></span><span class="k">瀑布流卡片</span><span class="dot"></span><span class="k">拖动排序</span><span class="dot"></span><span class="k">双击收折</span><span class="dot"></span><span class="k">灯光亮度色温</span><span class="dot"></span><span class="k">风扇风速模式</span><span class="dot"></span><span class="k">空调温度</span><span class="dot"></span><span class="k">实时状态</span><span class="dot"></span><span class="k">常驻置顶</span><span class="dot"></span><span class="k">开机自启</span><span class="dot"></span><span class="k">全屏模式</span><span class="dot"></span><span class="k">多显示器</span><span class="dot"></span></div>
-  </div>
-  <div class="marquee-track hidden-en" id="mq-en" style="display:none">
-    <div class="marquee-item"><span class="k">QR SIGN-IN</span><span class="dot"></span><span class="k">MASONRY CARDS</span><span class="dot"></span><span class="k">DRAG REORDER</span><span class="dot"></span><span class="k">DOUBLE-CLICK COLLAPSE</span><span class="dot"></span><span class="k">BRIGHTNESS &amp; CCT</span><span class="dot"></span><span class="k">FAN SPEED</span><span class="dot"></span><span class="k">AC TEMP</span><span class="dot"></span><span class="k">LIVE STATUS</span><span class="dot"></span><span class="k">ALWAYS ON TOP</span><span class="dot"></span><span class="k">LAUNCH AT LOGIN</span><span class="dot"></span><span class="k">FULLSCREEN</span><span class="dot"></span><span class="k">MULTI-MONITOR</span><span class="dot"></span></div>
-    <div class="marquee-item"><span class="k">QR SIGN-IN</span><span class="dot"></span><span class="k">MASONRY CARDS</span><span class="dot"></span><span class="k">DRAG REORDER</span><span class="dot"></span><span class="k">DOUBLE-CLICK COLLAPSE</span><span class="dot"></span><span class="k">BRIGHTNESS &amp; CCT</span><span class="dot"></span><span class="k">FAN SPEED</span><span class="dot"></span><span class="k">AC TEMP</span><span class="dot"></span><span class="k">LIVE STATUS</span><span class="dot"></span><span class="k">ALWAYS ON TOP</span><span class="dot"></span><span class="k">LAUNCH AT LOGIN</span><span class="dot"></span><span class="k">FULLSCREEN</span><span class="dot"></span><span class="k">MULTI-MONITOR</span><span class="dot"></span></div>
+<!-- ================= HERO ================= -->
+<div class="hero" id="top">
+  <div class="hero-in">
+    <div>
+      <div class="eyebrow">MIJIA WIDGET · FOR WINDOWS</div>
+      <h1>
+        <span class="hidden-zh">米家设备<br>尽在桌面</span>
+        <span class="hidden-en">Your Mi Home,<br>right on the desktop</span>
+      </h1>
+      <p class="sub">
+        <span class="hidden-zh">一个常驻桌面的米家小组件。扫码登录后，灯、风扇、空调、传感器全部成为桌面卡片，状态实时同步，随手就能控制。</span>
+        <span class="hidden-en">A desktop widget for your Mi Home devices. Sign in with one QR scan — lights, fans, ACs and sensors become live cards you can control instantly.</span>
+      </p>
+      <div class="hero-acts">
+        <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
+          <span class="hidden-zh">下载 Windows 版</span><span class="hidden-en">Download for Windows</span>
+        </a>
+        <a class="more" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">
+          <span class="hidden-zh">在 GitHub 上查看</span><span class="hidden-en">View on GitHub</span><span>→</span>
+        </a>
+      </div>
+      <div class="hero-meta">
+        <span class="hidden-zh"><b>v0.1.0</b> · Windows 10 / 11 · 64 位</span>
+        <span class="hidden-en"><b>v0.1.0</b> · Windows 10 / 11 · x64</span>
+        <span class="hidden-zh">免费开源 · AGPL-3.0</span><span class="hidden-en">Free &amp; open source</span>
+      </div>
+    </div>
+    <div class="hero-shot reveal">
+      <img src="screenshots/app.png" alt="米家小组件主界面：五列瀑布流设备卡片">
+    </div>
   </div>
 </div>
 
-<!-- ============ GALLERY ============ -->
-<section id="gallery">
-  <div class="wrap">
-    <div class="section-header center reveal">
-      <span class="label"><span class="hidden-zh">产品预览</span><span class="hidden-en">Preview</span></span>
-      <h2><span class="hidden-zh">你的设备，一屏尽在掌握</span><span class="hidden-en">Every device, one screen away</span></h2>
-      <p><span class="hidden-zh">展开的卡片只撑高自己所在的列，瀑布流排列互不干扰；每张卡片都能拖动排序、双击收折。</span><span class="hidden-en">Expanding a card only extends its own column — a true masonry layout. Drag to reorder, double-click to collapse.</span></p>
+<!-- ================= VALUES ================= -->
+<div class="values">
+  <div class="w values-in">
+    <div class="value reveal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+      <div>
+        <h3><span class="hidden-zh">米家扫码登录</span><span class="hidden-en">QR sign-in</span></h3>
+        <p><span class="hidden-zh">与米家 App 一致的官方登录流程</span><span class="hidden-en">The same official flow as Mi Home</span></p>
+      </div>
     </div>
-    <div class="gallery-shot reveal">
-      <img src="screenshots/app.png" alt="米家小组件主界面：五列瀑布流设备卡片" loading="lazy">
+    <div class="value reveal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <div>
+        <h3><span class="hidden-zh">状态实时同步</span><span class="hidden-en">Live sync</span></h3>
+        <p><span class="hidden-zh">开关、温湿度、电量自动刷新</span><span class="hidden-en">State, sensors and energy auto-refresh</span></p>
+      </div>
     </div>
-    <div class="gallery-cap">
-      <span class="hidden-zh">五列自适应布局 · 深色界面 · 窗口自由缩放</span><span class="hidden-en">5-column adaptive layout · Dark UI · Free resizing</span>
-      <span>v0.1.0</span>
+    <div class="value reveal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div>
+        <h3><span class="hidden-zh">凭据只存本机</span><span class="hidden-en">Local only</span></h3>
+        <p><span class="hidden-zh">不经过任何第三方服务器</span><span class="hidden-en">No third-party servers involved</span></p>
+      </div>
+    </div>
+    <div class="value reveal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+      <div>
+        <h3><span class="hidden-zh">免费且开源</span><span class="hidden-en">Free &amp; open</span></h3>
+        <p><span class="hidden-zh">无广告、无统计，源码可审计</span><span class="hidden-en">No ads, no tracking, auditable source</span></p>
+      </div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- ============ FEATURES ============ -->
-<section id="features" style="padding-top:0">
-  <div class="wrap">
-    <div class="section-header reveal">
-      <span class="label"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></span>
-      <h2><span class="hidden-zh">为桌面而生的米家控制台</span><span class="hidden-en">A Mi Home console built for the desktop</span></h2>
+<!-- ================= BENTO FEATURES ================= -->
+<section id="features">
+  <div class="w">
+    <div class="sec-head reveal">
+      <h2><span class="hidden-zh">为桌面重新设计的米家体验</span><span class="hidden-en">Mi Home, reimagined for desktop</span></h2>
+      <p><span class="hidden-zh">大窗口看全局，小窗口看常用，怎么摆都顺手</span><span class="hidden-en">A full dashboard or a compact widget — arranged your way</span></p>
     </div>
-    <div class="grid-3">
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">01</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-7"/></svg></div>
-        <h3><span class="hidden-zh">米家扫码登录</span><span class="hidden-en">QR code sign-in</span></h3>
-        <p><span class="hidden-zh">用米家 App 扫码即可，与官方一致的登录流程，无需输入账号密码。</span><span class="hidden-en">Scan with the Mi Home app — the same official login flow, no password typing.</span></p>
+
+    <div class="bento bento-row1">
+      <div class="tile tile-big reveal">
+        <div class="tile-copy">
+          <h3><span class="hidden-zh">瀑布流卡片布局</span><span class="hidden-en">Masonry card layout</span></h3>
+          <p class="d"><span class="hidden-zh">展开一张卡片，只顺延它所在的列；其它设备纹丝不动。列数随窗口宽度自动增减。</span><span class="hidden-en">Expanding a card extends only its own column. Columns adapt automatically to window width.</span></p>
+        </div>
+        <div class="imgwrap"><img src="screenshots/app.png" alt="瀑布流设备卡片布局" loading="lazy"></div>
       </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">02</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="5" height="14" rx="1"/><rect x="9.5" y="3" width="5" height="18" rx="1"/><rect x="16" y="10" width="5" height="11" rx="1"/></svg></div>
-        <h3><span class="hidden-zh">瀑布流设备卡片</span><span class="hidden-en">Masonry device cards</span></h3>
-        <p><span class="hidden-zh">每张卡片按自身高度排列成瀑布流，支持拖动排序与双击收折，列数随窗口宽度自适应。</span><span class="hidden-en">Cards stack in a true masonry layout. Drag to reorder, double-click to collapse, columns adapt to window width.</span></p>
+      <div class="tile tile-tall reveal">
+        <div class="tile-copy">
+          <h3><span class="hidden-zh">常驻桌面的小窗</span><span class="hidden-en">A widget that stays</span></h3>
+          <p class="d"><span class="hidden-zh">置顶显示在桌面一角，自动记住位置与大小，抬眼可见、随手可控。</span><span class="hidden-en">Pinned to a corner, always on top. Position and size are remembered for you.</span></p>
+        </div>
+        <div class="imgwrap"><img src="screenshots/phone.png" alt="单列小窗模式" loading="lazy"></div>
       </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">03</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-        <h3><span class="hidden-zh">状态实时同步</span><span class="hidden-en">Live status sync</span></h3>
-        <p><span class="hidden-zh">开关状态、温湿度、功率电量自动刷新，设备上下线即时可见。</span><span class="hidden-en">Power state, temperature, humidity and energy update automatically — online status at a glance.</span></p>
+    </div>
+
+    <div class="bento bento-row2" style="margin-top:20px">
+      <div class="tile tile-sm reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg></div>
+        <h3><span class="hidden-zh">拖动排序</span><span class="hidden-en">Drag to reorder</span></h3>
+        <p class="d"><span class="hidden-zh">按住手柄把常用设备拖到最顺手的位置，顺序自动保存。</span><span class="hidden-en">Grab the handle and arrange devices your way — the order is saved automatically.</span></p>
       </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">04</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
-        <h3><span class="hidden-zh">丰富的设备控制</span><span class="hidden-en">Rich device controls</span></h3>
-        <p><span class="hidden-zh">灯光亮度与色温、风扇风速 / 模式 / 扫风、空调目标温度、净饮机水温，规格按型号自动适配。</span><span class="hidden-en">Brightness &amp; color temperature, fan speed / mode / oscillation, AC target temp, water temp — specs adapt per model.</span></p>
+      <div class="tile tile-sm reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+        <h3><span class="hidden-zh">双击收折</span><span class="hidden-en">Collapse instantly</span></h3>
+        <p class="d"><span class="hidden-zh">双击或右键即可收折卡片，网关、温度计等只读设备默认精简显示。</span><span class="hidden-en">Double-click or right-click to collapse. Read-only devices stay compact by default.</span></p>
       </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">05</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg></div>
-        <h3><span class="hidden-zh">常驻置顶小窗</span><span class="hidden-en">Always-on-top widget</span></h3>
-        <p><span class="hidden-zh">小窗常驻桌面一角并置顶显示，自动记住窗口位置、大小和所有设置。</span><span class="hidden-en">A compact window pinned to a corner, always on top. Remembers position, size and every setting.</span></p>
-      </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">06</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></div>
-        <h3><span class="hidden-zh">托盘菜单与开机自启</span><span class="hidden-en">Tray menu &amp; auto-start</span></h3>
-        <p><span class="hidden-zh">系统托盘提供全部常用操作，可设置开机自动启动，登录后设备状态立刻就位。</span><span class="hidden-en">All common actions live in the system tray. Enable launch at login and status is ready instantly.</span></p>
-      </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">07</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></div>
-        <h3><span class="hidden-zh">两种全屏模式</span><span class="hidden-en">Two fullscreen modes</span></h3>
-        <p><span class="hidden-zh">普通全屏保留任务栏；覆盖全屏完全置顶铺满整块屏幕，适合信息墙场景。</span><span class="hidden-en">Normal fullscreen keeps the taskbar; cover mode fills the screen on top — great for a dashboard wall.</span></p>
-      </div>
-      <div class="feature reveal">
-        <div class="accent-bar"></div>
-        <div class="feature-num">08</div>
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="13" height="9" rx="1"/><rect x="15" y="11" width="7" height="9" rx="1"/><path d="M8 13v4M6 17h4"/></svg></div>
-        <h3><span class="hidden-zh">一键发送到副屏</span><span class="hidden-en">Send to second screen</span></h3>
-        <p><span class="hidden-zh">多显示器环境下，一键把小组件移到下一块屏幕，自动居中并防止裁切。</span><span class="hidden-en">On multi-monitor setups, move the widget to the next display with one click — centered and never clipped.</span></p>
+      <div class="tile tile-sm reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="14" height="10" rx="1.5"/><rect x="16" y="10" width="6" height="10" rx="1.5"/><path d="M8 14v4M6 18h4"/></svg></div>
+        <h3><span class="hidden-zh">全屏与副屏</span><span class="hidden-en">Fullscreen &amp; 2nd screen</span></h3>
+        <p class="d"><span class="hidden-zh">两种全屏模式可做信息墙，多显示器下一键发送到副屏。</span><span class="hidden-en">Two fullscreen modes for a dashboard wall; send it to another monitor in one click.</span></p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============ HOW ============ -->
-<section id="how" style="padding-top:0">
-  <div class="wrap">
-    <div class="section-header reveal">
-      <span class="label"><span class="hidden-zh">四步上手</span><span class="hidden-en">How it works</span></span>
-      <h2><span class="hidden-zh">30 秒，从下载到用上</span><span class="hidden-en">Up and running in 30 seconds</span></h2>
+<!-- ================= DEVICES (DARK) ================= -->
+<section class="dark" id="devices">
+  <div class="w">
+    <div class="sec-head reveal">
+      <div class="eyebrow">MIOT NATIVE</div>
+      <h2><span class="hidden-zh">你家里的设备，大多都能管</span><span class="hidden-en">Most of your devices, supported</span></h2>
+      <p><span class="hidden-zh">按设备 MIoT 规格自动生成控制项，无需逐个适配</span><span class="hidden-en">Controls are generated from each device's MIoT spec automatically</span></p>
+    </div>
+    <div class="devs reveal">
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 3z"/></svg></div>
+        <h3><span class="hidden-zh">灯光照明</span><span class="hidden-en">Lights</span></h3>
+        <p><span class="hidden-zh">开关、亮度、色温调节</span><span class="hidden-en">Power, brightness, color temperature</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.2"/><path d="M12 9.8V4M12 20v-5.8M9.8 12H4M20 12h-5.8M10.4 10.4 6.2 6.2M17.8 17.8l-4.2-4.2M13.6 10.4l4.2-4.2M6.2 17.8l4.2-4.2"/></svg></div>
+        <h3><span class="hidden-zh">风扇循环扇</span><span class="hidden-en">Fans</span></h3>
+        <p><span class="hidden-zh">风速、模式、上下左右扫风</span><span class="hidden-en">Speed, mode, 4-way oscillation</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h13a3 3 0 0 1 0 6H8M3 8v8M3 12h4"/><path d="M19 9h1.5a1.5 1.5 0 0 1 0 3H19"/></svg></div>
+        <h3><span class="hidden-zh">空调温控</span><span class="hidden-en">Air conditioners</span></h3>
+        <p><span class="hidden-zh">目标温度与运行状态</span><span class="hidden-en">Target temperature and run state</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 17v2"/></svg></div>
+        <h3><span class="hidden-zh">温湿度传感</span><span class="hidden-en">Temp &amp; humidity</span></h3>
+        <p><span class="hidden-zh">实时温湿度与电量状态</span><span class="hidden-en">Live readings and battery level</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 5.5 6 10.5a6 6 0 0 1-12 0C6 8.5 12 3 12 3z"/><path d="M9 14a3 3 0 0 0 3 3"/></svg></div>
+        <h3><span class="hidden-zh">净饮水设备</span><span class="hidden-en">Water purifiers</span></h3>
+        <p><span class="hidden-zh">水温、滤芯寿命与 TDS</span><span class="hidden-en">Water temp, filter life, TDS</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5 2 8h10c0-3 2-5 2-8a7 7 0 0 0-7-7z"/><path d="M9 21h6M10 17.5V21M14 17.5V21"/></svg></div>
+        <h3><span class="hidden-zh">厨房与小家电</span><span class="hidden-en">Kitchen &amp; appliances</span></h3>
+        <p><span class="hidden-zh">计时器等 MIoT 设备</span><span class="hidden-en">Timers and other MIoT devices</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12l-1 12H7L6 8z"/><path d="M10 13h4"/></svg></div>
+        <h3><span class="hidden-zh">插座开关</span><span class="hidden-en">Plugs &amp; switches</span></h3>
+        <p><span class="hidden-zh">远程开关与实时功率</span><span class="hidden-en">Remote switching and live wattage</span></p>
+      </div>
+      <div class="dev">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><circle cx="7.5" cy="10" r="1.2"/><path d="M11 9h6M11 12h4"/></svg></div>
+        <h3><span class="hidden-zh">网关中枢</span><span class="hidden-en">Gateways &amp; hubs</span></h3>
+        <p><span class="hidden-zh">在线状态与功率信息</span><span class="hidden-en">Online status and power info</span></p>
+      </div>
+    </div>
+    <p class="dark-note reveal"><span class="hidden-zh">设备支持情况取决于型号是否提供标准 MIoT 规格；不支持的设备可到 GitHub Issues 反馈型号。</span><span class="hidden-en">Support depends on the model's standard MIoT spec. Unsupported models? Report them on GitHub Issues.</span></p>
+  </div>
+</section>
+
+<!-- ================= STEPS ================= -->
+<section id="start">
+  <div class="w">
+    <div class="sec-head reveal">
+      <h2><span class="hidden-zh">三步，用上它</span><span class="hidden-en">Up in three steps</span></h2>
     </div>
     <div class="steps">
       <div class="step reveal">
-        <div class="step-num">1</div>
-        <h3><span class="hidden-zh">下载安装</span><span class="hidden-en">Download &amp; install</span></h3>
-        <p><span class="hidden-zh">在 Releases 下载安装包，可自选安装目录，无需额外运行环境。</span><span class="hidden-en">Grab the installer from Releases. Pick any install folder — no runtime required.</span></p>
+        <div class="no">01</div>
+        <h3><span class="hidden-zh">下载并安装</span><span class="hidden-en">Download &amp; install</span></h3>
+        <p><span class="hidden-zh">在 Releases 下载 NSIS 安装包，可自选安装目录，无需安装任何运行环境。</span><span class="hidden-en">Get the NSIS installer from Releases. Choose your install folder — no runtime needed.</span></p>
       </div>
       <div class="step reveal">
-        <div class="step-num">2</div>
-        <h3><span class="hidden-zh">扫码登录</span><span class="hidden-en">Scan to sign in</span></h3>
-        <p><span class="hidden-zh">打开应用后用米家 App 扫码授权，登录凭据仅保存在本机。</span><span class="hidden-en">Open the app and authorize with Mi Home QR scan. Credentials are stored only on this PC.</span></p>
+        <div class="no">02</div>
+        <h3><span class="hidden-zh">米家 App 扫码</span><span class="hidden-en">Scan with Mi Home</span></h3>
+        <p><span class="hidden-zh">启动应用后用米家 App 扫码授权，设备列表自动拉取，登录凭据仅保存在本机。</span><span class="hidden-en">Launch, authorize with a Mi Home QR scan. Devices appear automatically; credentials stay local.</span></p>
       </div>
       <div class="step reveal">
-        <div class="step-num">3</div>
-        <h3><span class="hidden-zh">设备自动成卡</span><span class="hidden-en">Cards appear</span></h3>
-        <p><span class="hidden-zh">账号下的设备自动拉取，按 MIoT 规格生成控制卡片并开始同步状态。</span><span class="hidden-en">Your devices are fetched automatically and rendered as MIoT-spec control cards with live status.</span></p>
-      </div>
-      <div class="step reveal">
-        <div class="step-num">4</div>
-        <h3><span class="hidden-zh">拖到顺手的位置</span><span class="hidden-en">Place &amp; control</span></h3>
-        <p><span class="hidden-zh">拖动卡片排序、收折不常用的设备，把小窗钉在桌面一角随手控制。</span><span class="hidden-en">Reorder cards, collapse what you rarely use, pin the window to a corner and take control.</span></p>
+        <div class="no">03</div>
+        <h3><span class="hidden-zh">摆在桌面，开始控制</span><span class="hidden-en">Place it, control all</span></h3>
+        <p><span class="hidden-zh">拖动卡片排好顺序，把小窗钉在顺手的位置，抬眼可见、一键控制。</span><span class="hidden-en">Arrange the cards, pin the window where you like, and take control at a glance.</span></p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============ SPECS ============ -->
-<section id="specs" style="padding-top:0">
-  <div class="wrap">
-    <div class="section-header reveal">
-      <span class="label"><span class="hidden-zh">技术参数</span><span class="hidden-en">Specifications</span></span>
-      <h2><span class="hidden-zh">关于这个软件</span><span class="hidden-en">Under the hood</span></h2>
+<!-- ================= FAQ ================= -->
+<section class="faq" id="faq">
+  <div class="w">
+    <div class="sec-head reveal">
+      <h2><span class="hidden-zh">常见问题</span><span class="hidden-en">Frequently asked</span></h2>
     </div>
-    <div class="specs-wrap reveal">
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">操作系统</span><span class="hidden-en">OS</span></span><span class="specs-v">Windows 10 / 11 · 64 位 (x64)</span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">当前版本</span><span class="hidden-en">Version</span></span><span class="specs-v">v0.1.0</span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">运行框架</span><span class="hidden-en">Framework</span></span><span class="specs-v">Electron 44 · Chromium</span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">安装方式</span><span class="hidden-en">Installer</span></span><span class="specs-v">NSIS · 约 109 MB · 可自选目录</span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">开源协议</span><span class="hidden-en">License</span></span><span class="specs-v">AGPL-3.0-or-later</span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">数据存储</span><span class="hidden-en">Data storage</span></span><span class="specs-v"><span class="hidden-zh">仅本机 userData · 直连米家官方</span><span class="hidden-en">Local userData only · Direct to Mi Home</span></span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">设备适配</span><span class="hidden-en">Device support</span></span><span class="specs-v"><span class="hidden-zh">MIoT 标准设备 · 规格按型号自动匹配</span><span class="hidden-en">MIoT devices · Specs auto-matched per model</span></span></div>
-      <div class="spec-row"><span class="specs-k"><span class="hidden-zh">界面语言</span><span class="hidden-en">UI language</span></span><span class="specs-v"><span class="hidden-zh">简体中文</span><span class="hidden-en">Simplified Chinese</span></span></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FAQ ============ -->
-<section id="faq" style="padding-top:0">
-  <div class="wrap">
-    <div class="section-header reveal">
-      <span class="label"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></span>
-      <h2><span class="hidden-zh">下载前，你可能想知道</span><span class="hidden-en">Before you download</span></h2>
-    </div>
-    <div class="faq-grid">
-      <div class="faq reveal">
-        <h3><span class="hidden-zh">SmartScreen 拦截怎么办？</span><span class="hidden-en">SmartScreen warning?</span></h3>
-        <p><span class="hidden-zh">个人开源项目暂未购买代码签名证书。点击「更多信息」→「仍要运行」即可，软件完全开源可审计。</span><span class="hidden-en">The app is unsigned for now. Click “More info” → “Run anyway”. The source is fully open and auditable.</span></p>
-      </div>
-      <div class="faq reveal">
-        <h3><span class="hidden-zh">米家账号安全吗？</span><span class="hidden-en">Is my account safe?</span></h3>
-        <p><span class="hidden-zh">走米家官方扫码登录，凭据仅保存在本机应用数据目录，不经过任何第三方服务器。</span><span class="hidden-en">It uses the official Mi Home QR login. Credentials stay in the local app-data folder and never touch third-party servers.</span></p>
-      </div>
-      <div class="faq reveal">
-        <h3><span class="hidden-zh">支持哪些设备？</span><span class="hidden-en">Which devices work?</span></h3>
-        <p><span class="hidden-zh">符合 MIoT 规范的设备按型号自动适配控制项；网关、温度计等只读设备仅展示状态。</span><span class="hidden-en">MIoT-compliant devices get controls auto-matched by model. Read-only devices like gateways and thermometers show status only.</span></p>
-      </div>
-      <div class="faq reveal">
-        <h3><span class="hidden-zh">软件收费吗？</span><span class="hidden-en">Is it free?</span></h3>
-        <p><span class="hidden-zh">完全免费且开源，没有内购、广告与统计。你也可以自行从源码构建。</span><span class="hidden-en">Completely free and open source — no in-app purchases, ads or tracking. Build it yourself from source.</span></p>
-      </div>
-      <div class="faq reveal">
-        <h3><span class="hidden-zh">为什么是 AGPL 协议？</span><span class="hidden-en">Why AGPL?</span></h3>
-        <p><span class="hidden-zh">项目依赖 GPL-3.0+ 的开源组件，作为衍生作品须以兼容协议发布，详见仓库 LICENSE。</span><span class="hidden-en">It depends on a GPL-3.0+ component, so the derivative work ships under a compatible license. See LICENSE in the repo.</span></p>
-      </div>
-      <div class="faq reveal">
-        <h3><span class="hidden-zh">支持 macOS 吗？</span><span class="hidden-en">What about macOS?</span></h3>
-        <p><span class="hidden-zh">当前仅发布 Windows x64 安装包。代码基于 Electron，欢迎在 GitHub 上参与移植。</span><span class="hidden-en">Only the Windows x64 build is published today. It is Electron-based — ports are welcome on GitHub.</span></p>
-      </div>
+    <div class="faq-list">
+      <details class="reveal">
+        <summary><span class="hidden-zh">安装时 SmartScreen 提示「已保护你的电脑」？</span><span class="hidden-en">SmartScreen says “Windows protected your PC”?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">本软件是个人开源项目，暂未购买代码签名证书。点击「更多信息」→「仍要运行」即可继续安装。软件完全开源，可自行审计源码或从源码构建。</span><span class="hidden-en">The app is an unsigned personal open-source project. Click “More info” → “Run anyway”. The source is fully open and auditable.</span></div>
+      </details>
+      <details class="reveal">
+        <summary><span class="hidden-zh">米家账号和设备数据安全吗？</span><span class="hidden-en">Is my Mi Home account safe?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">应用走米家官方扫码登录，不接触你的账号密码。登录凭据与设备数据仅保存在本机应用数据目录（userData），直接与米家官方接口通信，不经过任何第三方服务器。</span><span class="hidden-en">It uses the official Mi Home QR login and never sees your password. Credentials and device data live only in the local userData folder and talk directly to Mi Home.</span></div>
+      </details>
+      <details class="reveal">
+        <summary><span class="hidden-zh">为什么我的设备没有控制项？</span><span class="hidden-en">Why does a device have no controls?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。欢迎到 <a href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Report the model on <a href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+      </details>
+      <details class="reveal">
+        <summary><span class="hidden-zh">软件收费吗？会收集数据吗？</span><span class="hidden-en">Is it free? Does it collect data?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">完全免费、开源，没有内购、广告和任何统计追踪。你也可以自行从源码构建可执行文件。</span><span class="hidden-en">Completely free and open source — no purchases, ads or analytics. You can build the executable yourself.</span></div>
+      </details>
+      <details class="reveal">
+        <summary><span class="hidden-zh">为什么使用 AGPL-3.0 协议？</span><span class="hidden-en">Why AGPL-3.0?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">项目依赖 GPL-3.0-or-later 的开源组件 <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>，作为衍生作品须以 GPL 兼容协议分发，因此本项目采用 AGPL-3.0-or-later，详见仓库 LICENSE。</span><span class="hidden-en">It builds on the GPL-3.0-or-later component <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>, so this derivative work ships under the compatible AGPL-3.0-or-later license. See LICENSE.</span></div>
+      </details>
+      <details class="reveal">
+        <summary><span class="hidden-zh">支持 macOS 或 Linux 吗？</span><span class="hidden-en">macOS or Linux?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">当前仅发布 Windows x64 安装包。应用基于 Electron 构建，跨平台移植在技术上可行，欢迎在 GitHub 参与贡献。</span><span class="hidden-en">Only the Windows x64 build is published today. The app is Electron-based, so ports are technically feasible — contributions welcome.</span></div>
+      </details>
     </div>
   </div>
 </section>
 
-<!-- ============ DOWNLOAD ============ -->
-<section id="download" style="padding-top:0">
-  <div class="wrap">
-    <div class="section-header center reveal">
-      <span class="label"><span class="hidden-zh">下载</span><span class="hidden-en">Download</span></span>
-      <h2><span class="hidden-zh">开始使用</span><span class="hidden-en">Get it now</span></h2>
-    </div>
-    <div class="download-grid reveal">
-      <div class="dcard featured">
-        <div class="tag"><span class="hidden-zh">推荐 · 最新版本</span><span class="hidden-en">Recommended · Latest</span></div>
-        <h3><span class="hidden-zh">Windows 安装包</span><span class="hidden-en">Windows Installer</span></h3>
-        <div class="sub">v0.1.0 · x64 · NSIS · 109 MB<br><span class="hidden-zh">支持自选安装目录与快捷方式</span><span class="hidden-en">Custom folder &amp; shortcuts</span></div>
-        <a class="btn btn-primary" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span class="hidden-zh">下载 Setup.exe</span><span class="hidden-en">Download Setup.exe</span>
-        </a>
-      </div>
-      <div class="dcard">
-        <div class="tag"><span class="hidden-zh">源码</span><span class="hidden-en">Source</span></div>
-        <h3><span class="hidden-zh">GitHub 仓库</span><span class="hidden-en">GitHub Repository</span></h3>
-        <div class="sub"><span class="hidden-zh">完整源码、构建脚本与协议文件，clone 后 npm start 即可运行。</span><span class="hidden-en">Full source, build scripts and license. Clone and run npm start.</span></div>
-        <a class="btn btn-ghost" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-          <span class="hidden-zh">查看源码</span><span class="hidden-en">View source</span>
-        </a>
-      </div>
-      <div class="dcard">
-        <div class="tag"><span class="hidden-zh">反馈</span><span class="hidden-en">Feedback</span></div>
-        <h3><span class="hidden-zh">问题与建议</span><span class="hidden-en">Issues &amp; Ideas</span></h3>
-        <div class="sub"><span class="hidden-zh">设备不兼容、Bug 或功能想法，欢迎到 Issues 提出，附上设备型号更好。</span><span class="hidden-en">Found a bug, unsupported device or feature idea? Open an issue — device model appreciated.</span></div>
-        <a class="btn btn-ghost" href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-          <span class="hidden-zh">提交 Issue</span><span class="hidden-en">Open an issue</span>
-        </a>
-      </div>
-    </div>
-    <div class="cta reveal">
-      <div class="cta-glow"></div>
-      <h2><span class="hidden-zh">设备状态，抬眼可见</span><span class="hidden-en">Your home status, one glance away</span></h2>
-      <p><span class="hidden-zh">免费开源，扫码即用。给桌面加一块米家信息角。</span><span class="hidden-en">Free, open source, ready after one QR scan. Add a Mi Home corner to your desktop.</span></p>
-      <div class="hero-actions">
-        <a class="btn btn-primary" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span class="hidden-zh">免费下载 v0.1.0</span><span class="hidden-en">Download v0.1.0 free</span>
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ FOOTER ============ -->
-<footer>
-  <div class="wrap">
-    <div class="foot-top">
-      <a class="brand" href="#top">
-        <img src="docs/favicon.svg" alt="logo">
-        <span>
-          <span class="hidden-zh">米家小组件</span>
-          <span class="hidden-en">Mijia Widget</span>
-          <small>MIJIA WIDGET</small>
-        </span>
+<!-- ================= DOWNLOAD ================= -->
+<section id="download" style="padding-bottom:0">
+  <div class="w">
+    <div class="dl-card reveal">
+      <h2><span class="hidden-zh">现在，把米家放上桌面</span><span class="hidden-en">Put Mi Home on your desktop</span></h2>
+      <p class="s"><span class="hidden-zh">免费开源，扫码即用。</span><span class="hidden-en">Free, open source, ready after one scan.</span></p>
+      <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="hidden-zh">下载米家小组件 v0.1.0</span><span class="hidden-en">Download Mijia Widget v0.1.0</span>
       </a>
-      <div class="foot-links">
+      <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 109 MB</div>
+      <div class="dl-warn"><span class="hidden-zh">未购买代码签名证书，首次运行如出现 SmartScreen 提示，选择「更多信息」→「仍要运行」。</span><span class="hidden-en">The installer is unsigned. If SmartScreen appears, choose “More info” → “Run anyway”.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="w">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <img src="docs/favicon.svg" alt="">
+        <div class="nm"><span class="hidden-zh">米家小组件</span><span class="hidden-en">Mijia Widget</span></div>
+        <p><span class="hidden-zh">Windows 桌面常驻米家设备小窗，个人开源作品。</span><span class="hidden-en">A persistent Mi Home widget for Windows. A personal open-source project.</span></p>
+      </div>
+      <div class="foot-col">
+        <h4><span class="hidden-zh">产品</span><span class="hidden-en">Product</span></h4>
+        <a href="https://github.com/HZDavy/mijia-widget/releases" target="_blank" rel="noopener"><span class="hidden-zh">下载安装包</span><span class="hidden-en">Downloads</span></a>
+        <a href="https://github.com/HZDavy/mijia-widget/releases" target="_blank" rel="noopener"><span class="hidden-zh">更新日志</span><span class="hidden-en">Release notes</span></a>
+        <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
+      </div>
+      <div class="foot-col">
+        <h4><span class="hidden-zh">资源</span><span class="hidden-en">Resources</span></h4>
         <a href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/HZDavy/mijia-widget/releases" target="_blank" rel="noopener"><span class="hidden-zh">全部版本</span><span class="hidden-en">Releases</span></a>
         <a href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/HZDavy/mijia-widget/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      </div>
+      <div class="foot-col">
+        <h4><span class="hidden-zh">协议与隐私</span><span class="hidden-en">Legal</span></h4>
         <a href="https://github.com/HZDavy/mijia-widget/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a>
+        <a href="#faq"><span class="hidden-zh">隐私说明</span><span class="hidden-en">Privacy</span></a>
+        <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
       </div>
     </div>
     <div class="foot-bottom">
-      <p class="hidden-zh">Copyright © 2026 HZDavy · 本软件基于 AGPL-3.0-or-later 开源，依赖 GPL-3.0+ 的 @zythum02/mijia-api。</p>
-      <p class="hidden-en">Copyright © 2026 HZDavy · Released under AGPL-3.0-or-later, built on the GPL-3.0+ library @zythum02/mijia-api.</p>
+      <p>Copyright © 2026 HZDavy. <span class="hidden-zh">本软件基于 AGPL-3.0-or-later 开源，依赖 GPL-3.0+ 的 @zythum02/mijia-api。</span><span class="hidden-en">Released under AGPL-3.0-or-later; built on the GPL-3.0+ library @zythum02/mijia-api.</span></p>
       <p class="hidden-zh">免责声明：本项目为个人学习交流用途的非官方软件，与小米 / 米家官方无任何关联，亦未获其授权或背书。「米家」「MIJIA」及相关商标归其权利人所有。</p>
-      <p class="hidden-en">Disclaimer: This is an unofficial, personal project for learning purposes. It is not affiliated with, authorized or endorsed by Xiaomi / Mi Home. “米家” and “MIJIA” are trademarks of their respective owners.</p>
+      <p class="hidden-en">Disclaimer: an unofficial personal project for learning purposes. Not affiliated with or endorsed by Xiaomi / Mi Home. Trademarks belong to their respective owners.</p>
     </div>
   </div>
 </footer>
@@ -514,22 +505,18 @@ function switchLang(lang){
   document.body.classList.toggle('lang-en', lang==='en');
   document.documentElement.lang = lang==='en' ? 'en' : 'zh-CN';
   localStorage.setItem('mijia-widget-lang', lang);
-  var btns=document.querySelectorAll('.lang-switch button');
-  btns[0].classList.toggle('active',lang==='zh');
-  btns[1].classList.toggle('active',lang==='en');
-  document.getElementById('mq-zh').style.display = lang==='en' ? 'none' : '';
-  document.getElementById('mq-en').style.display = lang==='en' ? '' : 'none';
+  var bs=document.querySelectorAll('.lang button');
+  bs[0].classList.toggle('on',lang==='zh');
+  bs[1].classList.toggle('on',lang==='en');
   document.title = lang==='en'
-    ? 'Mijia Widget · Pin Mi Home devices on your Windows desktop'
-    : '米家小组件 · 把米家设备钉在 Windows 桌面上';
+    ? 'Mijia Widget · Your Mi Home, on your desktop'
+    : '米家小组件 · 米家设备，尽在桌面';
 }
 switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
 
-// marquee seamless loop: duplicate already present in markup; ensure width works
-// reveal on scroll
 var ob = new IntersectionObserver(function(entries){
   entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); ob.unobserve(e.target); } });
-},{threshold:0.08});
+},{threshold:0.07});
 document.querySelectorAll('.reveal').forEach(function(el){ ob.observe(el); });
 </script>
 </body>
