@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>米家小组件 · 米家设备，尽在桌面</title>
-<meta name="description" content="米家小组件：Windows 桌面常驻小窗，扫码登录米家账号，灯、风扇、空调、传感器实时状态卡片化展示与控制。免费开源。">
+<title>OpenMijia · 米家设备，尽在桌面</title>
+<meta name="description" content="OpenMijia：Windows 桌面常驻米家小窗，扫码登录米家账号，灯、风扇、空调、传感器实时状态卡片化展示与控制。免费开源。">
 <link rel="icon" href="docs/favicon.svg" type="image/svg+xml">
 <style>
 :root{
@@ -44,8 +44,9 @@ body.lang-en label.hidden-en,summary.hidden-en{display:block !important}
 /* ---------- nav ---------- */
 header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.92);border-bottom:1px solid var(--line)}
 .nav-in{height:64px;display:flex;align-items:center;gap:34px}
-.logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em;flex-shrink:0}
 .logo img{width:30px;height:30px}
+.logo>span{white-space:nowrap}
 .nav-menu{display:flex;gap:30px;margin-left:10px;font-size:14.5px;color:var(--ink-2)}
 .nav-menu a{padding:4px 0;transition:color .15s}
 .nav-menu a:hover{color:var(--green-deep)}
@@ -190,6 +191,15 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .steps{grid-template-columns:1fr;gap:40px}
   .foot-grid{grid-template-columns:1fr 1fr}
 }
+@media (max-width:640px){
+  .nav-in{height:56px;gap:14px;padding:0 16px}
+  .logo img{width:28px;height:28px}
+  .logo small{display:none}
+  .gh-link{display:none}
+  .nav-right{gap:14px}
+  .nav-right .btn{padding:8px 15px;font-size:13.5px}
+  .lang{gap:6px;font-size:12.5px}
+}
 </style>
 </head>
 <body>
@@ -199,7 +209,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   <div class="w nav-in">
     <a class="logo" href="#top">
       <img src="docs/favicon.svg" alt="">
-      <span class="hidden-zh">米家小组件</span><span class="hidden-en">Mijia Widget</span>
+      <span class="hidden-zh">OpenMijia</span><span class="hidden-en">OpenMijia</span>
     </a>
     <nav class="nav-menu">
       <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
@@ -211,10 +221,10 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="lang">
         <button class="on" onclick="switchLang('zh')">简体</button><i></i><button onclick="switchLang('en')">EN</button>
       </div>
-      <a class="gh-link" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener" aria-label="GitHub">
+      <a class="gh-link" href="https://github.com/HZDavy/OpenMijia" target="_blank" rel="noopener" aria-label="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
       </a>
-      <a class="btn btn-dark" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
+      <a class="btn btn-dark" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
         <span class="hidden-zh">立即下载</span><span class="hidden-en">Download</span>
       </a>
     </div>
@@ -225,20 +235,20 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <div class="hero" id="top">
   <div class="hero-in">
     <div>
-      <div class="eyebrow">MIJIA WIDGET · FOR WINDOWS</div>
+      <div class="eyebrow">OPENMIJIA · FOR WINDOWS</div>
       <h1>
         <span class="hidden-zh">米家设备<br>尽在桌面</span>
         <span class="hidden-en">Your Mi Home,<br>right on the desktop</span>
       </h1>
       <p class="sub">
-        <span class="hidden-zh">一个常驻桌面的米家小组件。扫码登录后，灯、风扇、空调、传感器全部成为桌面卡片，状态实时同步，随手就能控制。</span>
+        <span class="hidden-zh">OpenMijia，一个常驻桌面的米家小组件。扫码登录后，灯、风扇、空调、传感器全部成为桌面卡片，状态实时同步，随手就能控制。</span>
         <span class="hidden-en">A desktop widget for your Mi Home devices. Sign in with one QR scan — lights, fans, ACs and sensors become live cards you can control instantly.</span>
       </p>
       <div class="hero-acts">
-        <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
+        <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
           <span class="hidden-zh">下载 Windows 版</span><span class="hidden-en">Download for Windows</span>
         </a>
-        <a class="more" href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">
+        <a class="more" href="https://github.com/HZDavy/OpenMijia" target="_blank" rel="noopener">
           <span class="hidden-zh">在 GitHub 上查看</span><span class="hidden-en">View on GitHub</span><span>→</span>
         </a>
       </div>
@@ -430,7 +440,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       </details>
       <details class="reveal">
         <summary><span class="hidden-zh">为什么我的设备没有控制项？</span><span class="hidden-en">Why does a device have no controls?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。欢迎到 <a href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Report the model on <a href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。欢迎到 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Report the model on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
       <details class="reveal">
         <summary><span class="hidden-zh">软件收费吗？会收集数据吗？</span><span class="hidden-en">Is it free? Does it collect data?</span></summary>
@@ -454,9 +464,9 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     <div class="dl-card reveal">
       <h2><span class="hidden-zh">现在，把米家放上桌面</span><span class="hidden-en">Put Mi Home on your desktop</span></h2>
       <p class="s"><span class="hidden-zh">免费开源，扫码即用。</span><span class="hidden-en">Free, open source, ready after one scan.</span></p>
-      <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/mijia-widget/releases/latest" target="_blank" rel="noopener">
+      <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span class="hidden-zh">下载米家小组件 v0.1.0</span><span class="hidden-en">Download Mijia Widget v0.1.0</span>
+        <span class="hidden-zh">下载 OpenMijia v0.1.0</span><span class="hidden-en">Download OpenMijia v0.1.0</span>
       </a>
       <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 109 MB</div>
       <div class="dl-warn"><span class="hidden-zh">未购买代码签名证书，首次运行如出现 SmartScreen 提示，选择「更多信息」→「仍要运行」。</span><span class="hidden-en">The installer is unsigned. If SmartScreen appears, choose “More info” → “Run anyway”.</span></div>
@@ -470,24 +480,24 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     <div class="foot-grid">
       <div class="foot-brand">
         <img src="docs/favicon.svg" alt="">
-        <div class="nm"><span class="hidden-zh">米家小组件</span><span class="hidden-en">Mijia Widget</span></div>
+        <div class="nm"><span class="hidden-zh">OpenMijia</span><span class="hidden-en">OpenMijia</span></div>
         <p><span class="hidden-zh">Windows 桌面常驻米家设备小窗，个人开源作品。</span><span class="hidden-en">A persistent Mi Home widget for Windows. A personal open-source project.</span></p>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">产品</span><span class="hidden-en">Product</span></h4>
-        <a href="https://github.com/HZDavy/mijia-widget/releases" target="_blank" rel="noopener"><span class="hidden-zh">下载安装包</span><span class="hidden-en">Downloads</span></a>
-        <a href="https://github.com/HZDavy/mijia-widget/releases" target="_blank" rel="noopener"><span class="hidden-zh">更新日志</span><span class="hidden-en">Release notes</span></a>
+        <a href="https://github.com/HZDavy/OpenMijia/releases" target="_blank" rel="noopener"><span class="hidden-zh">下载安装包</span><span class="hidden-en">Downloads</span></a>
+        <a href="https://github.com/HZDavy/OpenMijia/releases" target="_blank" rel="noopener"><span class="hidden-zh">更新日志</span><span class="hidden-en">Release notes</span></a>
         <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">资源</span><span class="hidden-en">Resources</span></h4>
-        <a href="https://github.com/HZDavy/mijia-widget" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/HZDavy/mijia-widget/issues" target="_blank" rel="noopener">Issues</a>
-        <a href="https://github.com/HZDavy/mijia-widget/blob/main/README.md" target="_blank" rel="noopener">README</a>
+        <a href="https://github.com/HZDavy/OpenMijia" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/HZDavy/OpenMijia/blob/main/README.md" target="_blank" rel="noopener">README</a>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">协议与隐私</span><span class="hidden-en">Legal</span></h4>
-        <a href="https://github.com/HZDavy/mijia-widget/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a>
+        <a href="https://github.com/HZDavy/OpenMijia/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a>
         <a href="#faq"><span class="hidden-zh">隐私说明</span><span class="hidden-en">Privacy</span></a>
         <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
       </div>
@@ -509,8 +519,8 @@ function switchLang(lang){
   bs[0].classList.toggle('on',lang==='zh');
   bs[1].classList.toggle('on',lang==='en');
   document.title = lang==='en'
-    ? 'Mijia Widget · Your Mi Home, on your desktop'
-    : '米家小组件 · 米家设备，尽在桌面';
+    ? 'OpenMijia · Your Mi Home, on your desktop'
+    : 'OpenMijia · 米家设备，尽在桌面';
 }
 switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
 
