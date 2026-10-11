@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenMijia · 米家设备，尽在桌面</title>
-<meta name="description" content="OpenMijia：Windows 桌面常驻米家小窗，扫码登录米家账号，灯、风扇、空调、传感器实时状态卡片化展示与控制。免费开源。">
+<title>OpenMijia · 开源米家，多平台一致体验</title>
+<meta name="description" content="OpenMijia：开源米家客户端，多平台一致的米家设备体验。米家 App 扫码登录，灯、风扇、空调、传感器实时状态卡片化展示与控制。Windows 已发布，macOS、iOS、Android 规划中。免费开源。">
 <link rel="icon" href="docs/favicon.svg" type="image/svg+xml">
 <style>
 :root{
@@ -89,6 +89,18 @@ header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.92);bo
 .value svg{width:25px;height:25px;color:var(--green-deep);flex:none;margin-top:3px}
 .value h3{font-size:15.5px;font-weight:600;margin-bottom:4px}
 .value p{font-size:13px;color:var(--ink-3);line-height:1.55}
+
+/* ---------- platforms roadmap ---------- */
+.plats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.plat{background:var(--bg-soft);border:1px solid var(--line);border-radius:16px;padding:28px 26px;display:flex;flex-direction:column;gap:13px}
+.plat.on{background:var(--green-tint);border-color:#d2efe1}
+.plat .pic{width:42px;height:42px;border-radius:11px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.plat.on .pic{color:var(--green-deep)}
+.plat .pic svg{width:22px;height:22px}
+.plat h3{font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.plat p{font-size:13px;color:var(--ink-3);line-height:1.55}
+.tag{display:inline-block;font-size:11px;font-weight:500;line-height:1;padding:4px 9px;border-radius:20px;background:#e9e9e9;color:#8a8a8a;white-space:nowrap}
+.tag-on{background:#d6f3e6;color:var(--green-deep)}
 
 /* ---------- section heading ---------- */
 section{padding:96px 0}
@@ -188,6 +200,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .tile-tall .imgwrap{position:static;height:380px;margin-top:20px}
   .tile-tall .imgwrap img{border-radius:14px}
   .devs{grid-template-columns:1fr 1fr}
+  .plats{grid-template-columns:1fr 1fr}
   .steps{grid-template-columns:1fr;gap:40px}
   .foot-grid{grid-template-columns:1fr 1fr}
 }
@@ -217,6 +230,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     </a>
     <nav class="nav-menu">
       <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
+      <a href="#platforms"><span class="hidden-zh">多平台</span><span class="hidden-en">Platforms</span></a>
       <a href="#devices"><span class="hidden-zh">设备支持</span><span class="hidden-en">Devices</span></a>
       <a href="#start"><span class="hidden-zh">快速上手</span><span class="hidden-en">Get started</span></a>
       <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
@@ -239,14 +253,14 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <div class="hero" id="top">
   <div class="hero-in">
     <div>
-      <div class="eyebrow">OPENMIJIA · FOR WINDOWS</div>
+      <div class="eyebrow"><span class="hidden-zh">开源米家 · 多平台一致体验</span><span class="hidden-en">THE OPEN-SOURCE MI HOME</span></div>
       <h1>
-        <span class="hidden-zh">米家设备<br>尽在桌面</span>
-        <span class="hidden-en">Your Mi Home,<br>right on the desktop</span>
+        <span class="hidden-zh">你的米家<br>处处一致</span>
+        <span class="hidden-en">Your Mi Home,<br>consistent everywhere</span>
       </h1>
       <p class="sub">
-        <span class="hidden-zh">OpenMijia，一个常驻桌面的米家小组件。扫码登录后，灯、风扇、空调、传感器全部成为桌面卡片，状态实时同步，随手就能控制。</span>
-        <span class="hidden-en">A desktop widget for your Mi Home devices. Sign in with one QR scan — lights, fans, ACs and sensors become live cards you can control instantly.</span>
+        <span class="hidden-zh">OpenMijia 是开源的米家客户端。米家 App 扫码登录后，灯、风扇、空调与传感器在任何设备上都是同一套卡片、同一份实时状态。Windows 版现已可用，macOS、iOS、Android 即将到来。</span>
+        <span class="hidden-en">OpenMijia is an open-source Mi Home client. After one QR sign-in, lights, fans, ACs and sensors appear as the same live cards on every device. Windows is available now — macOS, iOS and Android are on the way.</span>
       </p>
       <div class="hero-acts">
         <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
@@ -257,9 +271,9 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         </a>
       </div>
       <div class="hero-meta">
-        <span class="hidden-zh"><b>v0.1.0</b> · Windows 10 / 11 · 64 位</span>
-        <span class="hidden-en"><b>v0.1.0</b> · Windows 10 / 11 · x64</span>
-        <span class="hidden-zh">免费开源 · AGPL-3.0</span><span class="hidden-en">Free &amp; open source</span>
+        <span class="hidden-zh"><b>Windows</b> 已发布 · macOS / iOS / Android 规划中</span>
+        <span class="hidden-en"><b>Windows</b> out now · macOS, iOS &amp; Android planned</span>
+        <span class="hidden-zh">免费开源 · AGPL-3.0</span><span class="hidden-en">Free &amp; open source · AGPL-3.0</span>
       </div>
     </div>
     <div class="hero-shot reveal">
@@ -302,12 +316,45 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   </div>
 </div>
 
+<!-- ================= PLATFORMS ================= -->
+<section id="platforms">
+  <div class="w">
+    <div class="sec-head reveal">
+      <div class="eyebrow">CROSS-PLATFORM ROADMAP</div>
+      <h2><span class="hidden-zh">多平台，一套体验</span><span class="hidden-en">One experience, every platform</span></h2>
+      <p><span class="hidden-zh">同一套账号、同一套卡片、同一份实时状态</span><span class="hidden-en">One account, one set of cards, one live state — everywhere</span></p>
+    </div>
+    <div class="plats reveal">
+      <div class="plat on">
+        <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l7.3-1v7.2H3V5.5zM11.4 4.3 21 3v8.7h-9.6V4.3zM3 12.3h7.3v7.2L3 18.5v-6.2zM11.4 12.3H21V21l-9.6-1.3v-7.4z"/></svg></div>
+        <h3>Windows <span class="tag tag-on"><span class="hidden-zh">已发布</span><span class="hidden-en">Available</span></span></h3>
+        <p><span class="hidden-zh">Windows 10 / 11 · v0.1.0，可直接下载安装</span><span class="hidden-en">v0.1.0 for Windows 10 / 11 — download it now</span></p>
+      </div>
+      <div class="plat">
+        <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.5c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.9-.9-3.1-.8-1.6 0-3 .9-3.9 2.4-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.4 1.2-.1 1.6-.8 3-.8s1.8.8 3.1.8c1.3 0 2.1-1.1 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.5-1-2.5-3.9zM14.2 5.9c.6-.8 1.1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 .1 2-.5 2.7-1.3z"/></svg></div>
+        <h3>macOS <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
+        <p><span class="hidden-zh">下一个目标平台，桌面体验对齐</span><span class="hidden-en">The next stop, with full desktop parity</span></p>
+      </div>
+      <div class="plat">
+        <div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><line x1="10.6" y1="5.2" x2="13.4" y2="5.2"/></svg></div>
+        <h3>iOS <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
+        <p><span class="hidden-zh">iPhone 与 iPad，同一套卡片交互</span><span class="hidden-en">iPhone &amp; iPad, the same card experience</span></p>
+      </div>
+      <div class="plat">
+        <div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 10.2v6.3A1.5 1.5 0 0 0 7 18h10a1.5 1.5 0 0 0 1.5-1.5v-6.3"/><path d="M5.5 10.2h13"/><path d="M8.6 10.2 7.2 7.4M15.4 10.2l1.4-2.8"/><path d="M9.2 6.2a5.6 5.6 0 0 1 5.6 0"/><line x1="9.2" y1="4.9" x2="8.4" y2="3.6"/><line x1="14.8" y1="4.9" x2="15.6" y2="3.6"/><line x1="9" y1="20.4" x2="9" y2="18"/><line x1="15" y1="20.4" x2="15" y2="18"/></svg></div>
+        <h3>Android <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
+        <p><span class="hidden-zh">手机与平板，复用同一设备核心</span><span class="hidden-en">Phones &amp; tablets, sharing one device core</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ================= BENTO FEATURES ================= -->
 <section id="features">
   <div class="w">
     <div class="sec-head reveal">
-      <h2><span class="hidden-zh">为桌面重新设计的米家体验</span><span class="hidden-en">Mi Home, reimagined for desktop</span></h2>
-      <p><span class="hidden-zh">大窗口看全局，小窗口看常用，怎么摆都顺手</span><span class="hidden-en">A full dashboard or a compact widget — arranged your way</span></p>
+      <h2><span class="hidden-zh">为每个屏幕打磨的米家体验</span><span class="hidden-en">Mi Home, crafted for every screen</span></h2>
+      <p><span class="hidden-zh">桌面版先行：大窗口看全局，小窗口看常用，怎么摆都顺手</span><span class="hidden-en">Starting on desktop: a full dashboard or a compact widget — arranged your way</span></p>
     </div>
 
     <div class="bento bento-row1">
@@ -455,8 +502,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <div class="faq-body"><span class="hidden-zh">项目依赖 GPL-3.0-or-later 的开源组件 <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>，作为衍生作品须以 GPL 兼容协议分发，因此本项目采用 AGPL-3.0-or-later，详见仓库 LICENSE。</span><span class="hidden-en">It builds on the GPL-3.0-or-later component <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>, so this derivative work ships under the compatible AGPL-3.0-or-later license. See LICENSE.</span></div>
       </details>
       <details class="reveal">
-        <summary><span class="hidden-zh">支持 macOS 或 Linux 吗？</span><span class="hidden-en">macOS or Linux?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">当前仅发布 Windows x64 安装包。应用基于 Electron 构建，跨平台移植在技术上可行，欢迎在 GitHub 参与贡献。</span><span class="hidden-en">Only the Windows x64 build is published today. The app is Electron-based, so ports are technically feasible — contributions welcome.</span></div>
+        <summary><span class="hidden-zh">会支持 macOS、iOS、Android 吗？</span><span class="hidden-en">Will it support macOS, iOS and Android?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMijia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>。Linux 暂未列入近期计划。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. Follow the progress on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>. Linux is not planned for the near term.</span></div>
       </details>
     </div>
   </div>
@@ -473,6 +520,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="hidden-zh">下载 OpenMijia v0.1.0</span><span class="hidden-en">Download OpenMijia v0.1.0</span>
       </a>
       <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 109 MB</div>
+      <div class="dl-meta" style="margin-top:8px"><span class="hidden-zh">macOS / iOS / Android 版本规划中，欢迎在 GitHub 关注进展</span><span class="hidden-en">macOS / iOS / Android on the roadmap — follow the progress on GitHub</span></div>
       <div class="dl-warn"><span class="hidden-zh">未购买代码签名证书，首次运行如出现 SmartScreen 提示，选择「更多信息」→「仍要运行」。</span><span class="hidden-en">The installer is unsigned. If SmartScreen appears, choose “More info” → “Run anyway”.</span></div>
     </div>
   </div>
@@ -485,7 +533,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="foot-brand">
         <img src="docs/favicon.svg" alt="">
         <div class="nm"><span class="hidden-zh">OpenMijia</span><span class="hidden-en">OpenMijia</span></div>
-        <p><span class="hidden-zh">Windows 桌面常驻米家设备小窗，个人开源作品。</span><span class="hidden-en">A persistent Mi Home widget for Windows. A personal open-source project.</span></p>
+        <p><span class="hidden-zh">开源米家客户端，多平台一致体验。Windows 已发布，macOS / iOS / Android 规划中。</span><span class="hidden-en">The open-source Mi Home client with one consistent experience. Windows available; macOS, iOS &amp; Android planned.</span></p>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">产品</span><span class="hidden-en">Product</span></h4>
@@ -523,8 +571,8 @@ function switchLang(lang){
   bs[0].classList.toggle('on',lang==='zh');
   bs[1].classList.toggle('on',lang==='en');
   document.title = lang==='en'
-    ? 'OpenMijia · Your Mi Home, on your desktop'
-    : 'OpenMijia · 米家设备，尽在桌面';
+    ? 'OpenMijia · The open-source Mi Home, everywhere'
+    : 'OpenMijia · 开源米家，多平台一致体验';
 }
 switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
 
