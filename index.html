@@ -117,18 +117,82 @@ section{padding:96px 0}
 .tile-tall{height:496px;background:var(--green-tint)}
 .tile-sm{height:316px;padding:42px 40px;display:flex;flex-direction:column}
 .tile-copy{position:relative;z-index:2}
-.tile-big .tile-copy{position:absolute;top:44px;left:48px;max-width:330px}
+.tile-big{display:flex;flex-direction:column;padding:0}
+.tile-big .tile-copy{position:static;padding:30px 34px 0;max-width:440px}
 .tile h3{font-size:23px;font-weight:700;letter-spacing:-.015em;margin-bottom:10px}
 .tile .d{font-size:14px;color:var(--ink-2);line-height:1.65}
-.tile-big .imgwrap img{width:100%;display:block}
-.tile-big .imgwrap{position:absolute;left:40px;right:40px;bottom:34px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e4;box-shadow:0 10px 36px rgba(0,0,0,.07);background:#171717}
+.tile-big .imgwrap{position:static;flex:1;display:flex;align-items:flex-end;margin:18px 20px 20px;min-height:0}
+.tile-big .imgwrap .win{width:100%;zoom:.93}
 .tile-tall .tile-copy{padding:40px 38px 0}
-.tile-tall .imgwrap{position:absolute;left:0;right:0;bottom:0;height:74%;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
-.tile-tall .imgwrap img{height:100%;border-radius:14px 14px 0 0;border:1px solid #d8efe5;border-bottom:0}
+.tile-tall .imgwrap{position:absolute;left:0;right:0;bottom:0;height:74%;display:flex;align-items:flex-start;justify-content:center;overflow:hidden}
+.tile-tall .imgwrap .win-narrow{zoom:.78}
 .tile-sm .ic{width:46px;height:46px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--green-deep);margin-bottom:auto}
 .tile-sm .ic svg{width:23px;height:23px}
 .tile-sm h3{font-size:19px;margin:20px 0 8px}
 .tile-sm .d{font-size:13.5px}
+
+/* ---------- live app mock（真实 HTML/CSS 复刻应用界面） ---------- */
+.win{background:#171717;border-radius:12px;overflow:hidden;color:#ececec;font-size:13px;font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;pointer-events:none;user-select:none}
+.win-bar{display:flex;align-items:center;gap:10px;padding:13px 12px 10px 15px}
+.win-logo{flex:none;width:22px;height:22px;display:grid;place-items:center;color:#fff}
+.win-logo svg{width:20px;height:20px}
+.win-tt{flex:1;min-width:0}
+.win-tt b{display:block;font-size:14px;font-weight:600;letter-spacing:.4px;line-height:1.3}
+.win-tt i{display:block;font-style:normal;font-size:11px;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.win-burger{flex:none;width:24px;height:24px;display:grid;place-items:center;color:#9a9a9a}
+.win-burger svg{width:16px;height:16px}
+.win-grid{display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:8px;padding:2px 12px 10px}
+.win[data-cols="1"] .win-grid{grid-template-columns:1fr}
+.win-narrow{width:300px;max-width:100%;margin:0 auto;border:1px solid #333;box-shadow:0 18px 44px rgba(0,0,0,.18)}
+.mcard{padding:12px;border-radius:12px;border:1px solid #333;background:#212121}
+.m-light{--c:#ffc24b;--cs:rgba(255,194,75,.16)}
+.m-fan{--c:#4bd0a0;--cs:rgba(75,208,160,.16)}
+.m-sensor{--c:#38bdf8;--cs:rgba(56,189,248,.16)}
+.mc-head{display:flex;align-items:center;gap:8px}
+.mc-ic{flex:none;width:26px;height:26px;border-radius:8px;background:var(--cs);color:var(--c);display:grid;place-items:center}
+.mcard.active .mc-ic{background:var(--c);color:#14161c}
+.mc-ic svg{width:15px;height:15px}
+.mc-name{flex:1;min-width:0}
+.mc-name b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-name i{display:block;font-style:normal;font-size:10.5px;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-sw{flex:none;position:relative;width:38px;height:22px;border-radius:999px;background:#3a3a3a}
+.m-sw.on{background:var(--c)}
+.m-sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.m-sw.on::after{transform:translateX(16px)}
+.mc-body{display:flex;align-items:flex-start;gap:12px;margin-top:10px}
+.m-hero{flex:none;display:flex;flex-direction:column;gap:4px;min-width:0}
+.m-hero>i{font-style:normal;font-size:10.5px;color:#9a9a9a}
+.m-hero>b{font-size:26px;font-weight:300;letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
+.m-hero>b u{text-decoration:none;font-size:11px;color:#9a9a9a;margin-left:3px}
+.m-meta{flex:1;display:flex;flex-direction:column;gap:4px;padding-top:1px;min-width:0}
+.m-meta span{display:flex;font-size:11px;color:#9a9a9a;min-height:15px;white-space:nowrap}
+.m-meta i{font-style:normal}
+.m-meta b{margin-left:auto;font-weight:500;color:#d6d6d6;font-variant-numeric:tabular-nums}
+.m-readouts{flex:1;display:flex;gap:20px}
+.m-readouts .ro{display:flex;flex-direction:column;gap:4px}
+.m-sep{height:1px;margin:11px 0;background:#333}
+.m-slider{display:flex;align-items:center;gap:9px;margin-top:11px}
+.m-slider:first-of-type{margin-top:11px}
+.ms-ic{flex:none;display:grid;place-items:center;color:var(--c)}
+.ms-ic svg{width:13px;height:13px}
+.ms-track{flex:1;position:relative;height:5px;border-radius:999px;background:#3a3a3a}
+.ms-track::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--pct,0%);border-radius:999px;background:var(--c)}
+.ms-track::after{content:"";position:absolute;top:50%;left:var(--pct,0%);transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--c)}
+.ms-track.ct{background:linear-gradient(to right,#ecdfb2 0%,#c3d6d6 48%,#9fc6dd 100%)}
+.ms-track.ct::before{display:none}
+.ms-track.ct::after{border-color:#8fa9b8}
+.m-slider em{flex:none;width:36px;text-align:right;font-style:normal;font-size:11px;color:#9a9a9a;font-variant-numeric:tabular-nums}
+.m-ctrl{display:flex;align-items:center;gap:8px;margin-top:10px}
+.m-ctrl>i{flex:none;font-style:normal;font-size:10.5px;color:#9a9a9a;white-space:nowrap}
+.m-ctrl .cf{margin-left:auto;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:7px}
+.m-seg{display:inline-flex;padding:2px;gap:2px;border-radius:8px;background:#3a3a3a}
+.m-seg span{padding:3px 9px;border-radius:6px;font-size:10.5px;line-height:1.4;color:#9a9a9a;white-space:nowrap}
+.m-seg span.on{background:var(--c);color:#14161c;font-weight:600}
+.m-chip{border:1px solid #333;padding:3px 11px;border-radius:999px;color:#9a9a9a;font-size:10.5px;white-space:nowrap}
+.m-chip.on{background:var(--cs);border-color:var(--c);color:var(--c);font-weight:600}
+.win-status{display:flex;align-items:center;gap:6px;padding:7px 15px 10px;border-top:1px solid #333;font-size:10.5px;color:#9a9a9a}
+.win-status .d-ok{width:6px;height:6px;border-radius:50%;background:#46d18a}
+.win-status .sp{flex:1}
 
 /* ---------- dark device section ---------- */
 .dark{background:var(--dark);color:#fff}
@@ -196,9 +260,9 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .value{border-top:1px solid var(--line)}
   .values-in .value:nth-child(-n+2){border-top:0}
   .bento-row1,.bento-row2{grid-template-columns:1fr}
-  .tile-big,.tile-tall{height:auto;min-height:440px}
-  .tile-tall .imgwrap{position:static;height:380px;margin-top:20px}
-  .tile-tall .imgwrap img{border-radius:14px}
+  .tile-big,.tile-tall{height:auto;min-height:0}
+  .tile-big .imgwrap{margin:22px 20px 20px}
+  .tile-tall .imgwrap{position:static;height:400px;margin-top:24px}
   .devs{grid-template-columns:1fr 1fr}
   .plats{grid-template-columns:1fr 1fr}
   .steps{grid-template-columns:1fr;gap:40px}
@@ -216,6 +280,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .hero-acts .btn-lg{padding:12px 26px;font-size:15px}
   section{padding:64px 0}
   .sec-head{margin-bottom:36px}
+  .win-grid{grid-template-columns:1fr !important}
+  .hero-shot .win-grid{max-height:420px;overflow:hidden}
 }
 </style>
 </head>
@@ -277,7 +343,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       </div>
     </div>
     <div class="hero-shot reveal">
-      <img src="screenshots/app.png" alt="米家小组件主界面：五列瀑布流设备卡片">
+      <div class="win" data-cols="3" data-mock></div>
     </div>
   </div>
 </div>
@@ -363,14 +429,14 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
           <h3><span class="hidden-zh">瀑布流卡片布局</span><span class="hidden-en">Masonry card layout</span></h3>
           <p class="d"><span class="hidden-zh">展开一张卡片，只顺延它所在的列；其它设备纹丝不动。列数随窗口宽度自动增减。</span><span class="hidden-en">Expanding a card extends only its own column. Columns adapt automatically to window width.</span></p>
         </div>
-        <div class="imgwrap"><img src="screenshots/app.png" alt="瀑布流设备卡片布局" loading="lazy"></div>
+        <div class="imgwrap"><div class="win" data-cols="3" data-mock></div></div>
       </div>
       <div class="tile tile-tall reveal">
         <div class="tile-copy">
           <h3><span class="hidden-zh">常驻桌面的小窗</span><span class="hidden-en">A widget that stays</span></h3>
           <p class="d"><span class="hidden-zh">置顶显示在桌面一角，自动记住位置与大小，抬眼可见、随手可控。</span><span class="hidden-en">Pinned to a corner, always on top. Position and size are remembered for you.</span></p>
         </div>
-        <div class="imgwrap"><img src="screenshots/phone.png" alt="单列小窗模式" loading="lazy"></div>
+        <div class="imgwrap"><div class="win win-narrow" data-cols="1" data-mock></div></div>
       </div>
     </div>
 
@@ -562,6 +628,70 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   </div>
 </footer>
 
+<!-- 应用界面（真实 HTML/CSS 复刻，注入到所有 [data-mock] 容器） -->
+<template id="t-win">
+  <div class="win-bar">
+    <span class="win-logo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><path d="M14 32h36M32 14v36M19.3 19.3l25.4 25.4M44.7 19.3 19.3 44.7"/></svg></span>
+    <span class="win-tt"><b>米家</b><i>3 个设备 · 全部在线</i></span>
+    <span class="win-burger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+  </div>
+  <div class="win-grid">
+    <div class="mcard m-light active">
+      <div class="mc-head">
+        <span class="mc-ic"><svg viewBox="0 0 24 24"><path d="M12 2.4a7.1 7.1 0 0 0-4.1 12.9v1.6h8.2v-1.6A7.1 7.1 0 0 0 12 2.4Zm-2.6 16.7h5.2v1.1a2.1 2.1 0 0 1-2.1 2.1h-1a2.1 2.1 0 0 1-2.1-2.1v-1.1Z" fill="currentColor"/></svg></span>
+        <span class="mc-name"><b>客厅吸顶灯</b><i>yeelink.light.ceil26</i></span>
+        <span class="m-sw on"></span>
+      </div>
+      <div class="mc-body">
+        <span class="m-hero"><i>亮度</i><b>72<u>%</u></b></span>
+        <span class="m-meta"><span><i>状态</i><b>已开启</b></span></span>
+      </div>
+      <div class="m-sep"></div>
+      <div class="m-slider">
+        <span class="ms-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <i class="ms-track" style="--pct:72%"></i><em>72%</em>
+      </div>
+      <div class="m-slider">
+        <span class="ms-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.6V5a2 2 0 1 1 4 0v8.6a4 4 0 1 1-4 0Z"/><path d="M12 9v5"/></svg></span>
+        <i class="ms-track ct" style="--pct:50%"></i><em>4000K</em>
+      </div>
+    </div>
+    <div class="mcard m-fan active">
+      <div class="mc-head">
+        <span class="mc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z"/></svg></span>
+        <span class="mc-name"><b>循环扇</b><i>zhimi.fan.fa1</i></span>
+        <span class="m-sw on"></span>
+      </div>
+      <div class="mc-body">
+        <span class="m-hero"><i>风速</i><b>3<u>档</u></b></span>
+        <span class="m-meta"><span><i>状态</i><b>直吹风</b></span></span>
+      </div>
+      <div class="m-slider">
+        <span class="ms-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z"/></svg></span>
+        <i class="ms-track" style="--pct:60%"></i><em>3 档</em>
+      </div>
+      <div class="m-sep"></div>
+      <div class="m-ctrl"><i>模式</i><span class="cf"><span class="m-seg"><span>自然风</span><span class="on">直吹风</span></span></span></div>
+      <div class="m-ctrl"><i>左右扫风</i><span class="cf"><span class="m-chip on">开</span></span></div>
+      <div class="m-ctrl"><i>上下扫风</i><span class="cf"><span class="m-chip">关</span></span></div>
+    </div>
+    <div class="mcard m-sensor">
+      <div class="mc-head">
+        <span class="mc-ic"><svg viewBox="0 0 24 24"><path d="M12 2.6a2.9 2.9 0 0 0-2.9 2.9v6.9a5 5 0 1 0 5.8 0V5.5A2.9 2.9 0 0 0 12 2.6Zm1.2 4.9v6.6l.5.35a3.1 3.1 0 1 1-3.4 0l.5-.35V7.5a1.2 1.2 0 0 1 2.4 0Z" fill="currentColor"/></svg></span>
+        <span class="mc-name"><b>温湿度计</b><i>miaomiaoce.sensor_ht</i></span>
+      </div>
+      <div class="mc-body" style="align-items:flex-end">
+        <span class="m-readouts">
+          <span class="ro"><i style="font-style:normal;font-size:10.5px;color:#9a9a9a">温度</i><span class="m-hero" style="gap:0"><b>25.8<u>°C</u></b></span></span>
+          <span class="ro"><i style="font-style:normal;font-size:10.5px;color:#9a9a9a">湿度</i><span class="m-hero" style="gap:0"><b>56<u>%</u></b></span></span>
+        </span>
+      </div>
+      <div class="m-meta" style="margin-top:10px"><span><i>电量</i><b>88%</b></span></div>
+    </div>
+  </div>
+  <div class="win-status"><i class="d-ok"></i>已连接<span class="sp"></span><span>刚刚同步</span></div>
+</template>
+
 <script>
 function switchLang(lang){
   document.body.classList.toggle('lang-en', lang==='en');
@@ -575,6 +705,15 @@ function switchLang(lang){
     : 'OpenMijia · 开源米家，多平台一致体验';
 }
 switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
+
+// 把应用界面模板注入到所有展示位（hero / 瀑布流大卡 / 常驻小窗）
+(function(){
+  var tpl = document.getElementById('t-win');
+  if(!tpl) return;
+  document.querySelectorAll('[data-mock]').forEach(function(el){
+    el.appendChild(tpl.content.cloneNode(true));
+  });
+})();
 
 var ob = new IntersectionObserver(function(entries){
   entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); ob.unobserve(e.target); } });
