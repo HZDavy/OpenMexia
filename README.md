@@ -2,6 +2,8 @@
 
 Windows 桌面版米家小组件：一个常驻桌面的小窗，实时展示并控制你的米家设备。基于 Electron 构建。
 
+官网：https://hzdavy.github.io/mijia-widget/ （站点源码在 `gh-pages` 分支）
+
 ## 功能
 
 - **米家账号扫码登录**，设备列表与状态自动同步
