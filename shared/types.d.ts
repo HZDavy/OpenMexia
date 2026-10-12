@@ -196,6 +196,9 @@ export type FullscreenMode = 'normal' | 'cover' | null;
 /** 主题 */
 export type Theme = 'light' | 'dark';
 
+/** 窗口模式：'window' 正常窗口（任务栏可见、无托盘）；'widget' 小组件（工具窗口 + 托盘） */
+export type WindowMode = 'window' | 'widget';
+
 /** widget:init 的返回值 */
 export interface InitPayload {
   devices: Device[];
@@ -206,6 +209,7 @@ export interface InitPayload {
   hasCustomSize: boolean;
   fullscreen: FullscreenMode;
   theme: Theme;
+  windowMode: WindowMode;
   version: string;
 }
 

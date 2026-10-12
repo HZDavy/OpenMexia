@@ -178,6 +178,8 @@ html, body {
   transition: background 0.13s, color 0.13s;
 }
 .menu-item:hover { background: var(--surface-hover); }
+/* display:flex 会盖掉 hidden 属性的 UA 样式（窗口模式隐藏「固定到任务栏/收起到托盘」依赖它），需显式补回 */
+.menu-item[hidden] { display: none; }
 .menu-item.danger { color: #ff8a8a; }
 .menu-item.danger:hover { background: rgba(255, 86, 86, 0.16); }
 
@@ -376,13 +378,11 @@ html, body {
 
 /* 分组模式：外层不再是网格，改为「房间头 + 瀑布流」纵向堆叠 */
 .devices.grouped { display: block; }
-/* 分组模式下禁用拖动排序（卡片归属由房间决定） */
-.devices.grouped .drag-handle { display: none; }
 
 .room { margin: 0 0 6px; }
 .room:last-child { margin-bottom: 0; }
 
-/* 房间头：横向占满整行 */
+/* 房间头：横向占满整行（名称 + 设备数 + 右侧点阵把手） */
 .room-head {
   display: flex;
   align-items: center;
@@ -399,23 +399,48 @@ html, body {
 }
 .room-head:hover { background: var(--surface-hover); }
 
-/* 单书名号（chevron）：展开态开口向下，收折态旋转 180° 开口向上 */
-.room-chevron {
+/* 房间名：不再撑满，设备数紧随其后 */
+.room-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-count { flex: 0 0 auto; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+
+/* 点阵把手：拖它可整体调整房间顺序 */
+.room-grip {
   flex: 0 0 auto;
+  margin-left: auto;
   display: grid;
   place-items: center;
-  width: 15px;
+  width: 20px;
+  height: 22px;
+  border-radius: 5px;
   color: var(--muted);
-  transition: transform 0.18s ease;
+  opacity: 0.45;
+  cursor: grab;
+  touch-action: none;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
-.room-chevron svg { width: 14px; height: 14px; display: block; }
-.room.room-collapsed .room-chevron { transform: rotate(180deg); }
+.room-grip svg { width: 16px; height: 16px; display: block; }
+.room-head:hover .room-grip { opacity: 0.9; }
+.room-grip:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.room-grip:active { cursor: grabbing; }
 
-.room-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.room-count { flex: 0 0 auto; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+/* 房间体：收折动画由 JS 驱动 height / margin-top 与卡片、列表的 transform，
+   这里只定义静止态。用显式高度（而非 0fr）避免 Chromium 残留一线重绘。 */
+.room-body { margin-top: 6px; }
+.room.room-collapsed .room-body { margin-top: 0; }
+/* 收折静止态：高度归零并彻底隐藏（visibility 一并消除残留的一线） */
+.room.room-collapsed .room-body:not(.animating) {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+/* 动画进行中裁剪溢出内容，让叠好的牌堆「扎进」表头而不外溢 */
+.room-body.animating { overflow: hidden; }
 
 /* 每个房间各自一个独立瀑布流容器：沿用 #devices 的网格规则 */
 .room-list {
+  /* 作为定位基准，让房间内的拖动排序坐标以自身为原点 */
+  position: relative;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 280px), 100%), 1fr));
   grid-auto-rows: 1px;
@@ -425,7 +450,21 @@ html, body {
   row-gap: 0;
 }
 .room-list.one-col { grid-auto-rows: max-content; row-gap: 8px; }
-.room.room-collapsed .room-list { display: none; }
+
+/* 拖动中的房间：浮起，跟手移位 */
+.room.dragging-room {
+  background: transparent;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  cursor: grabbing;
+}
+.room.dragging-room .room-head { background: var(--surface-hover); }
+/* 拖动时撑住原位置的等高虚线占位 */
+.room-drag-placeholder {
+  border-radius: 10px;
+  border: 1px dashed #3d3d3d;
+  background: rgba(255, 255, 255, 0.03);
+}
 
 /* 按设备类型分色：--c 主色，--c-soft 浅色底 */
 .card[data-type="sensor"] { --c: #38bdf8; --c-soft: rgba(56, 189, 248, 0.16); }
@@ -445,7 +484,8 @@ html, body {
   background: var(--surface);
   /* min-height 参与过渡：多列等高时统一高度的变化（如隐藏最高卡片）会平滑回缩，
      而不是硬跳；配合 .card-extra 的 max-height 过渡，收折/展开整体连续。 */
-  transition: background 0.15s, border-color 0.15s, transform 0.15s, min-height 0.28s ease;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s,
+    min-height 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .card:hover { background: var(--surface-hover); border-color: #3d3d3d; }
 .card.offline { opacity: 0.55; }
@@ -453,8 +493,10 @@ html, body {
 .card-extra {
   overflow: hidden;
   max-height: 800px;
-  transition: max-height 0.28s ease, opacity 0.22s ease,
-    margin 0.28s ease, padding 0.28s ease;
+  transition: max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.26s ease,
+    margin 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .card.collapsed .card-extra {
   max-height: 0;
@@ -465,13 +507,12 @@ html, body {
   padding-bottom: 0;
   pointer-events: none;
 }
-.card.collapsed .card-body { margin-top: 8px; }
+/* 卡片固定信息（卡头 + 正文）在收折 / 展开两态保持同一顶距，展开时不下移、上部固定 */
 /* 测量收折态高度：移除可收折区（display:none 不计入布局且无过渡）。
    只作用于「可收折」卡片 —— 不可收折卡片没有收折态，按其自然高度参与对齐即可。
    注意：.measuring 只加在「离屏克隆」上（见 .measure-host），绝不动活卡片的 display，
    否则 display 切换会重置 CSS transition，掐断收折/展开动画。 */
 .card.measuring:not(.no-collapse) .card-extra { display: none; }
-.card.measuring:not(.no-collapse) .card-body { margin-top: 8px; }
 /* 离屏测量宿主：克隆卡片放这里量高（visibility:hidden 仍参与布局且能测量） */
 .measure-host {
   position: fixed;
@@ -1058,8 +1099,8 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 /* ---------------- 关于 面板 ---------------- */
 
 .about-card {
-  max-width: 300px;
-  padding: 16px 16px 14px;
+  max-width: 320px;
+  padding: 22px 22px 18px;
   text-align: center;
 }
 
@@ -1067,7 +1108,7 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .about-badge {
   width: 118px;
   height: 118px;
-  margin: 10px auto 0;
+  margin: 16px auto 0;
   perspective: 720px;
 }
 .about-badge-3d {
@@ -1082,6 +1123,8 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
   -webkit-app-region: no-drag;
 }
 .about-badge-3d.dragging { transition: none; cursor: grabbing; }
+/* 悬停倾斜跟随：短过渡让倾斜平滑追踪鼠标（按下拖动 / 单击翻转时移除该类） */
+.about-badge-3d.hovering { transition: transform 0.12s ease-out; }
 /* 面内的装饰不拦截指针，拖动统一交给容器处理 */
 .about-badge-3d * { pointer-events: none; }
 
@@ -1145,8 +1188,9 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
   filter: drop-shadow(0 1px 1px rgba(0, 30, 20, 0.45));
 }
 .badge-back .badge-mark {
-  /* 银色面上的白色米字做出浮雕感：下方深影 + 上方亮边 */
-  filter: drop-shadow(0 1.2px 1.6px rgba(30, 38, 48, 0.6)) drop-shadow(0 -0.6px 0 rgba(255, 255, 255, 0.85));
+  /* 灰色版画做「凹进去」的刻痕感：与浮雕相反，下方亮边 + 上方暗边 */
+  object-fit: contain;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.65)) drop-shadow(0 -1px 1px rgba(30, 38, 48, 0.4));
 }
 
 /* 随旋转移动的徽章高光（--lx/--ly 由 app.js 写入），制造 3D 反光 */
@@ -1205,13 +1249,13 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 
 .about-hint {
-  margin-top: 10px;
+  margin-top: 13px;
   font-size: 11px;
   color: var(--muted);
 }
 
 .about-name {
-  margin-top: 12px;
+  margin-top: 18px;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -1220,7 +1264,14 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .about-app { font-size: 14px; font-weight: 600; letter-spacing: 0.3px; }
 .about-ver { font-size: 11.5px; color: var(--muted); }
 
-.about-author { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.about-desc {
+  margin-top: 10px;
+  font-size: 11px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+.about-author { margin-top: 14px; font-size: 12px; color: var(--muted); }
 .about-link {
   color: var(--accent-2);
   text-decoration: none;
@@ -1232,12 +1283,12 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .about-actions {
   display: flex;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 18px;
 }
 .about-actions .pin-btn { flex: 1; min-width: 0; }
 
 .about-msg {
-  margin-top: 10px;
+  margin-top: 12px;
   padding: 7px 10px;
   border-radius: 8px;
   font-size: 11.5px;

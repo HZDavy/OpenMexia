@@ -41,9 +41,6 @@ const EYE_ICON =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
 const COLLAPSE_ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9.5 12 4.5l5 5"/><path d="M7 14.5 12 19.5l5-5"/></svg>';
-// 房间收折头部的单书名号（展开态开口向下 ∧，收折态由 CSS 旋转 180° 变成开口向上 ∨）
-const ROOM_CHEVRON_ICON =
-  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14.5 12 9.5l5 5"/></svg>';
 
 const listEl = document.getElementById('devices');
 const subtitleEl = document.getElementById('subtitle');
@@ -63,6 +60,8 @@ let mockMode = false;   // 未登录、无真实设备时：显示欢迎引导�
 let groupByRoom = readGroupByRoom();     // 是否按房间分类显示
 let showRoomName = readShowRoomName();   // 是否在设备代号前显示「房间名 | 」
 let collapsedRooms = readCollapsedRooms(); // 被收折的房间 key
+let roomOrder = readRoomOrder();           // 持久化的房间顺序（房间 key 数组）
+let roomDrag = null;                       // 当前房间拖动状态
 const roomSections = new Map(); // 房间 key -> { section, head, nameEl, countEl, list }
 
 const h = (tag, cls, html) => {
@@ -904,9 +903,17 @@ function readOrder() {
 }
 
 function persistOrder() {
-  order = [...listEl.children]
-    .filter((el) => el.classList.contains('card'))
-    .map((el) => el.dataset.id);
+  // 扁平模式只有一个容器；按房间分类时依次取各房间的瀑布流容器（文档序 = 房间顺序），
+  // 拼成一份全局顺序：房间内顺序即用户拖动结果，渲染时 sortByOrder 再按此还原。
+  const containers = groupByRoom
+    ? [...listEl.querySelectorAll('.room-list')]
+    : [listEl];
+  order = [];
+  for (const c of containers) {
+    for (const el of c.children) {
+      if (el.classList && el.classList.contains('card')) order.push(el.dataset.id);
+    }
+  }
   try { localStorage.setItem('mijia.order', JSON.stringify(order)); } catch {}
 }
 
@@ -918,6 +925,29 @@ function sortByOrder(devices) {
     const rb = rank.has(b.id) ? rank.get(b.id) : Infinity;
     return ra - rb;
   });
+}
+
+/* ---------------- 房间顺序持久化 ---------------- */
+
+function readRoomOrder() {
+  try {
+    const arr = JSON.parse(localStorage.getItem('mijia.roomOrder') || '[]');
+    return Array.isArray(arr) ? arr.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRoomOrder() {
+  try { localStorage.setItem('mijia.roomOrder', JSON.stringify(roomOrder)); } catch {}
+}
+
+// 按当前 DOM 顺序（即用户拖动后的顺序）记录房间 key
+function persistRoomOrder() {
+  roomOrder = [...listEl.children]
+    .filter((el) => el.classList && el.classList.contains('room'))
+    .map((el) => el.dataset.roomId);
+  writeRoomOrder();
 }
 
 /* ---------------- 隐藏设备持久化 ---------------- */
@@ -1012,13 +1042,16 @@ const DRAG_EVAL_EPS = 3;          // px
 
 listEl.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
-  // 按房间分类显示时禁用拖动排序（卡片归属由房间决定，顺序仅在同一房间内有效）
-  if (groupByRoom) return;
+  if (roomDrag) return;                       // 房间拖动进行中不发起设备拖动
   const handle = e.target.closest('.drag-handle');
   if (!handle) return;
   const card = handle.closest('.card');
   if (!card) return;
+  // 容器：扁平模式是 #devices；按房间分类时是卡片所在的 .room-list，
+  // 拖动因此只在房间内部生效（卡片归属由房间决定，不能跨房间拖）
+  const container = card.closest('.room-list') || listEl;
   drag = {
+    container,
     el: card,
     pointerId: e.pointerId,
     startX: e.clientX,
@@ -1044,14 +1077,15 @@ listEl.addEventListener('pointerdown', (e) => {
 
 function startDrag() {
   const el = drag.el;
+  const container = drag.container;
   drag.moved = true;
   // 记录脱离文档流前的几何信息：用视觉矩形（getBoundingClientRect）而不是 offsetLeft/Top。
   // 网格列宽/间隙是亚像素分配，offset 系列与视觉矩形能差 1~2px；若以 offset 为基准，
   // 切到绝对定位的一瞬间卡片会平移这一点点，抓取点也就随之偏离指针。
-  const listRect = listEl.getBoundingClientRect();
+  const listRect = container.getBoundingClientRect();
   const rect = el.getBoundingClientRect();
-  drag.baseLeft = rect.left - listRect.left + listEl.scrollLeft;
-  drag.baseTop = rect.top - listRect.top + listEl.scrollTop;
+  drag.baseLeft = rect.left - listRect.left + container.scrollLeft;
+  drag.baseTop = rect.top - listRect.top + container.scrollTop;
   drag.width = rect.width;
   drag.height = rect.height;
   // 指针在卡片内的视觉偏移（放大前），跟手时按 DRAG_SCALE 换算
@@ -1064,7 +1098,7 @@ function startDrag() {
   // 指针停在边缘/缝隙（不在任何卡片内、只能取最近卡片）时就会每帧来回翻转，表现为闪烁。
   // 快照冻结了「插入占位符之前」的布局，判定与占位符自身的影响解耦，从此稳定。
   drag.boxes = new Map();
-  for (const c of listEl.children) {
+  for (const c of container.children) {
     if (c.classList && c.classList.contains('card') && c !== el) {
       drag.boxes.set(c, {
         l: c.offsetLeft,
@@ -1080,7 +1114,7 @@ function startDrag() {
   ph.style.height = drag.height + 'px';
   // 占位符沿用卡片原来的跨度，保证脱离文档流时不引起其它卡片跳动
   if (el.style.gridRowEnd) ph.style.gridRowEnd = el.style.gridRowEnd;
-  listEl.insertBefore(ph, el);
+  container.insertBefore(ph, el);
   drag.ph = ph;
 
   el.classList.add('dragging');
@@ -1107,9 +1141,10 @@ function startDrag() {
 
 // 拖拽跟手定位：按当前指针位置（视口坐标）重算位移，并处理二维让位
 function layoutDrag(cursorX, cursorY) {
-  const rect = listEl.getBoundingClientRect();
-  const cx = cursorX - rect.left + listEl.scrollLeft; // 指针在列表内容坐标系中的位置
-  const cy = cursorY - rect.top + listEl.scrollTop;
+  const container = drag.container;
+  const rect = container.getBoundingClientRect();
+  const cx = cursorX - rect.left + container.scrollLeft; // 指针在容器内容坐标系中的位置
+  const cy = cursorY - rect.top + container.scrollTop;
   // transform-origin 为左上角(0 0)，放大后卡片上任意点 p 的落位 = 原点 + DRAG_SCALE*p + 位移。
   // 要让「按下时抓住的那一点」(grabX,grabY) 始终停在指针下，位移应为：
   //   dx = cx - baseLeft - DRAG_SCALE*grabX（y 同理）
@@ -1126,7 +1161,7 @@ function layoutDrag(cursorX, cursorY) {
 
   // 落点判定：优先取包含指针的网格单元；指针不在任何单元内（缝隙 / 边缘）时，
   // 默认沿用上一次的目标，只有当另一张卡片明显更近（超出死区）才切换 —— 迟滞抑制边界抖动。
-  const cards = [...listEl.children].filter(
+  const cards = [...container.children].filter(
     (c) => c.classList && c.classList.contains('card') && c !== drag.el
   );
   // 判定一律走「起拖时的几何快照」（见 startDrag）：快照不受占位符插入影响，
@@ -1193,19 +1228,19 @@ function layoutDrag(cursorX, cursorY) {
   // 若每帧都重排 + FLIP，会反复读到未结束的过渡位置并叠加位移，造成抖动/不跟手。
   const alreadyPlaced = target
     ? (insertAfter ? target.nextElementSibling === drag.ph : drag.ph.nextElementSibling === target)
-    : listEl.lastElementChild === drag.ph;
+    : container.lastElementChild === drag.ph;
   if (alreadyPlaced) return;
 
   // 记录让位前位置：用 offset 快照（不含 transform），FLIP 差值才稳定不累积
   const before = new Map(cards.map((c) => [c, [c.offsetLeft, c.offsetTop]]));
   if (target) {
-    listEl.insertBefore(drag.ph, insertAfter ? target.nextElementSibling : target);
+    container.insertBefore(drag.ph, insertAfter ? target.nextElementSibling : target);
   } else {
-    listEl.append(drag.ph);
+    container.append(drag.ph);
   }
 
   // 占位符落位后重新分配列，其余卡片随之让位（列锁定下也按新顺序重排）
-  assignColumns();
+  assignColumns(container);
   cards.forEach((c) => {
     const b = before.get(c);
     const mdx = b[0] - c.offsetLeft;
@@ -1249,16 +1284,16 @@ function autoScrollTick() {
 // 结束拖动：把被拖卡片插回占位处，并用二维 FLIP 平滑落回网格单元
 function endDrag() {
   if (!drag) return;
-  const { el, ph, moved } = drag;
+  const { el, ph, moved, container } = drag;
   if (autoScrollRAF) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
   if (moved && ph) {
     const from = el.getBoundingClientRect();
     el.classList.remove('dragging');
-    listEl.insertBefore(el, ph);
+    container.insertBefore(el, ph);
     ph.remove();
 
     // 复位其它卡片的临时让位样式
-    for (const c of listEl.children) {
+    for (const c of container.children) {
       if (c !== el && c.classList && c.classList.contains('card')) {
         c.style.transition = '';
         c.style.transform = '';
@@ -1267,9 +1302,9 @@ function endDrag() {
 
     // 清除绝对定位等内联样式，让卡片重新受网格排布，再 FLIP 到最终位置
     el.style.cssText = '';
-    assignColumns();
-    equalizeCollapsed();
-    layoutSpans();
+    assignColumns(container);
+    equalizeCollapsed(container);
+    layoutSpans(container);
     trackSpans();
     const to = el.getBoundingClientRect();
     const fx = from.left - to.left;
@@ -1290,9 +1325,9 @@ function endDrag() {
     el.classList.remove('dragging');
     el.style.cssText = '';
     // 未真正拖动也会清空内联样式，这里把列/跨度补回来，避免卡片被自动放置到第一列
-    assignColumns();
-    equalizeCollapsed();
-    layoutSpans();
+    assignColumns(container);
+    equalizeCollapsed(container);
+    layoutSpans(container);
     trackSpans();
   }
   drag = null;
@@ -1320,6 +1355,235 @@ window.addEventListener('pointercancel', () => {
 // 窗口失焦（如拖到窗外松手）时收尾，避免拖动状态残留
 window.addEventListener('blur', () => {
   if (drag) endDrag();
+  if (roomDrag) endRoomDrag();
+});
+
+/* ---------------- 房间整体拖动排序 ---------------- */
+
+// 仅按房间头上的点阵把手才进入拖动。整个 .room（头 + 卡片区）绝对定位跟手，
+// 原位置以等高占位撑住；上下移动到其它房间中心线附近时占位让位，其它房间用 FLIP 平滑过渡。
+const ROOM_DRAG_THRESHOLD = 4;
+const ROOM_DRAG_DEADZONE = 18;  // 指针越过目标中心线这么多才改变「插前 / 插后」，抑制边界抖动
+const ROOM_DRAG_EPS = 3;        // 指针位移阈值，避免每帧重算重排
+let roomAutoScrollRAF = null;
+
+listEl.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  if (drag) return;                           // 设备拖动进行中不发起房间拖动
+  const grip = e.target.closest('.room-grip');
+  if (!grip) return;
+  const section = grip.closest('.room');
+  if (!section) return;
+  roomDrag = {
+    el: section,
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    grabY: 0,
+    moved: false,
+    ph: null,
+    baseTop: 0,
+    baseLeft: 0,
+    width: 0,
+    height: 0,
+    boxes: null,            // 起拖前其它房间的几何快照（内容坐标）
+    lastTarget: null,
+    lastInsertAfter: false,
+    lastEvalY: null,
+  };
+  e.preventDefault();
+});
+
+function startRoomDrag() {
+  const el = roomDrag.el;
+  roomDrag.moved = true;
+  const listRect = listEl.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  roomDrag.baseTop = rect.top - listRect.top + listEl.scrollTop;
+  roomDrag.baseLeft = rect.left - listRect.left + listEl.scrollLeft;
+  roomDrag.width = rect.width;
+  roomDrag.height = rect.height;
+  roomDrag.grabY = roomDrag.startY - rect.top;
+
+  // 落点判定快照：必须在插入占位符之前抓取（占位符会顺移其后的房间）
+  roomDrag.boxes = new Map();
+  for (const c of listEl.children) {
+    if (c.classList && c.classList.contains('room') && c !== el) {
+      roomDrag.boxes.set(c, { t: c.offsetTop, h: c.offsetHeight });
+    }
+  }
+
+  const ph = document.createElement('div');
+  ph.className = 'room-drag-placeholder';
+  ph.style.height = roomDrag.height + 'px';
+  // 占位符沿用原房间的下外边距，避免脱离文档流时下方房间整体上移
+  ph.style.marginBottom = getComputedStyle(el).marginBottom;
+  el.parentNode.insertBefore(ph, el);
+  roomDrag.ph = ph;
+
+  el.classList.add('dragging-room');
+  el.style.position = 'absolute';
+  el.style.left = roomDrag.baseLeft + 'px';
+  el.style.top = roomDrag.baseTop + 'px';
+  el.style.width = roomDrag.width + 'px';
+  el.style.margin = '0';
+  el.style.zIndex = '20';
+  el.style.pointerEvents = 'none';
+  el.style.transition = 'none';
+
+  roomAutoScrollRAF = requestAnimationFrame(roomAutoScrollTick);
+}
+
+function layoutRoomDrag(cursorY) {
+  const listRect = listEl.getBoundingClientRect();
+  const cy = cursorY - listRect.top + listEl.scrollTop;
+  const dy = cy - roomDrag.baseTop - roomDrag.grabY;
+  roomDrag.el.style.transform = `translateY(${dy}px)`;
+
+  if (roomDrag.lastEvalY !== null && Math.abs(cy - roomDrag.lastEvalY) < ROOM_DRAG_EPS) return;
+
+  const rooms = [...listEl.children].filter(
+    (c) => c.classList && c.classList.contains('room') && c !== roomDrag.el
+  );
+  const boxOf = (c) => roomDrag.boxes.get(c) || { t: c.offsetTop, h: c.offsetHeight };
+  const centerDist = (c) => {
+    const b = boxOf(c);
+    return Math.abs(cy - (b.t + b.h / 2));
+  };
+  let target = null;
+  for (const c of rooms) {
+    const b = boxOf(c);
+    if (cy >= b.t && cy <= b.t + b.h) { target = c; break; }
+  }
+  if (!target && rooms.length) {
+    const prev = roomDrag.lastTarget && rooms.includes(roomDrag.lastTarget) ? roomDrag.lastTarget : null;
+    let best = prev;
+    let bestD = prev ? centerDist(prev) : Infinity;
+    for (const c of rooms) {
+      const d = centerDist(c);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    if (prev && best !== prev && bestD > centerDist(prev) - ROOM_DRAG_DEADZONE) best = prev;
+    target = best;
+  }
+
+  let insertAfter = false;
+  if (target) {
+    const tb = boxOf(target);
+    const delta = cy - (tb.t + tb.h / 2);
+    if (target === roomDrag.lastTarget && typeof roomDrag.lastInsertAfter === 'boolean') {
+      if (delta > ROOM_DRAG_DEADZONE) insertAfter = true;
+      else if (delta < -ROOM_DRAG_DEADZONE) insertAfter = false;
+      else insertAfter = roomDrag.lastInsertAfter;
+    } else {
+      insertAfter = delta > 0;
+    }
+  }
+  roomDrag.lastTarget = target;
+  roomDrag.lastInsertAfter = target ? insertAfter : false;
+  roomDrag.lastEvalY = cy;
+
+  const alreadyPlaced = target
+    ? (insertAfter ? target.nextElementSibling === roomDrag.ph : roomDrag.ph.nextElementSibling === target)
+    : listEl.lastElementChild === roomDrag.ph;
+  if (alreadyPlaced) return;
+
+  const before = new Map(rooms.map((c) => [c, c.offsetTop]));
+  if (target) {
+    listEl.insertBefore(roomDrag.ph, insertAfter ? target.nextElementSibling : target);
+  } else {
+    listEl.append(roomDrag.ph);
+  }
+  rooms.forEach((c) => {
+    const mdy = before.get(c) - c.offsetTop;
+    if (Math.abs(mdy) < 0.5) return;
+    c.style.transition = 'none';
+    c.style.transform = `translateY(${mdy}px)`;
+    void c.offsetWidth;
+    requestAnimationFrame(() => {
+      c.style.transition = 'transform 0.18s ease';
+      c.style.transform = '';
+    });
+  });
+}
+
+function moveRoomDrag(e) {
+  layoutRoomDrag(e.clientY);
+}
+
+// 指针靠近列表上下边缘时自动滚动列表并刷新跟手位置
+function roomAutoScrollTick() {
+  if (!roomDrag || !roomDrag.moved) { roomAutoScrollRAF = null; return; }
+  const rect = listEl.getBoundingClientRect();
+  const EDGE = 46;
+  const MAX = 16;
+  const y = roomDrag.lastY != null ? roomDrag.lastY : roomDrag.startY;
+  let speed = 0;
+  if (y < rect.top + EDGE) speed = -Math.ceil(((rect.top + EDGE - y) / EDGE) * MAX);
+  else if (y > rect.bottom - EDGE) speed = Math.ceil(((y - (rect.bottom - EDGE)) / EDGE) * MAX);
+  speed = Math.max(-MAX, Math.min(MAX, speed));
+  if (speed) {
+    const prev = listEl.scrollTop;
+    listEl.scrollTop = prev + speed;
+    if (listEl.scrollTop !== prev) layoutRoomDrag(y);
+  }
+  roomAutoScrollRAF = requestAnimationFrame(roomAutoScrollTick);
+}
+
+function endRoomDrag() {
+  if (!roomDrag) return;
+  const { el, ph, moved } = roomDrag;
+  if (roomAutoScrollRAF) { cancelAnimationFrame(roomAutoScrollRAF); roomAutoScrollRAF = null; }
+  if (moved && ph) {
+    const from = el.getBoundingClientRect();
+    el.classList.remove('dragging-room');
+    listEl.insertBefore(el, ph);
+    ph.remove();
+    for (const c of listEl.children) {
+      if (c !== el && c.classList && c.classList.contains('room')) {
+        c.style.transition = '';
+        c.style.transform = '';
+      }
+    }
+    el.style.cssText = '';
+    const to = el.getBoundingClientRect();
+    const fy = from.top - to.top;
+    if (fy) {
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${fy}px)`;
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.18s ease';
+        el.style.transform = '';
+        setTimeout(() => { if (!el.classList.contains('dragging-room')) el.style.transition = ''; }, 220);
+      });
+    }
+    persistRoomOrder();
+  } else {
+    if (ph) ph.remove();
+    el.classList.remove('dragging-room');
+    el.style.cssText = '';
+  }
+  roomDrag = null;
+}
+
+window.addEventListener('pointermove', (e) => {
+  if (!roomDrag || e.pointerId !== roomDrag.pointerId) return;
+  roomDrag.lastY = e.clientY;
+  if (!roomDrag.moved) {
+    if (Math.hypot(e.clientX - roomDrag.startX, e.clientY - roomDrag.startY) < ROOM_DRAG_THRESHOLD) return;
+    startRoomDrag();
+  }
+  e.preventDefault();
+  moveRoomDrag(e);
+}, { passive: false });
+
+window.addEventListener('pointerup', (e) => {
+  if (!roomDrag || e.pointerId !== roomDrag.pointerId) return;
+  endRoomDrag();
+});
+
+window.addEventListener('pointercancel', () => {
+  if (roomDrag) endRoomDrag();
 });
 
 /* ---------------- 瀑布流：列锁定 + 按卡片实际高度换算 grid-row 跨度 ---------------- */
@@ -1365,9 +1629,9 @@ function layoutSpans(container = listEl) {
     // 拖动中的卡片已脱离文档流（absolute），不要给它写网格跨度，否则
     // 「确定的网格定位」会让它的包含块变成网格区域，left/top 基准又错位（卡片飞走）。
     if (el.classList.contains('dragging')) continue;
-    // 高度取整到整数像素：实测高度常带子像素噪声（如 112.00002），
-    // 直接向上取整会多占一行、把同列相邻卡片的缝隙撑大。
-    const hgt = Math.round(el.getBoundingClientRect().height);
+    // 用布局高度 offsetHeight（已取整、且忽略 transform）：房间叠牌动画会给卡片加
+    // scale(0.9)，若用 getBoundingClientRect 会读到缩放后的高度、把跨度算小。
+    const hgt = el.offsetHeight;
     // 行跨度把「一个纵向缝隙」内嵌进去：区域高 = n*unit（unit=1，row-gap=0），
     // 下一张卡片的顶部 = 本卡顶部 + n，视觉缝隙 = n - 高度 ≈ gap（±0.5px）。
     // 因为量化粒度是 1px 而不是「unit+row-gap」，展开态卡片也不会残留大缝，横竖缝一致。
@@ -1449,7 +1713,7 @@ function equalizeCollapsed(container = listEl) {
 // 收折 / 展开时卡片高度是连续变化的：用一小段 rAF 跟随刷新跨度，
 // 让下方卡片随动画平滑顺延，而不是收尾时一次性跳变。
 let spanRAF = 0;
-function trackSpans(ms = 380) {
+function trackSpans(ms = 420) {
   if (spanRAF) cancelAnimationFrame(spanRAF);
   const t0 = performance.now();
   const tick = () => {
@@ -1628,34 +1892,223 @@ function groupDevices(devices) {
     map.get(key).devices.push(d);
   }
   const groups = [...map.values()];
-  groups.sort((a, b) => (a.key ? (b.key ? 0 : -1) : 1));   // 未分类殿后（其余保持出现顺序）
+  if (roomOrder.length) {
+    // 有持久化顺序时按其排列；新出现（未记录）的房间排到末尾，保持相互间的出现顺序
+    const rank = new Map(roomOrder.map((k, i) => [k, i]));
+    groups.sort((a, b) => {
+      const ra = rank.has(a.key) ? rank.get(a.key) : Infinity;
+      const rb = rank.has(b.key) ? rank.get(b.key) : Infinity;
+      return ra - rb;
+    });
+  } else {
+    groups.sort((a, b) => (a.key ? (b.key ? 0 : -1) : 1));   // 未分类殿后（其余保持出现顺序）
+  }
   return groups;
 }
 
-// 一个房间 = 全宽房间头 + 独立瀑布流容器
+// 一个房间 = 全宽房间头（名称 + 设备数 + 点阵把手） + 可收折的独立瀑布流容器
 function makeRoomSection(key) {
   const section = h('section', 'room');
   section.dataset.roomId = key;
   const head = h('div', 'room-head');
-  head.title = '点击收折 / 展开该房间';
-  const chevron = h('span', 'room-chevron', ROOM_CHEVRON_ICON);
+  head.title = '双击收折 / 展开，右键打开菜单';
   const nameEl = h('span', 'room-name');
   const countEl = h('span', 'room-count');
-  head.append(chevron, nameEl, countEl);
-  head.addEventListener('click', () => {
-    const collapsed = !section.classList.contains('room-collapsed');
-    section.classList.toggle('room-collapsed', collapsed);
-    if (collapsed) collapsedRooms.add(key); else collapsedRooms.delete(key);
-    writeCollapsedRooms();
-    relayoutColumns();
-    relayoutEqualize();
-    relayoutSpans();
-    trackSpans();
-    fitWindow();
+  const grip = h('span', 'room-grip', GRIP_ICON);
+  grip.title = '拖动调整房间顺序';
+  head.append(nameEl, countEl, grip);
+
+  // 双击房间头：收折 / 展开（带高度过渡）
+  head.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.room-grip')) return;
+    setRoomCollapsed(section, key, !section.classList.contains('room-collapsed'));
   });
+  // 右键房间头：弹出房间控制菜单（与设备右键菜单同款样式）
+  head.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    openRoomCtxMenu(key, section, e.clientX, e.clientY);
+  });
+
+  const body = h('div', 'room-body');
   const list = h('div', 'room-list');
-  section.append(head, list);
+  body.append(list);
+  section.append(head, body);
   return { section, head, nameEl, countEl, list };
+}
+
+/* ---------------- 房间收折动画：叠牌 → 非线性扎进表头 ---------------- */
+
+// 卡片先像扑克牌一样叠成一摞（第一张在最上），随后整摞非线性地「扎进」表头。
+// 收折：叠牌(GATHER_EASE，立即) → 牌堆上移 + 房间体塌缩(PLUNGE_EASE，延迟接力)
+// 展开：逆过程 —— 房间体撑开 + 牌堆从表头抽出 → 卡片散开归位
+const ROOM_ANIM_MS = 300;         // 单段时长
+const ROOM_ANIM_DELAY = 100;      // 两段之间的接力延迟
+const ROOM_ANIM_CLEAN = ROOM_ANIM_MS + ROOM_ANIM_DELAY + 80; // 清理内联样式的时机
+// 收拢 / 散开：快出缓收（easeOut）；扎入 / 抽出：缓起快收（easeIn）——两段都非线性
+const ROOM_GATHER_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const ROOM_PLUNGE_EASE = 'cubic-bezier(0.5, 0, 0.75, 0)';
+const ROOM_STACK_STEP = 2;        // 每张牌相对上一张的错位，营造「一摞牌」的厚度感
+
+function roomCardsOf(list) {
+  return list ? [...list.children].filter((el) => el.classList && el.classList.contains('card')) : [];
+}
+
+// 计算每张卡片叠到「列表左上角」所需的位移；第一张 z 最高（盖在最上）
+function roomStackFrames(cards, list) {
+  const listRect = list.getBoundingClientRect();
+  // 单列时卡片与列表同宽，牌堆扎向左上角会显得偏：改扎向顶部居中；多列保持左上角
+  const center = isSingleCol(list);
+  return cards.map((el, i) => {
+    const r = el.getBoundingClientRect();
+    const off = i * ROOM_STACK_STEP;
+    // scale(0.9) 以左上为原点收缩，单列时把收缩后的牌堆补偿到水平居中
+    const anchorX = center ? listRect.left + (listRect.width - r.width * 0.9) / 2 : listRect.left;
+    return { el, dx: anchorX - r.left + off, dy: listRect.top - r.top + off, z: cards.length - i };
+  });
+}
+
+// 把一张卡片设为「叠牌」态（transform-origin 固定在左上角，缩放不改变错位基准）
+function setCardStack(f, withTransition) {
+  const el = f.el;
+  el.style.transformOrigin = 'top left';
+  el.style.zIndex = String(f.z);
+  el.style.transition = withTransition ? `transform ${ROOM_ANIM_MS}ms ${ROOM_GATHER_EASE}` : 'none';
+  el.style.transform = `translate(${f.dx}px, ${f.dy}px) scale(0.9)`;
+}
+
+// 清掉本次动画写在元素上的临时内联样式，回到 CSS 静止态
+function clearRoomStyles(section) {
+  const body = section.querySelector('.room-body');
+  const list = section.querySelector('.room-list');
+  if (body) {
+    body.style.transition = '';
+    body.style.height = '';
+    body.style.marginTop = '';
+    body.classList.remove('animating');
+  }
+  if (list) {
+    list.style.transition = '';
+    list.style.transform = '';
+  }
+  for (const el of roomCardsOf(list)) {
+    el.style.transition = '';
+    el.style.transform = '';
+    el.style.transformOrigin = '';
+    el.style.zIndex = '';
+  }
+}
+
+function scheduleRoomCleanup(section) {
+  if (section._roomAnimTimer) clearTimeout(section._roomAnimTimer);
+  section._roomAnimTimer = setTimeout(() => {
+    section._roomAnimTimer = 0;
+    clearRoomStyles(section);
+    section._roomAnimating = false;
+  }, ROOM_ANIM_CLEAN);
+}
+
+function stopRoomAnim(section) {
+  if (section._roomAnimTimer) { clearTimeout(section._roomAnimTimer); section._roomAnimTimer = 0; }
+  clearRoomStyles(section);
+}
+
+// 收折：叠牌 → 整摞非线性扎进表头
+function collapseRoom(section) {
+  stopRoomAnim(section);
+  section._roomAnimating = true;
+
+  const body = section.querySelector('.room-body');
+  const list = section.querySelector('.room-list');
+  const cards = roomCardsOf(list);
+  const startH = body.getBoundingClientRect().height;
+  const frames = roomStackFrames(cards, list);
+
+  // 起点：锁定当前高度，卡片为自然位置（无过渡）
+  body.style.transition = 'none';
+  body.style.height = startH + 'px';
+  body.style.marginTop = '';
+  body.classList.add('animating');
+  list.style.transition = 'none';
+  list.style.transform = '';
+  for (const f of frames) {
+    f.el.style.transition = 'none';
+    f.el.style.transformOrigin = 'top left';
+    f.el.style.zIndex = String(f.z);
+    f.el.style.transform = 'none';
+  }
+  void body.offsetHeight;   // 提交起点帧
+
+  // 第一段：卡片叠成一摞（第一张在最上）
+  for (const f of frames) setCardStack(f, true);
+  // 第二段：延迟接力 —— 牌堆非线性扎进表头，房间体同步塌缩
+  const plunge = startH + 24;   // 上移距离：足以把牌堆完全推出房间体（被表头裁掉）
+  const trans = `${ROOM_ANIM_MS}ms ${ROOM_PLUNGE_EASE} ${ROOM_ANIM_DELAY}ms`;
+  body.style.transition = `height ${trans}, margin-top ${trans}`;
+  list.style.transition = `transform ${trans}`;
+  section.classList.add('room-collapsed');
+  body.style.height = '0px';
+  body.style.marginTop = '0px';
+  list.style.transform = `translateY(${-plunge}px)`;
+
+  scheduleRoomCleanup(section);
+}
+
+// 展开：牌堆从表头抽出 → 卡片散开归位
+function expandRoom(section) {
+  stopRoomAnim(section);
+  section._roomAnimating = true;
+
+  const body = section.querySelector('.room-body');
+  const list = section.querySelector('.room-list');
+  const cards = roomCardsOf(list);
+
+  // 先量出展开态自然高度（临时解除收折与裁剪；全程同步、不产生闪烁）
+  section.classList.remove('room-collapsed');
+  body.style.transition = 'none';
+  body.style.height = '';
+  body.style.marginTop = '';
+  list.style.transition = 'none';
+  list.style.transform = '';
+  for (const el of cards) { el.style.transition = 'none'; el.style.transform = ''; el.style.transformOrigin = ''; el.style.zIndex = ''; }
+  const target = body.getBoundingClientRect().height;
+  const frames = roomStackFrames(cards, list);
+  const plunge = target + 24;
+
+  // 起点：塌缩 + 牌堆藏在表头里（无过渡）
+  body.classList.add('animating');
+  body.style.transition = 'none';
+  body.style.height = '0px';
+  body.style.marginTop = '0px';
+  section.classList.add('room-collapsed');
+  list.style.transition = 'none';
+  list.style.transform = `translateY(${-plunge}px)`;
+  for (const f of frames) setCardStack(f, false);
+  void body.offsetHeight;   // 提交起点帧
+
+  // 第一段：房间体撑开、牌堆下移抽出表头（非线性）
+  section.classList.remove('room-collapsed');
+  const trans = `${ROOM_ANIM_MS}ms ${ROOM_GATHER_EASE}`;
+  body.style.transition = `height ${trans}, margin-top ${trans}`;
+  list.style.transition = `transform ${trans}`;
+  body.style.height = target + 'px';
+  body.style.marginTop = '';
+  list.style.transform = '';
+  // 第二段：延迟接力 —— 卡片非线性散开归位
+  for (const f of frames) {
+    f.el.style.transition = `transform ${ROOM_ANIM_MS}ms ${ROOM_GATHER_EASE} ${ROOM_ANIM_DELAY}ms`;
+    f.el.style.transform = 'none';
+  }
+
+  scheduleRoomCleanup(section);
+}
+
+// 切换房间收折状态（带「叠牌 → 扎进表头」动画）；房间正在动画时不响应
+function setRoomCollapsed(section, key, collapsed) {
+  if (collapsed) collapsedRooms.add(key); else collapsedRooms.delete(key);
+  writeCollapsedRooms();
+  if (section._roomAnimating) return;
+  if (collapsed === section.classList.contains('room-collapsed')) return;
+  if (collapsed) collapseRoom(section); else expandRoom(section);
 }
 
 // 退回到扁平网格：移除所有房间分组（其中的卡片会被 renderFlat 重新挂回 #devices）
@@ -1696,13 +2149,17 @@ function renderGrouped(devices) {
     if (!sec) { sec = makeRoomSection(g.key); roomSections.set(g.key, sec); }
     sec.nameEl.textContent = g.name || '未分类';
     sec.countEl.textContent = String(g.devices.length);
-    sec.section.classList.toggle('room-collapsed', collapsedRooms.has(g.key));
+    // 房间正在做收折 / 展开动画时不覆盖其状态，避免打断动画
+    if (!sec.section._roomAnimating) {
+      sec.section.classList.toggle('room-collapsed', collapsedRooms.has(g.key));
+    }
     const memberIds = new Set();
     g.devices.forEach((d, i) => {
       try {
         const entry = ensureCard(d);
         memberIds.add(String(d.id));
-        if (sec.list.children[i] !== entry.el) {
+        // 拖动过程中不按数据顺序重排 DOM，避免覆盖用户拖动的结果
+        if (!(drag && drag.moved) && sec.list.children[i] !== entry.el) {
           sec.list.insertBefore(entry.el, sec.list.children[i] || null);
         }
       } catch (err) {
@@ -1713,8 +2170,8 @@ function renderGrouped(devices) {
     for (const child of [...sec.list.children]) {
       if (child.classList.contains('card') && !memberIds.has(String(child.dataset.id))) child.remove();
     }
-    // 房间顺序与分组顺序一致
-    if (listEl.children[gi] !== sec.section) {
+    // 房间顺序与分组顺序一致（房间拖动过程中不重排，避免覆盖用户拖动结果）
+    if (!(roomDrag && roomDrag.moved) && listEl.children[gi] !== sec.section) {
       listEl.insertBefore(sec.section, listEl.children[gi] || null);
     }
   });
@@ -1800,6 +2257,7 @@ const miLogin = document.getElementById('mi-login');
 const miReset = document.getElementById('mi-reset');
 const miFs = document.getElementById('mi-fs');
 const miFsCover = document.getElementById('mi-fs-cover');
+const miHide = document.getElementById('mi-hide');
 
 // 同步两个全屏项的勾选状态（mode: 'normal' | 'cover' | null）
 function applyFullscreenState(mode) {
@@ -1861,7 +2319,7 @@ miLogin.addEventListener('click', () => window.mijia.toggleLogin());
 miReset.addEventListener('click', () => window.mijia.sendToSecondScreen());
 miFs.addEventListener('click', () => window.mijia.fullscreen('normal'));
 miFsCover.addEventListener('click', () => window.mijia.fullscreen('cover'));
-document.getElementById('mi-hide').addEventListener('click', () => window.mijia.hide());
+miHide.addEventListener('click', () => window.mijia.hide());
 document.getElementById('mi-quit').addEventListener('click', () => window.mijia.quit());
 
 /* ---------------- 深色 / 浅色主题 ---------------- */
@@ -1891,6 +2349,24 @@ miTheme.addEventListener('click', () => {
 
 applyTheme(readTheme());
 
+/* ---------------- 窗口模式 / 小组件模式 ---------------- */
+
+const miMode = document.getElementById('mi-mode');
+const miModeLabel = miMode.querySelector('.mi-label');
+
+// mode: 'window' 正常窗口（任务栏可见、无托盘）；'widget' 小组件（工具窗口 + 托盘）。
+// 参照主题项：菜单文字显示「将切换到的目标模式」。
+function applyWindowMode(mode) {
+  const widget = mode !== 'window';
+  miModeLabel.textContent = widget ? '窗口模式' : '小组件模式';
+  // 窗口模式下窗口本就常驻任务栏、且没有托盘：移除「固定到任务栏」与「收起到托盘」
+  miPin.hidden = !widget;
+  miHide.hidden = !widget;
+}
+
+miMode.addEventListener('click', () => window.mijia.toggleWindowMode());
+window.mijia.onWindowMode(applyWindowMode);
+
 /* ---------------- 按房间分类 / 房间名称显示 ---------------- */
 
 const miRoom = document.getElementById('mi-room');
@@ -1906,10 +2382,18 @@ function applyRoomNameState() {
   miRoomNameLabel.textContent = showRoomName ? '隐藏房间名称' : '显示房间名称';
 }
 
+// 把房间显示偏好上报给主进程（托盘菜单需要同步勾选态与文案）
+function reportRoomState() {
+  if (window.mijia && window.mijia.reportRoomState) {
+    window.mijia.reportRoomState({ groupByRoom, showRoomName });
+  }
+}
+
 miRoom.addEventListener('click', () => {
   groupByRoom = !groupByRoom;
   try { localStorage.setItem('mijia.groupByRoom', groupByRoom ? '1' : '0'); } catch {}
   applyRoomGroupState();
+  reportRoomState();
   render(allDevices);
 });
 
@@ -1917,6 +2401,7 @@ miRoomName.addEventListener('click', () => {
   showRoomName = !showRoomName;
   try { localStorage.setItem('mijia.showRoomName', showRoomName ? '1' : '0'); } catch {}
   applyRoomNameState();
+  reportRoomState();
   for (const [, entry] of cards) {
     if (entry.last) updateCard(entry, entry.last);
   }
@@ -1924,6 +2409,7 @@ miRoomName.addEventListener('click', () => {
 
 applyRoomGroupState();
 applyRoomNameState();
+reportRoomState();
 
 // 托盘菜单 → 打开对应面板（与应用内菜单共用同一套面板）
 window.mijia.onOpenPanel((name) => {
@@ -1935,6 +2421,12 @@ window.mijia.onOpenPanel((name) => {
 
 // 托盘菜单 → 切换深色 / 浅色主题（复用应用内菜单项的点击逻辑）
 window.mijia.onToggleTheme(() => miTheme.click());
+
+// 托盘菜单 → 切换 按房间分类 / 房间名称显示（复用应用内菜单项的点击逻辑）
+window.mijia.onToggleRoom((which) => {
+  if (which === 'group') miRoom.click();
+  else if (which === 'name') miRoomName.click();
+});
 
 // 点击菜单项后收起
 menuEl.addEventListener('click', () => openMenu(false));
@@ -1998,15 +2490,29 @@ function openCtxMenu(device, card, x, y) {
   }
   ctxMenu.append(makeCtxItem('隐藏设备', EYE_OFF_ICON, () => hideDevice(device.id), true));
 
+  showCtxMenu(x, y);
+}
+
+// 房间右键菜单：与设备菜单同款样式，提供收折 / 展开房间
+function openRoomCtxMenu(key, section, x, y) {
+  ctxMenu.innerHTML = '';
+  const collapsed = section.classList.contains('room-collapsed');
+  ctxMenu.append(makeCtxItem(collapsed ? '展开房间' : '收折房间', COLLAPSE_ICON, () => {
+    setRoomCollapsed(section, key, !collapsed);
+  }));
+  showCtxMenu(x, y);
+}
+
+// 把菜单定位到鼠标处，并避免超出窗口边界
+function showCtxMenu(x, y) {
   ctxMenu.hidden = false;
-  // 定位到鼠标处，并避免超出窗口边界
   const pad = 6;
   const w = ctxMenu.offsetWidth;
   const hgt = ctxMenu.offsetHeight;
   const vw = document.documentElement.clientWidth;
   const vh = document.documentElement.clientHeight;
-  let left = Math.min(x, vw - w - pad);
-  let top = Math.min(y, vh - hgt - pad);
+  const left = Math.min(x, vw - w - pad);
+  const top = Math.min(y, vh - hgt - pad);
   ctxMenu.style.left = Math.max(pad, left) + 'px';
   ctxMenu.style.top = Math.max(pad, top) + 'px';
 }
@@ -2148,17 +2654,22 @@ document.getElementById('about-update').addEventListener('click', async () => {
   }
 });
 
-// 3D 徽章：鼠标拖动翻转（X/Y 轴），单击也翻转半圈；高光随旋转移动
+// 3D 徽章：鼠标拖动翻转（X/Y 轴），单击也翻转半圈；悬停时随鼠标轻微倾斜跟随。
+// 悬停倾斜叠加在拖动旋转之上（最终角度 = badgeRot + badgeTilt），高光随合成角度移动。
 const badgeRot = { x: 0, y: 0 };
+const badgeTilt = { x: 0, y: 0 };
+const BADGE_TILT_MAX = 10;  // 悬停倾斜最大角度（保持轻微）
 let badgeDrag = null;      // 拖动起点
 let badgePointerId = null;
 let badgeMoved = false;
 
 function applyBadge() {
-  badge3d.style.transform = `rotateX(${badgeRot.x}deg) rotateY(${badgeRot.y}deg)`;
+  const rx = badgeRot.x + badgeTilt.x;
+  const ry = badgeRot.y + badgeTilt.y;
+  badge3d.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
   // 高光位置随旋转反向偏移，模拟固定光源在徽章表面的反射
-  const nx = Math.max(-1, Math.min(1, badgeRot.y / 120));
-  const ny = Math.max(-1, Math.min(1, -badgeRot.x / 120));
+  const nx = Math.max(-1, Math.min(1, ry / 120));
+  const ny = Math.max(-1, Math.min(1, -rx / 120));
   badge3d.style.setProperty('--lx', (50 - nx * 38).toFixed(1) + '%');
   badge3d.style.setProperty('--ly', (50 - ny * 38).toFixed(1) + '%');
 }
@@ -2167,18 +2678,44 @@ badge3d.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   badgePointerId = e.pointerId;
   badgeMoved = false;
-  badgeDrag = { x: e.clientX, y: e.clientY, rx: badgeRot.x, ry: badgeRot.y };
+  // 把悬停倾斜并入拖动基准（变换总值不变、无跳变），拖动期间不再叠加倾斜
+  badgeDrag = { x: e.clientX, y: e.clientY, rx: badgeRot.x + badgeTilt.x, ry: badgeRot.y + badgeTilt.y };
+  badgeTilt.x = 0;
+  badgeTilt.y = 0;
+  badge3d.classList.remove('hovering');
   badge3d.classList.add('dragging');
   badge3d.setPointerCapture(e.pointerId);
 });
 
 badge3d.addEventListener('pointermove', (e) => {
-  if (!badgeDrag || e.pointerId !== badgePointerId) return;
+  // 未拖动：鼠标悬停随指针位置轻微倾斜（.hovering 的短过渡做平滑跟随；触摸不做悬停）
+  if (!badgeDrag) {
+    if (e.pointerType !== 'mouse') return;
+    const r = badge3d.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return;
+    const nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
+    const ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
+    badgeTilt.x = -ny * BADGE_TILT_MAX;
+    badgeTilt.y = nx * BADGE_TILT_MAX;
+    badge3d.classList.add('hovering');
+    applyBadge();
+    return;
+  }
+  if (e.pointerId !== badgePointerId) return;
   const dx = e.clientX - badgeDrag.x;
   const dy = e.clientY - badgeDrag.y;
   if (Math.abs(dx) > 3 || Math.abs(dy) > 3) badgeMoved = true;
   badgeRot.y = badgeDrag.ry + dx * 0.6;
   badgeRot.x = Math.max(-75, Math.min(75, badgeDrag.rx - dy * 0.6));
+  applyBadge();
+});
+
+// 指针离开：倾斜归零（移除 .hovering 后回到默认 0.55s 缓动，柔和回正）
+badge3d.addEventListener('pointerleave', () => {
+  if (badgeDrag) return;
+  badgeTilt.x = 0;
+  badgeTilt.y = 0;
+  badge3d.classList.remove('hovering');
   applyBadge();
 });
 
@@ -2244,6 +2781,7 @@ function sendTrayIcons() {
   const map = {
     top: 'mi-top', pin: 'mi-pin', login: 'mi-login',
     cloud: 'mi-cloud', home: 'mi-home', hidden: 'mi-hidden', theme: 'mi-theme',
+    mode: 'mi-mode', room: 'mi-room', roomname: 'mi-roomname',
     reset: 'mi-reset', hide: 'mi-hide', quit: 'mi-quit',
     fs: 'mi-fs', 'fs-cover': 'mi-fs-cover',
     about: 'mi-about',
@@ -2689,10 +3227,12 @@ window.mijia.onDevices(render);
 window.mijia.onSettings(applySettings);
 window.mijia.onFullscreenState(applyFullscreenState);
 
-window.mijia.init().then(({ devices, settings, isMock, login, hasCustomSize, fullscreen, theme, version }) => {
+window.mijia.init().then(({ devices, settings, isMock, login, hasCustomSize, fullscreen, theme, windowMode, version }) => {
   // 用户此前手动调整过窗口大小：跳过启动时的按内容自适应
   if (hasCustomSize) sized = true;
   applyFullscreenState(fullscreen || null);
+  // 窗口/小组件模式：同步菜单文案与「固定到任务栏 / 收起到托盘」的显隐
+  applyWindowMode(windowMode || 'widget');
   // 关于窗口版本号
   if (version) document.getElementById('about-ver').textContent = 'v' + version;
   // 以主进程持久化的主题为准（首次打开默认深色），并同步本地记忆

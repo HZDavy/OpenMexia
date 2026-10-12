@@ -5,7 +5,7 @@ import * as https from 'https';
 import { createProvider } from './src/devices';
 import { MijiaLogin } from './src/mijia-login';
 import * as QRCode from 'qrcode';
-import type { FullscreenMode, Settings, Theme } from './shared/types';
+import type { FullscreenMode, Settings, Theme, WindowMode } from './shared/types';
 
 // Electron 未内置「退出标记」这个应用私有属性，这里给 App 补上类型
 declare global {
@@ -29,7 +29,7 @@ const WIN_SIZE = { width: 364, height: 480 };
 const EDGE_GAP = 20; // 默认位置距屏幕边缘的留白
 
 let win: BrowserWindow;
-let tray: Tray;
+let tray: Tray | null = null;
 let provider: Awaited<ReturnType<typeof createProvider>>;
 let providerReady: Promise<unknown> = Promise.resolve();   // 设备源首次构建完成信号（窗口先显示，数据后到）
 let login: MijiaLogin;   // MijiaLogin：登录 / 设备清单 / 云端回退
@@ -38,6 +38,8 @@ let settings: Settings = { alwaysOnTop: true, launchAtLogin: false };
 let sizingProgrammatically = false;
 // 托盘菜单图标：由渲染层把与应用内菜单同一套 SVG 栅格化成 PNG dataURL 后传回
 let menuIcons: Record<string, Electron.NativeImage> = {};
+// 渲染层的房间显示偏好（groupByRoom / showRoomName），由渲染层上报，供托盘菜单同步勾选与文案
+let roomState = { groupByRoom: false, showRoomName: true };
 // 全屏模式：null 未全屏；'normal' 铺满当前屏工作区（任务栏可见）；'cover' 铺满整屏并置顶（盖住任务栏）
 let fsMode: FullscreenMode = null;
 let fsSavedBounds: Electron.Rectangle | null = null;   // 进入全屏前的窗口矩形，退出全屏时还原
@@ -265,6 +267,35 @@ function stateTheme(state: any = loadState()): Theme {
   return state.theme === 'light' ? 'light' : 'dark';
 }
 
+// 窗口模式：'window' 正常窗口（任务栏可见、无托盘）；'widget' 小组件（工具窗口 + 托盘）。
+// 首次打开（无记录）默认窗口模式，之后记住用户选择
+function windowMode(state: any = loadState()): WindowMode {
+  return state.windowMode === 'widget' ? 'widget' : 'window';
+}
+
+// 应用窗口模式：任务栏可见性 + 托盘显隐随模式切换，并广播给渲染层更新菜单
+function applyWindowMode(mode: WindowMode) {
+  const widget = mode === 'widget';
+  patchState({ windowMode: mode });
+  if (widget) {
+    if (!tray) createTray();
+    if (win && !win.isDestroyed()) win.setSkipTaskbar(true);
+  } else {
+    if (tray) { tray.destroy(); tray = null; }
+    if (win && !win.isDestroyed()) {
+      win.setSkipTaskbar(false);
+      // 若窗口正处于「收起到托盘」的隐藏态，切到无托盘的窗口模式会再也唤不回 → 直接显示
+      if (!win.isVisible()) win.show();
+      win.focus();
+    }
+  }
+  if (win && !win.isDestroyed()) win.webContents.send('widget:window-mode', mode);
+}
+
+function toggleWindowMode() {
+  applyWindowMode(windowMode() === 'widget' ? 'window' : 'widget');
+}
+
 /* ---------------- 窗口 ---------------- */
 
 function defaultPosition(): { x: number; y: number } {
@@ -281,13 +312,18 @@ function hasCustomSize(): boolean {
 function createWindow() {
   const state = loadState();
   const fallback = defaultPosition();
-  const x = Number.isFinite(state.x) ? state.x : fallback.x;
-  const y = Number.isFinite(state.y) ? state.y : fallback.y;
+  let x = Number.isFinite(state.x) ? state.x : fallback.x;
+  let y = Number.isFinite(state.y) ? state.y : fallback.y;
   // 记忆用户上次调整过的窗口大小；未调整过则用默认尺寸（首次由渲染层按内容自适应一次）
   const hasCustomSize = Number.isFinite(state.width) && Number.isFinite(state.height)
     && state.width >= 300 && state.height >= 220;
   const width = hasCustomSize ? state.width : WIN_SIZE.width;
   const height = hasCustomSize ? state.height : WIN_SIZE.height;
+  // 记忆的坐标所在显示器可能已被拔掉/改了分辨率：窗口与最近屏工作区几乎不重叠时回退默认位置，防丢窗口
+  const nearest = screen.getDisplayMatching({ x, y, width, height }).workArea;
+  const overlapX = Math.min(x + width, nearest.x + nearest.width) - Math.max(x, nearest.x);
+  const overlapY = Math.min(y + height, nearest.y + nearest.height) - Math.max(y, nearest.y);
+  if (overlapX < 120 || overlapY < 60) { x = fallback.x; y = fallback.y; }
 
   settings = {
     alwaysOnTop: state.alwaysOnTop !== false,
@@ -312,8 +348,9 @@ function createWindow() {
     // （Win+↑ 最大化、拖拽到顶部吸附、Win+Shift+Enter 全屏等）
     maximizable: true,
     fullscreenable: true,
-    // 工具窗口模式：默认不在任务栏显示（≈ PlanMonitor 的 Qt.Tool）
-    skipTaskbar: true,
+    // 小组件模式是工具窗口（≈ PlanMonitor 的 Qt.Tool），不在任务栏显示；
+    // 窗口模式按正常窗口显示在任务栏
+    skipTaskbar: windowMode(state) === 'widget',
     hasShadow: true,
     show: false,
     alwaysOnTop: settings.alwaysOnTop,
@@ -364,9 +401,10 @@ function createWindow() {
     win.webContents.send('widget:titlebar-menu', { x: pt.x, y: pt.y });
   });
 
-  // 关闭按钮只收起到托盘，退出走托盘菜单
+  // 小组件模式：关闭按钮只收起到托盘，退出走托盘菜单；
+  // 窗口模式：托盘不存在，关闭即退出（走默认关闭 → window-all-closed）
   win.on('close', (e) => {
-    if (!app.isQuitting) {
+    if (!app.isQuitting && windowMode() === 'widget') {
       e.preventDefault();
       win.hide();
     }
@@ -456,11 +494,28 @@ function buildTrayMenu(): Electron.Menu {
       ...icon('hidden'),
       click: () => openPanel('hidden'),
     },
+    {
+      // 状态在渲染层（localStorage），点击后发消息让它切换；勾选态由渲染层上报（roomState）
+      label: `按房间分类显示${roomState.groupByRoom ? ' ✓' : ''}`,
+      ...icon('room'),
+      click: () => { if (win && !win.isDestroyed()) win.webContents.send('widget:toggle-room', 'group'); },
+    },
+    {
+      label: roomState.showRoomName ? '隐藏房间名称' : '显示房间名称',
+      ...icon('roomname'),
+      click: () => { if (win && !win.isDestroyed()) win.webContents.send('widget:toggle-room', 'name'); },
+    },
     { type: 'separator' },
     {
       label: light ? '深色模式' : '浅色模式',
       ...icon('theme'),
       click: toggleTheme,
+    },
+    {
+      // 与应用内菜单一致：文案显示「将切换到的目标模式」
+      label: windowMode() === 'widget' ? '窗口模式' : '小组件模式',
+      ...icon('mode'),
+      click: toggleWindowMode,
     },
     { type: 'separator' },
     {
@@ -504,11 +559,12 @@ function buildTrayMenu(): Electron.Menu {
 
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
-  tray = new Tray(icon);
-  tray.setToolTip('OpenMexia');
+  const t = new Tray(icon);
+  t.setToolTip('OpenMexia');
   // 左键切换显示，右键弹菜单（Windows 上行为最可预期）
-  tray.on('click', toggleWindow);
-  tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
+  t.on('click', toggleWindow);
+  t.on('right-click', () => t.popUpContextMenu(buildTrayMenu()));
+  tray = t;
 }
 
 /* ---------------- IPC ---------------- */
@@ -525,6 +581,7 @@ function registerIpc() {
       hasCustomSize: hasCustomSize(),
       fullscreen: fsMode,
       theme: stateTheme(),
+      windowMode: windowMode(),
       version: app.getVersion(),
     };
   });
@@ -671,6 +728,15 @@ function registerIpc() {
     win.show();
     win.focus();
   });
+  // 窗口模式 / 小组件模式切换（菜单与托盘共用）
+  ipcMain.on('widget:toggle-window-mode', () => toggleWindowMode());
+  // 渲染层上报房间显示偏好（groupByRoom / showRoomName），供托盘菜单同步勾选态与文案
+  ipcMain.on('widget:room-state', (_e, s = {}) => {
+    roomState = {
+      groupByRoom: (s as any).groupByRoom === true,
+      showRoomName: (s as any).showRoomName !== false,
+    };
+  });
   // 打开外部链接（关于窗口的官网 / 作者主页）：仅允许 http(s)，交给系统默认浏览器
   ipcMain.on('widget:open-external', (_e, url) => {
     if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
@@ -714,11 +780,14 @@ if (!app.requestSingleInstanceLock()) {
       console.error('[main] rebuildProvider failed:', err);
     });
     createWindow();
-    createTray();
+    // 托盘只在小组件模式存在；窗口模式无托盘、窗口常驻任务栏
+    if (windowMode() === 'widget') createTray();
   });
 
   app.on('window-all-closed', () => {
-    // 托盘常驻，不随窗口关闭退出（订阅后即接管退出控制；不再调用 app.quit()）
+    // 小组件模式：托盘常驻，不随窗口关闭退出；
+    // 窗口模式：托盘不存在，窗口关闭即退出
+    if (windowMode() !== 'widget') app.quit();
   });
 
   app.on('before-quit', () => {

@@ -17,6 +17,7 @@ import type {
   Settings,
   Theme,
   UpdateResult,
+  WindowMode,
 } from './types';
 
 /** 全部 IPC 通道（渲染层 → 主进程 29 个，主进程 → 渲染层 9 个） */
@@ -52,6 +53,8 @@ export type IpcChannel =
   | 'widget:pin-taskbar'
   | 'widget:pin-taskbar-done'
   | 'widget:open-external'
+  | 'widget:toggle-window-mode'
+  | 'widget:room-state'
   // ---- 主进程 → 渲染层：主进程主动推送 ----
   | 'widget:devices'
   | 'widget:settings'
@@ -61,7 +64,9 @@ export type IpcChannel =
   | 'widget:toggle-theme'
   | 'widget:titlebar-menu'
   | 'widget:qr'
-  | 'widget:login-state';
+  | 'widget:login-state'
+  | 'widget:window-mode'
+  | 'widget:toggle-room';
 
 /**
  * `window.mijia` 的调用面（由 preload.js 的 contextBridge 暴露）。
@@ -94,6 +99,12 @@ export interface IpcApi {
   fullscreen(mode: Exclude<FullscreenMode, null>): void;
   onFullscreenState(cb: (mode: FullscreenMode) => void): void;
   setMenuIcons(icons: Record<string, string>): void;
+  // 窗口模式 / 小组件模式切换（主进程负责改窗口属性与托盘，渲染层同步菜单文案）
+  toggleWindowMode(): void;
+  onWindowMode(cb: (mode: WindowMode) => void): void;
+  // 渲染层上报房间显示偏好（托盘菜单同步勾选态与文案）；托盘点击回传 'group' | 'name'
+  reportRoomState(state: { groupByRoom: boolean; showRoomName: boolean }): void;
+  onToggleRoom(cb: (which: 'group' | 'name') => void): void;
 
   // ---- 托盘 / 菜单联动 ----
   onOpenPinGuide(cb: () => void): void;

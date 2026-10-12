@@ -30,6 +30,12 @@ contextBridge.exposeInMainWorld('mijia', {
   onFullscreenState: (cb) => ipcRenderer.on('widget:fullscreen-state', (_e, mode) => cb(mode)),
   // 把渲染层栅格化好的菜单图标（PNG dataURL）交给主进程做托盘菜单图标
   setMenuIcons: (icons) => ipcRenderer.send('widget:menu-icons', icons),
+  // 窗口模式 / 小组件模式切换；主进程应用后回播 'widget:window-mode'
+  toggleWindowMode: () => ipcRenderer.send('widget:toggle-window-mode'),
+  onWindowMode: (cb) => ipcRenderer.on('widget:window-mode', (_e, mode) => cb(mode)),
+  // 上报房间显示偏好供托盘菜单同步；托盘点击切换时主进程回传 'group' | 'name'
+  reportRoomState: (state) => ipcRenderer.send('widget:room-state', state),
+  onToggleRoom: (cb) => ipcRenderer.on('widget:toggle-room', (_e, which) => cb(which)),
   // 托盘菜单点了「固定到任务栏」：主进程已让窗口临时出现在任务栏，通知渲染层弹引导
   onOpenPinGuide: (cb) => ipcRenderer.on('widget:open-pin-guide', () => cb()),
   // 托盘菜单点了「登录米家 / 选择家庭 / 隐藏的设备」：渲染层打开对应面板（'login'|'home'|'hidden'）
