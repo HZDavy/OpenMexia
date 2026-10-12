@@ -21,6 +21,8 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 | macOS | 🚧 规划中 | 桌面端基于 Electron，下一个目标平台 |
 | iOS（iPhone / iPad） | 📋 计划中 | 复用同一套设备核心，卡片交互一致 |
 | Android（手机 / 平板） | 📋 计划中 | 同 iOS |
+| watchOS（Apple Watch） | 📋 计划中 | 腕上控制，复用同一套设备核心 |
+| Wear OS（Android 手表） | 📋 计划中 | 腕上控制，同一套设备核心 |
 | Linux | 🚧 规划中 | 同样基于 Electron，与 Windows 共用一套代码 |
 | 鸿蒙（HarmonyOS） | 📋 计划中 | 面向鸿蒙手机与平板，纳入长期规划 |
 
