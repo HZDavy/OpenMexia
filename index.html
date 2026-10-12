@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenMijia · 开源米家，多平台一致体验</title>
-<meta name="description" content="OpenMijia：开源米家客户端，多平台一致的米家设备体验。米家 App 扫码登录，灯、风扇、空调、传感器实时状态卡片化展示与控制。Windows 已发布，macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 规划中。免费开源。">
+<title>OpenMexia · 开源、全平台、多协议的智能控制中枢</title>
+<meta name="description" content="OpenMexia：开源、全平台、多协议、多厂商的智能家居控制中枢。打破单一品牌生态壁垒，把米家、Matter 及各厂商开放接口的设备汇聚到同一个本地掌控的控制台。米家 App 扫码即可接入，Windows 已发布，macOS、iOS、Android 等平台规划中。免费开源。">
 <link rel="icon" href="docs/favicon.svg" type="image/svg+xml">
 <style>
 :root{
@@ -120,6 +120,16 @@ section{padding:96px 0}
 .sec-head{text-align:center;margin-bottom:54px}
 .sec-head h2{font-size:clamp(30px,3.2vw,42px);font-weight:700;letter-spacing:-.025em;margin-bottom:14px}
 .sec-head p{font-size:16px;color:var(--ink-2)}
+
+/* ---------- naming meaning ---------- */
+.name-sec{background:var(--bg-soft);border-bottom:1px solid var(--line)}
+.name-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.name-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 28px;display:flex;flex-direction:column;gap:12px}
+.name-card .lt{font-size:38px;font-weight:700;letter-spacing:-.03em;color:var(--green-deep);line-height:1}
+.name-card .lt small{font-size:13px;font-weight:600;color:var(--ink-3);letter-spacing:0;margin-left:8px}
+.name-card h3{font-size:15.5px;font-weight:600;line-height:1.45}
+.name-card p{font-size:13px;color:var(--ink-2);line-height:1.65}
+.name-note{max-width:820px;margin:34px auto 0;text-align:center;font-size:13.5px;color:var(--ink-3);line-height:1.7}
 
 /* ---------- bento ---------- */
 .bento{display:grid;gap:20px}
@@ -292,6 +302,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .tile-tall .imgwrap{position:static;height:400px;margin-top:24px}
   .devs{grid-template-columns:1fr 1fr}
   .plats{grid-template-columns:1fr 1fr}
+  .name-grid{grid-template-columns:1fr 1fr}
   .steps{grid-template-columns:1fr;gap:40px}
   .foot-grid{grid-template-columns:1fr 1fr}
 }
@@ -307,6 +318,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .hero-acts .btn-lg{padding:12px 26px;font-size:15px}
   section{padding:64px 0}
   .sec-head{margin-bottom:36px}
+  .name-grid{grid-template-columns:1fr}
   .win-grid{grid-template-columns:1fr !important}
   .hero-shot .win-grid{max-height:420px;overflow:hidden}
 }
@@ -319,12 +331,13 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   <div class="w nav-in">
     <a class="logo" href="#top">
       <img src="docs/favicon.svg" alt="">
-      <span class="hidden-zh">OpenMijia</span><span class="hidden-en">OpenMijia</span>
+      <span class="hidden-zh">OpenMexia</span><span class="hidden-en">OpenMexia</span>
     </a>
     <nav class="nav-menu">
       <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
       <a href="#platforms"><span class="hidden-zh">多平台</span><span class="hidden-en">Platforms</span></a>
       <a href="#devices"><span class="hidden-zh">设备支持</span><span class="hidden-en">Devices</span></a>
+      <a href="#name"><span class="hidden-zh">命名寓意</span><span class="hidden-en">The name</span></a>
       <a href="#start"><span class="hidden-zh">快速上手</span><span class="hidden-en">Get started</span></a>
       <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
     </nav>
@@ -332,10 +345,10 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="lang">
         <button class="on" onclick="switchLang('zh')">简体</button><i></i><button onclick="switchLang('en')">EN</button>
       </div>
-      <a class="gh-link" href="https://github.com/HZDavy/OpenMijia" target="_blank" rel="noopener" aria-label="GitHub">
+      <a class="gh-link" href="https://github.com/HZDavy/OpenMexia" target="_blank" rel="noopener" aria-label="GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
       </a>
-      <a class="btn btn-dark" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
+      <a class="btn btn-dark" href="https://github.com/HZDavy/OpenMexia/releases/latest" target="_blank" rel="noopener">
         <span class="hidden-zh">立即下载</span><span class="hidden-en">Download</span>
       </a>
     </div>
@@ -346,20 +359,20 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <div class="hero" id="top">
   <div class="hero-in">
     <div>
-      <div class="eyebrow"><span class="hidden-zh">开源米家 · 多平台一致体验</span><span class="hidden-en">THE OPEN-SOURCE MI HOME</span></div>
+      <div class="eyebrow"><span class="hidden-zh">开源 · 全平台 · 多协议 · 多厂商</span><span class="hidden-en">OPEN · CROSS-PLATFORM · MULTI-PROTOCOL</span></div>
       <h1>
-        <span class="hidden-zh">你的米家<br>处处一致</span>
-        <span class="hidden-en">Your Mi Home,<br>consistent everywhere</span>
+        <span class="hidden-zh">一个平台<br>管住所有智能设备</span>
+        <span class="hidden-en">One hub for<br>all your smart devices</span>
       </h1>
       <p class="sub">
-        <span class="hidden-zh">OpenMijia 是开源的米家客户端。米家 App 扫码登录后，灯、风扇、空调与传感器在任何设备上都是同一套卡片、同一份实时状态。Windows 版现已可用，macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 即将到来。</span>
-        <span class="hidden-en">OpenMijia is an open-source Mi Home client. After one QR sign-in, lights, fans, ACs and sensors appear as the same live cards on every device. Windows is available now — macOS, iOS, Android, watchOS, Wear OS, Linux and HarmonyOS are on the way.</span>
+        <span class="hidden-zh">OpenMexia 是开源、全平台、多协议的智能家居控制中枢。它不绑定任何一家生态——以米家作为首个支持的生态，并逐步通过 Matter 及各厂商开放接口接入更多设备，把家里的灯、风扇、空调与传感器汇聚成同一套卡片、同一份实时状态，凭据只留在本机。Windows 版现已可用，macOS、iOS、Android 等平台即将到来。</span>
+        <span class="hidden-en">OpenMexia is an open-source, cross-platform, multi-protocol smart home hub. It is not tied to any single ecosystem — starting with Mi Home as the first supported one and gradually adding Matter and other vendors' open APIs, it gathers your lights, fans, ACs and sensors into one set of cards with one live state, with credentials kept local. Windows is available now; macOS, iOS, Android and more are on the way.</span>
       </p>
       <div class="hero-acts">
-        <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
+        <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMexia/releases/latest" target="_blank" rel="noopener">
           <span class="hidden-zh">下载 Windows 版</span><span class="hidden-en">Download for Windows</span>
         </a>
-        <a class="more" href="https://github.com/HZDavy/OpenMijia" target="_blank" rel="noopener">
+        <a class="more" href="https://github.com/HZDavy/OpenMexia" target="_blank" rel="noopener">
           <span class="hidden-zh">在 GitHub 上查看</span><span class="hidden-en">View on GitHub</span><span>→</span>
         </a>
       </div>
@@ -408,6 +421,40 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     </div>
   </div>
 </div>
+
+<!-- ================= 命名寓意 ================= -->
+<section class="name-sec" id="name">
+  <div class="w">
+    <div class="sec-head">
+      <div class="eyebrow">WHY “OPENMEXIA”</div>
+      <h2><span class="hidden-zh">名字里的四个心思</span><span class="hidden-en">The meaning behind the name</span></h2>
+      <p><span class="hidden-zh">Open · Me · X · ia —— 从致敬起点，到跨界融合，再到构建生态。</span><span class="hidden-en">Open · Me · X · ia — from an homage to its origin, to cross-ecosystem fusion, to a whole ecosystem.</span></p>
+    </div>
+    <div class="name-grid">
+      <div class="name-card">
+        <div class="lt">Open<small><span class="hidden-zh">开放</span><span class="hidden-en">Open</span></small></div>
+        <h3><span class="hidden-zh">开源精神与无界底座</span><span class="hidden-en">Open source &amp; an unbounded base</span></h3>
+        <p><span class="hidden-zh">宣告项目的开源属性与开放基因，打破单一品牌（如小米）的生态壁垒，致力于构建一个能接入所有开放 API、乃至 Matter 等全协议设备的无界控制底座。</span><span class="hidden-en">Declares the project's open-source nature and genes, breaks down single-brand ecosystem walls, and aims to be an unbounded hub that connects every open API — and every protocol, Matter included.</span></p>
+      </div>
+      <div class="name-card">
+        <div class="lt">Me<small><span class="hidden-zh">米 · 我</span><span class="hidden-en">Mi · me</span></small></div>
+        <h3><span class="hidden-zh">听觉传承与私有属性</span><span class="hidden-en">A familiar sound, a private hub</span></h3>
+        <p><span class="hidden-zh">发音上完美承接「米 (Mi)」的听觉记忆，暗示从「米家设备接入」起步的开发渊源；同时 Me 代表「我」，强调这是一个由用户本地掌控、不受大厂云端限制的私人智能中枢。</span><span class="hidden-en">Its sound carries the memory of “Mi”, hinting at its origin in Mi Home device support. “Me” also stands for the self — a personal hub you control locally, free from any vendor's cloud.</span></p>
+      </div>
+      <div class="name-card">
+        <div class="lt">X<small><span class="hidden-zh">跨界 · 无限</span><span class="hidden-en">Cross · infinite</span></small></div>
+        <h3><span class="hidden-zh">跨界互联与无限扩展</span><span class="hidden-en">Cross-connect &amp; endless growth</span></h3>
+        <p><span class="hidden-zh">X 是 Cross（跨平台 / 跨协议）的核心符号，象征 Wi-Fi、蓝牙、Zigbee、Matter 等原本互不相通的设备与协议在此交叉互联；作为数学中的无限变量，X 也寓意接入万物的无限潜力。</span><span class="hidden-en">X is the symbol of Cross — cross-platform, cross-protocol — where Wi-Fi, Bluetooth, Zigbee and Matter devices interweave. As the variable of the infinite, X also stands for boundless potential.</span></p>
+      </div>
+      <div class="name-card">
+        <div class="lt">ia<small><span class="hidden-zh">生态疆域</span><span class="hidden-en">A realm</span></small></div>
+        <h3><span class="hidden-zh">生态疆域与系统级平台</span><span class="hidden-en">A realm, a system-level platform</span></h3>
+        <p><span class="hidden-zh">-ia 后缀在拉丁语词根与科技命名体系中常指「广阔的领域或生态系统」（如 Wikipedia）。它赋予项目更高的格局：OpenMexia 不只是一个控制脚本，而是一个包容海量硬件节点的完整数字家园。</span><span class="hidden-en">The -ia suffix (as in Wikipedia) points to “a vast realm or ecosystem”, giving the project a bigger scope: OpenMexia is not a mere control script, but a whole digital home for countless hardware nodes.</span></p>
+      </div>
+    </div>
+    <p class="name-note"><span class="hidden-zh">发音 /miːˈzi.ə/ 或「米夏」，与「米家 (Mijia)」口型相近，却指向一个更开放、由你掌控的全平台智能中枢。</span><span class="hidden-en">Pronounced /miːˈzi.ə/ — close in sound to “Mijia”, yet pointing to a more open, personal, cross-platform hub of your own.</span></p>
+  </div>
+</section>
 
 <!-- ================= PLATFORMS ================= -->
 <section id="platforms">
@@ -466,7 +513,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <section id="features">
   <div class="w">
     <div class="sec-head">
-      <h2><span class="hidden-zh">为每个屏幕打磨的米家体验</span><span class="hidden-en">Mi Home, crafted for every screen</span></h2>
+      <h2><span class="hidden-zh">为每个屏幕打磨的智能中枢</span><span class="hidden-en">A hub crafted for every screen</span></h2>
       <p><span class="hidden-zh">桌面版先行：大窗口看全局，小窗口看常用，怎么摆都顺手</span><span class="hidden-en">Starting on desktop: a full dashboard or a compact widget — arranged your way</span></p>
     </div>
 
@@ -511,7 +558,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <section class="dark" id="devices">
   <div class="w">
     <div class="sec-head">
-      <div class="eyebrow">MIOT NATIVE</div>
+      <div class="eyebrow">MIOT NOW · MATTER NEXT</div>
       <h2><span class="hidden-zh">你家里的设备，大多都能管</span><span class="hidden-en">Most of your devices, supported</span></h2>
       <p><span class="hidden-zh">按设备 MIoT 规格自动生成控制项，无需逐个适配</span><span class="hidden-en">Controls are generated from each device's MIoT spec automatically</span></p>
     </div>
@@ -604,7 +651,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       </details>
       <details>
         <summary><span class="hidden-zh">为什么我的设备没有控制项？</span><span class="hidden-en">Why does a device have no controls?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。欢迎到 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Report the model on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。随着 Matter 与更多厂商开放接口的接入，支持范围会持续扩大。欢迎到 <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Support will keep expanding as Matter and more vendors' open APIs are integrated. Report the model on <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
       <details>
         <summary><span class="hidden-zh">软件收费吗？会收集数据吗？</span><span class="hidden-en">Is it free? Does it collect data?</span></summary>
@@ -616,7 +663,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       </details>
       <details>
         <summary><span class="hidden-zh">会支持 macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 吗？</span><span class="hidden-en">Will it support macOS, iOS, Android, watchOS, Wear OS, Linux and HarmonyOS?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMijia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。此外，面向 Apple Watch 的 watchOS、面向 Android 手表的 Wear OS，以及 Linux、HarmonyOS 同样在规划之中。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. watchOS for Apple Watch, Wear OS for Android watches, plus Linux and HarmonyOS, are also planned. Follow the progress on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMexia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。面向 Apple Watch 的 watchOS、面向 Android 手表的 Wear OS，以及 Linux、HarmonyOS 同样在规划之中。在协议层面，除米家 MIoT 外还将逐步接入 Matter 及各厂商开放接口。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. watchOS for Apple Watch, Wear OS for Android watches, plus Linux and HarmonyOS, are also planned. On the protocol side, beyond Mi Home MIoT we will gradually add Matter and other vendors' open APIs. Follow the progress on <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
     </div>
   </div>
@@ -626,11 +673,11 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <section id="download" style="padding-bottom:0">
   <div class="w">
     <div class="dl-card">
-      <h2><span class="hidden-zh">现在，把米家放上桌面</span><span class="hidden-en">Put Mi Home on your desktop</span></h2>
+      <h2><span class="hidden-zh">现在，把智能家居放上桌面</span><span class="hidden-en">Put your smart home on the desktop</span></h2>
       <p class="s"><span class="hidden-zh">免费开源，扫码即用。</span><span class="hidden-en">Free, open source, ready after one scan.</span></p>
-      <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
+      <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMexia/releases/latest" target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span class="hidden-zh">下载 OpenMijia v0.1.0</span><span class="hidden-en">Download OpenMijia v0.1.0</span>
+        <span class="hidden-zh">下载 OpenMexia v0.1.0</span><span class="hidden-en">Download OpenMexia v0.1.0</span>
       </a>
       <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 109 MB</div>
       <div class="dl-meta" style="margin-top:8px"><span class="hidden-zh">macOS / iOS / Android / watchOS / Wear OS / Linux / HarmonyOS 版本规划中，欢迎在 GitHub 关注进展</span><span class="hidden-en">macOS / iOS / Android / watchOS / Wear OS / Linux &amp; HarmonyOS on the roadmap — follow the progress on GitHub</span></div>
@@ -645,24 +692,24 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     <div class="foot-grid">
       <div class="foot-brand">
         <img src="docs/favicon.svg" alt="">
-        <div class="nm"><span class="hidden-zh">OpenMijia</span><span class="hidden-en">OpenMijia</span></div>
-        <p><span class="hidden-zh">开源米家客户端，多平台一致体验。Windows 已发布，macOS / iOS / Android / watchOS / Wear OS / Linux / HarmonyOS 规划中。</span><span class="hidden-en">The open-source Mi Home client with one consistent experience. Windows available; macOS, iOS, Android, watchOS, Wear OS, Linux &amp; HarmonyOS planned.</span></p>
+        <div class="nm"><span class="hidden-zh">OpenMexia</span><span class="hidden-en">OpenMexia</span></div>
+        <p><span class="hidden-zh">开源、全平台、多协议的智能家居控制中枢。以米家为首个支持的生态，逐步接入 Matter 及各厂商开放接口。Windows 已发布，macOS / iOS / Android 等平台规划中。</span><span class="hidden-en">An open-source, cross-platform, multi-protocol smart home hub. Mi Home is the first supported ecosystem; Matter and other vendors' open APIs come next. Windows available; macOS, iOS, Android and more planned.</span></p>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">产品</span><span class="hidden-en">Product</span></h4>
-        <a href="https://github.com/HZDavy/OpenMijia/releases" target="_blank" rel="noopener"><span class="hidden-zh">下载安装包</span><span class="hidden-en">Downloads</span></a>
-        <a href="https://github.com/HZDavy/OpenMijia/releases" target="_blank" rel="noopener"><span class="hidden-zh">更新日志</span><span class="hidden-en">Release notes</span></a>
+        <a href="https://github.com/HZDavy/OpenMexia/releases" target="_blank" rel="noopener"><span class="hidden-zh">下载安装包</span><span class="hidden-en">Downloads</span></a>
+        <a href="https://github.com/HZDavy/OpenMexia/releases" target="_blank" rel="noopener"><span class="hidden-zh">更新日志</span><span class="hidden-en">Release notes</span></a>
         <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">资源</span><span class="hidden-en">Resources</span></h4>
-        <a href="https://github.com/HZDavy/OpenMijia" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">Issues</a>
-        <a href="https://github.com/HZDavy/OpenMijia/blob/main/README.md" target="_blank" rel="noopener">README</a>
+        <a href="https://github.com/HZDavy/OpenMexia" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/HZDavy/OpenMexia/blob/main/README.md" target="_blank" rel="noopener">README</a>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">协议与隐私</span><span class="hidden-en">Legal</span></h4>
-        <a href="https://github.com/HZDavy/OpenMijia/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a>
+        <a href="https://github.com/HZDavy/OpenMexia/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a>
         <a href="#faq"><span class="hidden-zh">隐私说明</span><span class="hidden-en">Privacy</span></a>
         <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
       </div>
@@ -679,7 +726,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <template id="t-win">
   <div class="win-bar">
     <span class="win-logo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><path d="M14 32h36M32 14v36M19.3 19.3l25.4 25.4M44.7 19.3 19.3 44.7"/></svg></span>
-    <span class="win-tt"><b>OpenMijia</b><i>3 台设备 · 3 在线 · 2 开启</i></span>
+    <span class="win-tt"><b>OpenMexia</b><i>3 台设备 · 3 在线 · 2 开启</i></span>
     <span class="win-burger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
   </div>
   <div class="win-grid">
@@ -751,8 +798,8 @@ function switchLang(lang){
   bs[0].classList.toggle('on',lang==='zh');
   bs[1].classList.toggle('on',lang==='en');
   document.title = lang==='en'
-    ? 'OpenMijia · The open-source Mi Home, everywhere'
-    : 'OpenMijia · 开源米家，多平台一致体验';
+    ? 'OpenMexia · The open-source, cross-platform smart hub'
+    : 'OpenMexia · 开源、全平台、多协议的智能控制中枢';
 }
 switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
 
