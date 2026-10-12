@@ -13,6 +13,12 @@ const ICONS = {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="7.5" rx="2"/><path d="M6 7.75h12"/><path d="M6.5 15v4M12 15v4M17.5 15v4"/></svg>',
   purifier:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s5.6 6.1 5.6 10.2a5.6 5.6 0 1 1-11.2 0C6.4 9.1 12 3 12 3Z"/><path d="M9.4 13.6a2.7 2.7 0 0 0 2.6 2.7"/></svg>',
+  router:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="13.8" width="19" height="6.7" rx="2"/><path d="M6.4 17.15h.02M9.4 17.15h.02"/><path d="M12 10.6v3.2"/><path d="M8.6 9.1a5 5 0 0 1 6.8 0"/><path d="M6 6.4a9 9 0 0 1 12 0"/></svg>',
+  gateway:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.4" y="8.4" width="17.2" height="11" rx="2.4"/><path d="M7.4 12.2h3M7.4 15.4h6.2"/><path d="M12 8.4V5.4"/></svg>',
+  other:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4.6" width="17.6" height="14.8" rx="2.4"/><path d="M7.4 9.4h9.2M7.4 14.4h5.6"/></svg>',
 };
 
 const BULB_ICON =
@@ -50,6 +56,7 @@ let order = readOrder(); // 持久化的卡片顺序
 let hiddenSet = readHidden(); // 被隐藏（不在列表显示）的设备 id
 let collapsedSet = readCollapsed(); // 被收折（只留基本信息）的卡片 id
 let allDevices = [];    // 最近一次拿到的完整设备列表（隐藏恢复面板需要）
+let mockMode = false;   // 未登录、无真实设备时：显示欢迎引导，而不是演示数据
 
 const h = (tag, cls, html) => {
   const node = document.createElement(tag);
@@ -353,10 +360,22 @@ function buildCard(device) {
     const body = h('div', 'card-body');
     const hero = makeHero('亮度', '%');
     entry.refs.value = hero.value;
+    body.append(hero.hero);
+
+    // 色温大号读数：与「亮度」同字号（26px）、横排并列在亮度之后；仅规格带色温区间时展示
+    const ctRange = Array.isArray(device.colorTempRange) && device.colorTempRange.length >= 2
+      ? device.colorTempRange
+      : null;
+    if (ctRange) {
+      const tempHero = makeHero('色温', 'K');
+      entry.refs.tempValue = tempHero.value;
+      body.append(tempHero.hero);
+    }
+
     const meta = h('div', 'meta');
     entry.refs.state = h('div', 'meta-row', '<span>状态</span><b>--</b>');
     meta.append(entry.refs.state);
-    body.append(hero.hero, meta);
+    body.append(meta);
     el.append(body);
 
     el.append(sep());
@@ -392,9 +411,6 @@ function buildCard(device) {
     el.append(row);
 
     // 色温滑杆（仅当设备规格里带有色温区间时展示）
-    const ctRange = Array.isArray(device.colorTempRange) && device.colorTempRange.length >= 2
-      ? device.colorTempRange
-      : null;
     if (ctRange) {
       const [tMin, tMax] = ctRange;
       const tempRow = h('div', 'slider-row');
@@ -413,6 +429,7 @@ function buildCard(device) {
       tempSlider.addEventListener('pointerdown', () => { entry.tempDragging = true; });
       tempSlider.addEventListener('input', () => {
         entry.refs.tempText.textContent = tempSlider.value + 'K';
+        if (entry.refs.tempValue) entry.refs.tempValue.querySelector('.value').textContent = tempSlider.value;
         clearTimeout(entry._tt);
         entry._tt = setTimeout(commitTemp, 120);
       });
@@ -643,6 +660,29 @@ function buildCard(device) {
     el.append(sep(), entry.refs.targetSlider.row);
   }
 
+  // 网络设备（路由器 / 网关）与其它无可控开关的设备：只展示只读信息
+  if (device.type === 'router' || device.type === 'gateway' || device.type === 'other') {
+    const body = h('div', 'card-body');
+    const meta = h('div', 'meta');
+    // 规格里没有可读属性（如计时器、青萍蓝牙网关）时，状态行最左侧给一句提示，
+    // 说明只能看到在线/离线，读不到设备自身的状态；有可读属性的设备保持原样。
+    const hint = device.hasReads ? '' : '<i class="meta-hint">该设备暂不支持读取状态</i>';
+    entry.refs.state = h('div', 'meta-row', hint + '<span>状态</span><b>--</b>');
+    // 路由器规格里有上下行速率 / 连接设备数，就一并展示
+    if (device.hasNetMetrics) {
+      const hero = makeHero('连接设备', '台');
+      entry.refs.value = hero.value;
+      entry.refs.down = h('div', 'meta-row', '<span>下行</span><b>--</b>');
+      entry.refs.up = h('div', 'meta-row', '<span>上行</span><b>--</b>');
+      meta.append(entry.refs.down, entry.refs.up, entry.refs.state);
+      body.append(hero.hero);
+    } else {
+      meta.append(entry.refs.state);
+    }
+    body.append(meta);
+    el.append(body);
+  }
+
   // 点阵把手始终位于卡片头部最右
   head.append(grip);
 
@@ -704,8 +744,11 @@ function updateCard(entry, d) {
   entry.el.querySelector('.card-name b').textContent = d.name;
   entry.el.querySelector('.card-name span').textContent = d.model;
   entry.el.classList.toggle('offline', d.online === false);
-  // 只有「带开关且已开启」的设备才显示激活态图标；温度计等无开关设备保持普通（未激活）样式
-  entry.el.classList.toggle('active', d.on === true);
+  // 只有「带开关且已开启」的设备才显示激活态（实色）图标；
+  // 传感器、净饮机等没有开关的设备始终显示淡底（关闭态）图标，
+  // 避免出现和灯「打开」一样的实色图标。
+  const hasSwitch = entry.type === 'plug' || entry.type === 'light' || entry.type === 'fan' || entry.type === 'aircon';
+  entry.el.classList.toggle('active', hasSwitch && d.on === true);
 
   if (d.type === 'sensor') {
     const tv = r.temp.querySelector('.value');
@@ -745,7 +788,11 @@ function updateCard(entry, d) {
         if (isNum(d.colorTemperature) && d.colorTemperature > 0) {
           r.tempSlider.value = String(d.colorTemperature);
           r.tempText.textContent = d.colorTemperature + 'K';
-        } else { r.tempText.textContent = '--K'; }
+          if (r.tempValue) r.tempValue.querySelector('.value').textContent = d.colorTemperature;
+        } else {
+          r.tempText.textContent = '--K';
+          if (r.tempValue) r.tempValue.querySelector('.value').textContent = '--';
+        }
       }
       r.tempSlider.disabled = d.online === false;
       // 关灯时色温滑杆同步置灰（不再显示渐变），与亮度滑杆一致
@@ -819,6 +866,19 @@ function updateCard(entry, d) {
     r.faultRow.querySelector('b').textContent = faultLabel || '正常';
     r.faultRow.classList.toggle('warn', !!faultLabel);
     r.faultRow.hidden = !faultLabel;
+  }
+
+  // 网络设备（路由器 / 网关）与其它无可控开关的设备：只读信息
+  if (d.type === 'router' || d.type === 'gateway' || d.type === 'other') {
+    r.state.querySelector('b').textContent = d.online === false ? '离线' : '在线';
+    if (r.value) {
+      r.value.querySelector('.value').textContent = isNum(d.connectedDeviceNumber)
+        ? String(Math.round(d.connectedDeviceNumber)) : '--';
+      r.down.querySelector('b').textContent = isNum(d.downloadSpeed)
+        ? d.downloadSpeed.toFixed(1) + ' KB/s' : '--';
+      r.up.querySelector('b').textContent = isNum(d.uploadSpeed)
+        ? d.uploadSpeed.toFixed(1) + ' KB/s' : '--';
+    }
   }
 }
 
@@ -908,6 +968,14 @@ const DRAG_THRESHOLD = 4;
 // 拖动时卡片放大倍数：transform-origin 固定为左上角(0 0)，跟手公式据此按比例换算抓取点，
 // 保证指针始终压住把手上按下时的那个点（见 startDrag / layoutDrag）。
 const DRAG_SCALE = 1.04;
+// 目标判定迟滞（死区）：指针落在卡片之间的缝隙或边缘时，若没有死区，鼠标的亚像素抖动
+// 会让 target / insertAfter 在边界（中心线）两侧反复翻转，占位符随之来回插入，
+// 每次翻转都触发整列重排 + FLIP，视觉上就是「一闪一闪」。
+const DRAG_TARGET_DEADZONE = 24;  // px：指针不在任何卡片内时，新目标须比当前目标近这么多才切换
+const DRAG_INSERT_DEADZONE = 14;  // px：指针越过目标中心线这么多，才改变占位「插前 / 插后」
+// 指针位移阈值：相对上次落点判定，指针在内容坐标系中移动不足这么多时直接沿用上次判定，
+// 既不重算也不重排 —— 切断「重排改变布局 → 下一帧又改判 → 再重排」的反馈震荡。
+const DRAG_EVAL_EPS = 3;          // px
 
 listEl.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
@@ -930,6 +998,11 @@ listEl.addEventListener('pointerdown', (e) => {
     baseLeft: 0,
     width: 0,
     height: 0,
+    lastTarget: null,        // 上一帧的落点目标，用于迟滞
+    lastInsertAfter: false,  // 上一帧的插前/插后判定，用于迟滞
+    lastEvalX: null,         // 上次落点判定时指针的内容坐标（用于位移阈值）
+    lastEvalY: null,
+    boxes: null,             // 起拖前各卡片的几何快照（内容坐标），落点判定只用它，见 startDrag
   };
   e.preventDefault();
 });
@@ -949,6 +1022,23 @@ function startDrag() {
   // 指针在卡片内的视觉偏移（放大前），跟手时按 DRAG_SCALE 换算
   drag.grabX = drag.startX - rect.left;
   drag.grabY = drag.startY - rect.top;
+
+  // 落点判定的几何快照：必须在插入占位符「之前」抓取。
+  // 占位符一旦插入网格，会把它之后的卡片顺移一个槽位（列锁定按 DOM 序 i%列数 分配），
+  // 若判定读「实时」offset —— 判定改变占位符位置 → 占位符改变卡片位置 → 下一帧又改判定，
+  // 指针停在边缘/缝隙（不在任何卡片内、只能取最近卡片）时就会每帧来回翻转，表现为闪烁。
+  // 快照冻结了「插入占位符之前」的布局，判定与占位符自身的影响解耦，从此稳定。
+  drag.boxes = new Map();
+  for (const c of listEl.children) {
+    if (c.classList && c.classList.contains('card') && c !== el) {
+      drag.boxes.set(c, {
+        l: c.offsetLeft,
+        t: c.offsetTop,
+        w: c.offsetWidth,
+        h: c.offsetHeight,
+      });
+    }
+  }
 
   const ph = document.createElement('div');
   ph.className = 'drag-placeholder';
@@ -992,28 +1082,76 @@ function layoutDrag(cursorX, cursorY) {
   const dy = cy - drag.baseTop - DRAG_SCALE * drag.grabY;
   drag.el.style.transform = `translate(${dx}px, ${dy}px) scale(${DRAG_SCALE})`;
 
-  // 落点判定：优先取包含指针的网格单元，否则取中心最近的单元
+  // 位移阈值：指针相对上次落点判定移动很小（亚像素抖动/静止微颤）时，直接沿用上次判定，
+  // 不重算目标、不重排。否则指针停在边缘/缝隙处，重排改变布局会让下一帧又改判，来回震荡闪烁。
+  if (
+    drag.lastEvalX !== null &&
+    Math.hypot(cx - drag.lastEvalX, cy - drag.lastEvalY) < DRAG_EVAL_EPS
+  ) return;
+
+  // 落点判定：优先取包含指针的网格单元；指针不在任何单元内（缝隙 / 边缘）时，
+  // 默认沿用上一次的目标，只有当另一张卡片明显更近（超出死区）才切换 —— 迟滞抑制边界抖动。
   const cards = [...listEl.children].filter(
     (c) => c.classList && c.classList.contains('card') && c !== drag.el
   );
+  // 判定一律走「起拖时的几何快照」（见 startDrag）：快照不受占位符插入影响，
+  // 因此判定结果不会反过来被自己的后果改变，边缘/缝隙处也就不再每帧翻转。
+  // 快照缺失（异常路径）时退回实时 offset，保证不会因为拿不到几何而失效。
+  const boxOf = (c) => {
+    const b = drag.boxes && drag.boxes.get(c);
+    return b || { l: c.offsetLeft, t: c.offsetTop, w: c.offsetWidth, h: c.offsetHeight };
+  };
+  const centerDist = (c) => {
+    const b = boxOf(c);
+    const dx = cx - (b.l + b.w / 2);
+    const dy = cy - (b.t + b.h / 2);
+    return Math.hypot(dx, dy);
+  };
   let target = null;
-  let best = Infinity;
   for (const c of cards) {
-    // 用 offset 系列（不受 transform 影响）做判定，避免读到还在过渡中的视觉位置
-    const l = c.offsetLeft, t = c.offsetTop, w = c.offsetWidth, h = c.offsetHeight;
-    if (cx >= l && cx <= l + w && cy >= t && cy <= t + h) { target = c; break; }
-    const d = (cx - (l + w / 2)) ** 2 + (cy - (t + h / 2)) ** 2;
-    if (d < best) { best = d; target = c; }
+    const b = boxOf(c);
+    if (cx >= b.l && cx <= b.l + b.w && cy >= b.t && cy <= b.t + b.h) { target = c; break; }
+  }
+  if (!target && cards.length) {
+    const prev = drag.lastTarget && cards.includes(drag.lastTarget) ? drag.lastTarget : null;
+    let best = prev;
+    let bestD = prev ? centerDist(prev) : Infinity;
+    for (const c of cards) {
+      const d = centerDist(c);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    // 有上一目标时：最优卡片必须比它近出死区才允许切换，否则保持原目标，避免中心线附近来回翻转
+    if (prev && best !== prev && bestD > centerDist(prev) - DRAG_TARGET_DEADZONE) best = prev;
+    target = best;
   }
 
   // 依据读序（先行后列）判断占位应落在目标单元之前还是之后
   let insertAfter = false;
   if (target) {
-    const tcx = target.offsetLeft + target.offsetWidth / 2;
-    const tcy = target.offsetTop + target.offsetHeight / 2;
-    const sameRow = cy >= target.offsetTop && cy <= target.offsetTop + target.offsetHeight;
-    insertAfter = sameRow ? cx > tcx : cy > tcy;
+    const tb = boxOf(target);
+    const tcx = tb.l + tb.w / 2;
+    const tcy = tb.t + tb.h / 2;
+    // 比较轴的选择：指针落在目标卡片的「水平跨度」内时按纵向（上/下）判断插入前后，
+    // 否则按横向判断。绝不能以「卡片自身高度」判同行 —— 指针刚进入卡片顶边的一瞬间，
+    // 比较轴会从纵向切成横向，delta 由负突变（-70）为正（+136），占位符在相邻两个槽位
+    // 间每帧来回翻转。纵向缝隙（同列上下两卡之间）判定的正是这条边界，于是表现为闪烁。
+    // 改用「水平跨度」作为分界，指针上下微动时比较轴保持纵向，delta 连续，判定稳定。
+    const inSpanX = cx >= tb.l && cx <= tb.l + tb.w;
+    const delta = inSpanX ? cy - tcy : cx - tcx;
+    if (target === drag.lastTarget && typeof drag.lastInsertAfter === 'boolean') {
+      // 同一目标内：指针只有在越过中心线并超出死区后才改变「插前 / 插后」，死区内维持原判定
+      if (delta > DRAG_INSERT_DEADZONE) insertAfter = true;
+      else if (delta < -DRAG_INSERT_DEADZONE) insertAfter = false;
+      else insertAfter = drag.lastInsertAfter;
+    } else {
+      insertAfter = delta > 0;
+    }
   }
+  // 记录本次稳定判定，供下一帧迟滞参考
+  drag.lastTarget = target;
+  drag.lastInsertAfter = target ? insertAfter : false;
+  drag.lastEvalX = cx;
+  drag.lastEvalY = cy;
 
   // 占位当前是否已经在正确位置：是则直接返回 —— 不重排、不 FLIP。
   // 这是消除「多列拖动一闪一闪」的关键：pointermove 每帧都会触发，
@@ -1301,7 +1439,7 @@ function fitWindow() {
   // 瀑布流各列高低不一，不能再按「行」累加；取最低一张卡片的底边作为列表内容高度。
   const listRect = listEl.getBoundingClientRect();
   let maxB = 0;
-  for (const el of listEl.querySelectorAll('.card')) {
+  for (const el of listEl.querySelectorAll('.card, .empty')) {
     const r = el.getBoundingClientRect();
     maxB = Math.max(maxB, r.bottom - listRect.top + listEl.scrollTop);
   }
@@ -1393,7 +1531,30 @@ listRO.observe(listEl);
 
 /* ---------------- 渲染 ---------------- */
 
+// 未登录 / 无真实设备时的欢迎引导（新用户首次打开看到的样子）
+function renderWelcome() {
+  cards.clear();
+  listEl.classList.add('welcome-mode');   // 欢迎引导居中显示
+  let wrap = listEl.querySelector('.empty.welcome');
+  if (!wrap) {
+    listEl.textContent = '';
+    wrap = h('div', 'empty welcome');
+    wrap.innerHTML =
+      '<img class="welcome-logo" src="../assets/icon.png" alt="OpenMexia" />' +
+      '<h2 class="welcome-title">欢迎使用 OpenMexia</h2>' +
+      '<p class="welcome-desc">登录米家账号，把灯、风扇、空调与传感器汇聚到同一个控制台</p>' +
+      '<button class="pin-btn welcome-btn" type="button">登录米家</button>';
+    wrap.querySelector('.welcome-btn').addEventListener('click', () => openLoginModal(true));
+    listEl.append(wrap);
+  }
+  subtitleEl.textContent = '尚未登录';
+  updatedEl.textContent = '未登录';
+  statusDot.classList.remove('ok', 'warn');
+  fitWindow();
+}
+
 function render(devices) {
+  if (mockMode) { renderWelcome(); return; }
   allDevices = devices;
   devices = sortByOrder(devices).filter((d) => !hiddenSet.has(String(d.id)));
 
@@ -1408,6 +1569,9 @@ function render(devices) {
       }
     }
   }
+
+  listEl.querySelector('.empty.welcome')?.remove();
+  listEl.classList.remove('welcome-mode');   // 恢复多列网格排布
 
   const ids = new Set(devices.map((d) => d.id));
   for (const [id, entry] of cards) {
@@ -1494,11 +1658,47 @@ function applyFullscreenState(mode) {
   miFsCover.setAttribute('aria-checked', String(mode === 'cover'));
 }
 
-function openMenu(open) {
-  menuEl.hidden = !open;
-  menuBackdrop.hidden = !open;
-  btnMenu.classList.toggle('active', open);
-  btnMenu.setAttribute('aria-expanded', String(open));
+function openMenu(open, at) {
+  if (!open) {
+    menuEl.hidden = true;
+    menuBackdrop.hidden = true;
+    btnMenu.classList.toggle('active', false);
+    btnMenu.setAttribute('aria-expanded', 'false');
+    // 复位为默认（右上角汉堡按钮下方）定位
+    menuEl.style.left = '';
+    menuEl.style.top = '';
+    menuEl.style.right = '';
+    menuEl.style.transformOrigin = '';
+    return;
+  }
+
+  menuEl.hidden = false;
+  menuBackdrop.hidden = false;
+  // 只有从汉堡按钮打开时才高亮它；标题栏右键跟随鼠标弹出时不要激活汉堡按钮
+  const viaButton = !(at && Number.isFinite(at.x) && Number.isFinite(at.y));
+  btnMenu.classList.toggle('active', viaButton);
+  btnMenu.setAttribute('aria-expanded', viaButton ? 'true' : 'false');
+
+  if (at && Number.isFinite(at.x) && Number.isFinite(at.y)) {
+    // 跟随鼠标弹出（标题栏右键）：先显示再量尺寸，然后做窗口边界钳制
+    menuEl.style.right = 'auto';
+    menuEl.style.transformOrigin = 'top left';
+    const pad = 6;
+    const w = menuEl.offsetWidth;
+    const hgt = menuEl.offsetHeight;
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    const left = Math.max(pad, Math.min(at.x, vw - w - pad));
+    const top = Math.max(pad, Math.min(at.y, vh - hgt - pad));
+    menuEl.style.left = left + 'px';
+    menuEl.style.top = top + 'px';
+  } else {
+    // 汉堡按钮：用 CSS 默认的右上角定位
+    menuEl.style.left = '';
+    menuEl.style.top = '';
+    menuEl.style.right = '';
+    menuEl.style.transformOrigin = '';
+  }
 }
 
 btnMenu.addEventListener('click', (e) => {
@@ -1515,6 +1715,44 @@ miFsCover.addEventListener('click', () => window.mijia.fullscreen('cover'));
 document.getElementById('mi-hide').addEventListener('click', () => window.mijia.hide());
 document.getElementById('mi-quit').addEventListener('click', () => window.mijia.quit());
 
+/* ---------------- 深色 / 浅色主题 ---------------- */
+
+const miTheme = document.getElementById('mi-theme');
+const miThemeLabel = miTheme.querySelector('.mi-label');
+
+function readTheme() {
+  try { return localStorage.getItem('mijia.theme') === 'light' ? 'light' : 'dark'; }
+  catch { return 'dark'; }
+}
+
+// theme: 'dark' | 'light'。深色为默认，通过 <html class="light"> 切换主题变量
+function applyTheme(theme) {
+  const dark = theme !== 'light';
+  document.documentElement.classList.toggle('light', !dark);
+  // 显示「将切换到的目标模式」：当前深色则提示切浅色，反之亦然
+  miThemeLabel.textContent = dark ? '浅色模式' : '深色模式';
+  if (window.mijia && window.mijia.setTheme) window.mijia.setTheme(theme);
+}
+
+miTheme.addEventListener('click', () => {
+  const next = document.documentElement.classList.contains('light') ? 'dark' : 'light';
+  try { localStorage.setItem('mijia.theme', next); } catch {}
+  applyTheme(next);
+});
+
+applyTheme(readTheme());
+
+// 托盘菜单 → 打开对应面板（与应用内菜单共用同一套面板）
+window.mijia.onOpenPanel((name) => {
+  if (name === 'login') openLoginModal(true);
+  else if (name === 'home') openHomeModal(true);
+  else if (name === 'hidden') openHiddenModal(true);
+  else if (name === 'about') openAboutModal(true);
+});
+
+// 托盘菜单 → 切换深色 / 浅色主题（复用应用内菜单项的点击逻辑）
+window.mijia.onToggleTheme(() => miTheme.click());
+
 // 点击菜单项后收起
 menuEl.addEventListener('click', () => openMenu(false));
 
@@ -1528,6 +1766,17 @@ window.addEventListener('pointerdown', (e) => {
 }, true);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openMenu(false); });
 window.addEventListener('blur', () => openMenu(false));
+
+/* ---------------- 标题栏右键菜单 ---------------- */
+
+// 标题栏保持原生 drag 区域（保留系统拖动、双击最大化、边缘吸附等行为），
+// 右键不会派发到渲染层，而是触发主进程的 system-context-menu 事件；
+// 主进程阻止系统菜单后，把鼠标屏幕坐标传回这里，换算成窗口内坐标让菜单跟随鼠标弹出。
+window.mijia.onTitlebarMenu((pt) => {
+  if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
+  closeCtxMenu();
+  openMenu(true, { x: pt.x - window.screenX, y: pt.y - window.screenY });
+});
 
 /* ---------------- 设备右键操作菜单 ---------------- */
 
@@ -1547,8 +1796,10 @@ function makeCtxItem(label, icon, onClick, danger) {
 
 function openCtxMenu(device, card, x, y) {
   ctxMenu.innerHTML = '';
-  // 传感器无需开关操作；净饮机的 on 是提示音，不做「开/关设备」
-  if (device.type && device.type !== 'sensor' && device.type !== 'purifier') {
+  // 仅可开关的设备提供「开/关设备」：传感器、净饮机（on 是提示音）、
+  // 路由器 / 网关 / 其它无可控开关的设备都不显示该菜单项
+  const powerTypes = ['plug', 'light', 'fan', 'aircon'];
+  if (device.type && powerTypes.includes(device.type)) {
     ctxMenu.append(
       makeCtxItem(device.on ? '关闭设备' : '开启设备', POWER_ICON, () => {
         window.mijia.setPower(device.id, !device.on);
@@ -1636,6 +1887,134 @@ document.getElementById('mi-hidden').addEventListener('click', () => openHiddenM
 document.getElementById('hidden-close').addEventListener('click', () => openHiddenModal(false));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !hiddenModal.hidden) openHiddenModal(false); });
 
+/* ---------------- 关于 面板 ---------------- */
+
+// 本软件官网 / 作者主页
+const SITE_URL = 'https://hzdavy.github.io/OpenMexia/';
+const AUTHOR_URL = 'https://github.com/HZDavy';
+
+const aboutModal = document.getElementById('about-modal');
+const aboutMsgEl = document.getElementById('about-msg');
+const badge3d = document.getElementById('about-badge-3d');
+
+// 硬币厚度：在 3D 空间里沿 Z 轴堆叠多层银色薄片，旋转到侧面时呈现金属侧壁
+(function buildBadgeRim() {
+  const rim = document.getElementById('badge-rim');
+  if (!rim) return;
+  const SLICES = 25;   // 薄片数量（0.5px 一步，侧视时不露缝）
+  const HALF = 6;      // 单侧厚度，总厚 = 2 * HALF = 12px
+  for (let i = 0; i < SLICES; i++) {
+    const t = i / (SLICES - 1);            // 0..1
+    const layer = document.createElement('div');
+    layer.className = 'badge-rim-slice';
+    layer.style.transform = `translateZ(${(-HALF + t * HALF * 2).toFixed(2)}px)`;
+    // 外缘中部更亮、向两面渐暗 → 圆柱侧面的反光带
+    layer.style.filter = `brightness(${(0.62 + 0.5 * Math.sin(t * Math.PI)).toFixed(3)})`;
+    rim.appendChild(layer);
+  }
+})();
+
+function setAboutMsg(text, kind) {
+  if (!text) {
+    aboutMsgEl.hidden = true;
+    aboutMsgEl.textContent = '';
+    aboutMsgEl.className = 'about-msg';
+    return;
+  }
+  aboutMsgEl.hidden = false;
+  aboutMsgEl.textContent = text;
+  aboutMsgEl.className = 'about-msg' + (kind ? ' ' + kind : '');
+}
+
+function openAboutModal(open) {
+  aboutModal.hidden = !open;
+  if (open) setAboutMsg('');
+}
+
+document.getElementById('mi-about').addEventListener('click', () => openAboutModal(true));
+document.getElementById('about-close').addEventListener('click', () => openAboutModal(false));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !aboutModal.hidden) openAboutModal(false); });
+
+// 访问官网 / 点作者名跳转作者主页（交给主进程用系统浏览器打开）
+document.getElementById('about-site').addEventListener('click', () => window.mijia.openExternal(SITE_URL));
+document.getElementById('about-author-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  window.mijia.openExternal(AUTHOR_URL);
+});
+
+// 检查更新
+let checkingUpdate = false;
+document.getElementById('about-update').addEventListener('click', async () => {
+  if (checkingUpdate) return;
+  checkingUpdate = true;
+  setAboutMsg('正在检查更新…');
+  try {
+    const r = await window.mijia.checkUpdate();
+    if (!r || !r.ok) {
+      setAboutMsg('检查更新失败，请稍后重试', 'error');
+    } else if (r.hasUpdate) {
+      setAboutMsg(`发现新版本 v${r.latest}（当前 v${r.current}），已打开下载页`, 'ok');
+      window.mijia.openExternal(r.url || SITE_URL);
+    } else {
+      setAboutMsg(`已是最新版本 v${r.current}`, 'ok');
+    }
+  } catch {
+    setAboutMsg('检查更新失败，请稍后重试', 'error');
+  } finally {
+    checkingUpdate = false;
+  }
+});
+
+// 3D 徽章：鼠标拖动翻转（X/Y 轴），单击也翻转半圈；高光随旋转移动
+const badgeRot = { x: 0, y: 0 };
+let badgeDrag = null;      // 拖动起点
+let badgePointerId = null;
+let badgeMoved = false;
+
+function applyBadge() {
+  badge3d.style.transform = `rotateX(${badgeRot.x}deg) rotateY(${badgeRot.y}deg)`;
+  // 高光位置随旋转反向偏移，模拟固定光源在徽章表面的反射
+  const nx = Math.max(-1, Math.min(1, badgeRot.y / 120));
+  const ny = Math.max(-1, Math.min(1, -badgeRot.x / 120));
+  badge3d.style.setProperty('--lx', (50 - nx * 38).toFixed(1) + '%');
+  badge3d.style.setProperty('--ly', (50 - ny * 38).toFixed(1) + '%');
+}
+
+badge3d.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  badgePointerId = e.pointerId;
+  badgeMoved = false;
+  badgeDrag = { x: e.clientX, y: e.clientY, rx: badgeRot.x, ry: badgeRot.y };
+  badge3d.classList.add('dragging');
+  badge3d.setPointerCapture(e.pointerId);
+});
+
+badge3d.addEventListener('pointermove', (e) => {
+  if (!badgeDrag || e.pointerId !== badgePointerId) return;
+  const dx = e.clientX - badgeDrag.x;
+  const dy = e.clientY - badgeDrag.y;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) badgeMoved = true;
+  badgeRot.y = badgeDrag.ry + dx * 0.6;
+  badgeRot.x = Math.max(-75, Math.min(75, badgeDrag.rx - dy * 0.6));
+  applyBadge();
+});
+
+function endBadgeDrag(e) {
+  if (!badgeDrag || (e && e.pointerId !== badgePointerId)) return;
+  badge3d.classList.remove('dragging');
+  badgeDrag = null;
+  badgePointerId = null;
+  if (!badgeMoved) {
+    // 单击（未拖动）→ 翻转到另一面
+    badgeRot.y += 180;
+    applyBadge();
+  }
+}
+badge3d.addEventListener('pointerup', endBadgeDrag);
+badge3d.addEventListener('pointercancel', endBadgeDrag);
+
+applyBadge();
+
 function applySettings(s) {
   miTop.setAttribute('aria-checked', String(!!s.alwaysOnTop));
   miLogin.setAttribute('aria-checked', String(!!s.launchAtLogin));
@@ -1681,8 +2060,10 @@ function rasterizeIcon(itemId, color) {
 function sendTrayIcons() {
   const map = {
     top: 'mi-top', pin: 'mi-pin', login: 'mi-login',
+    cloud: 'mi-cloud', home: 'mi-home', hidden: 'mi-hidden', theme: 'mi-theme',
     reset: 'mi-reset', hide: 'mi-hide', quit: 'mi-quit',
     fs: 'mi-fs', 'fs-cover': 'mi-fs-cover',
+    about: 'mi-about',
   };
   const icons = {};
   for (const [key, id] of Object.entries(map)) {
@@ -1728,6 +2109,7 @@ function switchTab(tab) {
     loginTabs[k].classList.toggle('active', k === tab);
     loginPanes[k].hidden = k !== tab;
   }
+  if (tab !== 'pwd') hideCaptcha();
 }
 
 function showLoginMsg(text, kind) {
@@ -1739,16 +2121,27 @@ function showLoginMsg(text, kind) {
 function renderLoginState(s) {
   if (!s) return;
   const authed = !!s.hasDevices;
+  const wasMock = mockMode;
+  if (typeof s.isMock === 'boolean') mockMode = s.isMock;
   loginStateEl.textContent = authed
     ? `已登录 · ${s.deviceCount} 台设备${s.cloudAuth ? ' · 云端会话有效' : ''}`
-    : '未登录 · 当前显示演示数据';
+    : '未登录 · 登录后可同步真实设备';
   loginStateEl.classList.toggle('ok', authed);
-  mockTag.hidden = !s.isMock;
+  mockTag.hidden = true;
+  // 进入未登录态：立即切到欢迎引导；登录成功后的真实设备会由设备推送渲染
+  if (mockMode) renderWelcome();
+  else if (wasMock) {
+    // 离开未登录态：既要移除欢迎块，也要撤掉居中的 welcome-mode 布局 class，
+    // 否则 #devices 会残留为「空的 flex 容器」而整片空白（真实设备卡片随后由设备推送渲染）
+    listEl.querySelector('.empty.welcome')?.remove();
+    listEl.classList.remove('welcome-mode');
+  }
 }
 
 function openLoginModal(open) {
   loginModal.hidden = !open;
   if (open) {
+    hideCaptcha();
     showLoginMsg('');
     window.mijia.loginStatus().then(renderLoginState).catch(() => {});
   }
@@ -1762,23 +2155,168 @@ function readableError(e) {
     .replace(/^(Error|TypeError):\s*/, '');
 }
 
-// 密码登录
+// 密码登录（多步式：账号密码 → 图形验证码 / 二次安全验证码）
+const captchaField = document.getElementById('login-captcha-field');
+const captchaLabel = document.getElementById('login-captcha-label');
+const captchaInput = document.getElementById('login-captcha');
+const captchaBox = document.getElementById('login-captcha-img');
+let pwdSessionId = null;   // 待继续输入的登录会话
+let pwdStage = null;       // 'captcha' | 'send-captcha' | 'code'
+let pwdMethod = '';        // 二次验证方式：'email' | 'phone'
+
+// 验证码图片：拿到有效图片才显示，否则显示「点击刷新」占位文字（避免出现破损图标）
+function setCaptchaImage(dataUrl) {
+  const ok = typeof dataUrl === 'string' && dataUrl.startsWith('data:image/');
+  if (ok) {
+    captchaBox.style.backgroundImage = `url("${dataUrl}")`;
+    captchaBox.textContent = '';
+    captchaBox.classList.remove('empty');
+  } else {
+    captchaBox.style.backgroundImage = 'none';
+    captchaBox.textContent = '点击刷新';
+    captchaBox.classList.add('empty');
+  }
+}
+
+// 显示图形验证码输入（stage='captcha' 或 'send-captcha' 复用同一输入框）
+function showCaptcha(dataUrl) {
+  captchaField.hidden = false;
+  captchaLabel.textContent = '图形验证码';
+  captchaBox.hidden = false;
+  captchaInput.placeholder = '输入图中字符';
+  setCaptchaImage(dataUrl);
+  captchaInput.value = '';
+  captchaInput.focus();
+}
+
+// 显示二次验证码输入（邮箱 / 短信验证码）：复用同一输入框，隐藏图片按钮
+function showCodeField(method) {
+  pwdMethod = method || 'email';
+  captchaField.hidden = false;
+  captchaLabel.textContent = pwdMethod === 'phone' ? '短信验证码' : '邮箱验证码';
+  captchaBox.hidden = true;
+  captchaBox.style.backgroundImage = 'none';
+  captchaInput.placeholder = '输入收到的验证码';
+  captchaInput.value = '';
+  captchaInput.focus();
+}
+
+function hideCaptcha() {
+  pwdSessionId = null;
+  pwdStage = null;
+  pwdMethod = '';
+  captchaField.hidden = true;
+  captchaLabel.textContent = '图形验证码';
+  captchaBox.hidden = false;
+  captchaBox.style.backgroundImage = 'none';
+  captchaBox.textContent = '点击刷新';
+  captchaBox.classList.remove('empty');
+  captchaInput.placeholder = '输入图中字符';
+  captchaInput.value = '';
+}
+
+// 处理「需要继续输入」类响应（图形验证码 / 二次验证码）；返回 true 表示已接管、无需再走成功分支
+function handleContinue(res) {
+  if (!res || res.ok) return false;
+  if (res.needCode) {
+    pwdSessionId = res.sessionId || pwdSessionId;
+    pwdStage = 'code';
+    showCodeField(res.method);
+    showLoginMsg(res.hint || '请输入验证码');
+    return true;
+  }
+  if (res.needCaptcha) {
+    pwdSessionId = res.sessionId || pwdSessionId;
+    pwdStage = res.twoFactor ? 'send-captcha' : 'captcha';
+    showCaptcha(res.captcha);
+    if (!res.captcha) showLoginMsg('验证码加载失败，请点击刷新', 'error');
+    else if (res.twoFactor) showLoginMsg('为安全起见，请先输入图形验证码以发送验证码');
+    else showLoginMsg('需要图形验证码，请输入图中字符');
+    return true;
+  }
+  return false;
+}
+
+// 登录成功统一收尾
+function finishLoginSuccess(res) {
+  hideCaptcha();
+  document.getElementById('login-pass').value = '';
+  showLoginMsg(`登录成功，已获取 ${res.count} 台设备`, 'ok');
+  renderLoginState({ hasDevices: true, deviceCount: res.count, cloudAuth: false, isMock: false });
+}
+
+// 点「点击刷新」：按当前 stage 重新取一张验证码（图形验证码 / 二次验证发送用的图形验证码）
+async function refreshCaptcha() {
+  if (pwdSessionId) {
+    try {
+      const res = await window.mijia.loginRefreshCaptcha({ sessionId: pwdSessionId });
+      if (handleContinue(res)) return;
+      finishLoginSuccess(res);
+    } catch (e) {
+      showLoginMsg(readableError(e), 'error');
+    }
+    return;
+  }
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  const country = document.getElementById('login-country').value;
+  if (!username || !password) { showLoginMsg('请填写小米账号与密码', 'error'); return; }
+  try {
+    const res = await window.mijia.loginPassword({ username, password, country });
+    if (handleContinue(res)) return;
+    finishLoginSuccess(res);
+  } catch (e) {
+    showLoginMsg(readableError(e), 'error');
+  }
+}
+captchaBox.addEventListener('click', refreshCaptcha);
+
 document.getElementById('login-pwd-btn').addEventListener('click', async () => {
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
   const country = document.getElementById('login-country').value;
-  if (!username || !password) {
-    showLoginMsg('请填写小米账号与密码', 'error');
+  const btn = document.getElementById('login-pwd-btn');
+
+  // 已进入需要继续输入的阶段（图形验证码 / 二次验证码）：本次点击提交验证码
+  if (pwdSessionId) {
+    const code = captchaInput.value.trim();
+    if (!code) { showLoginMsg(pwdStage === 'code' ? '请输入验证码' : '请输入图形验证码', 'error'); return; }
+    btn.disabled = true;
+    showLoginMsg(pwdStage === 'code' ? '正在验证…' : '正在提交…');
+    try {
+      const res = await window.mijia.loginCaptcha({ sessionId: pwdSessionId, code });
+      if (res.needCode) {
+        pwdSessionId = res.sessionId;
+        pwdStage = 'code';
+        showCodeField(res.method);
+        showLoginMsg(res.hint || '验证码不正确，请重新输入', 'error');
+        return;
+      }
+      if (res.needCaptcha) {
+        pwdSessionId = res.sessionId;
+        pwdStage = res.twoFactor ? 'send-captcha' : 'captcha';
+        showCaptcha(res.captcha);
+        if (!res.captcha) showLoginMsg('验证码加载失败，请点击刷新', 'error');
+        else showLoginMsg(res.twoFactor ? '请重新输入图形验证码' : '验证码不正确，请重试', 'error');
+        return;
+      }
+      finishLoginSuccess(res);
+    } catch (e) {
+      hideCaptcha();
+      showLoginMsg(readableError(e), 'error');
+    } finally {
+      btn.disabled = false;
+    }
     return;
   }
-  const btn = document.getElementById('login-pwd-btn');
+
+  if (!username || !password) { showLoginMsg('请填写小米账号与密码', 'error'); return; }
   btn.disabled = true;
   showLoginMsg('正在登录…');
   try {
     const res = await window.mijia.loginPassword({ username, password, country });
-    document.getElementById('login-pass').value = '';
-    showLoginMsg(`登录成功，已获取 ${res.count} 台设备`, 'ok');
-    renderLoginState({ hasDevices: true, deviceCount: res.count, cloudAuth: false, isMock: false });
+    if (handleContinue(res)) return;
+    finishLoginSuccess(res);
   } catch (e) {
     showLoginMsg(readableError(e), 'error');
   } finally {
@@ -1968,13 +2506,21 @@ window.mijia.onDevices(render);
 window.mijia.onSettings(applySettings);
 window.mijia.onFullscreenState(applyFullscreenState);
 
-window.mijia.init().then(({ devices, settings, isMock, login, hasCustomSize, fullscreen }) => {
+window.mijia.init().then(({ devices, settings, isMock, login, hasCustomSize, fullscreen, theme, version }) => {
   // 用户此前手动调整过窗口大小：跳过启动时的按内容自适应
   if (hasCustomSize) sized = true;
   applyFullscreenState(fullscreen || null);
+  // 关于窗口版本号
+  if (version) document.getElementById('about-ver').textContent = 'v' + version;
+  // 以主进程持久化的主题为准（首次打开默认深色），并同步本地记忆
+  if (theme === 'light' || theme === 'dark') {
+    try { localStorage.setItem('mijia.theme', theme); } catch {}
+    applyTheme(theme);
+  }
+  if (typeof isMock === 'boolean') mockMode = isMock;
+  mockTag.hidden = true; // 不再暴露「演示数据」标签：未登录显示欢迎引导
   render(devices);
   applySettings(settings);
-  if (typeof isMock === 'boolean') mockTag.hidden = !isMock;
   if (login) renderLoginState({ ...login, isMock });
   // DOM 就绪后把菜单图标栅格化并交给主进程，供托盘菜单使用
   sendTrayIcons();

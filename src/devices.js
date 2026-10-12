@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const path = require('path');
+const os = require('os');
 const { getSpec, analyze } = require('./miot-spec');
 
 /**
@@ -281,6 +282,8 @@ class MiioProvider extends EventEmitter {
     this.pollMs = 5000;
     this._polling = false;
     this._miioReady = false;
+    // 本机网卡的 /24 前缀集合：只有与设备同网段时，局域网直连的探测结果才可信
+    this._localSubnets = hostSubnets();
   }
 
   get mihome() {
@@ -289,12 +292,20 @@ class MiioProvider extends EventEmitter {
 
   /** 读取清单 + 逐台解析规格，构建绑定。返回 this 以便链式调用。 */
   async build() {
+    // 无二维码会话时，尝试恢复密码登录的云端会话（落盘在 cloud/session.json），
+    // 以便跨网段设备仍能走云端回退读取状态，而不是被误判为离线。
+    try { await this.login.ensurePwdSession(); } catch { /* 无会话则仅靠局域网直连 */ }
     let list = this.login.loadDevices();
-    // 选定家庭后，只构建该家庭下的设备（homeId 为空则展示全部）
-    if (this.homeId) list = list.filter((d) => String(d.homeId || '') === this.homeId);
+    // 选定家庭后，只构建该家庭下的设备（homeId 为空则展示全部）。
+    // 注意：node-mihome 的 /home/device_list（密码登录）不返回 home_id，此时清单里所有设备的
+    // homeId 都是空串，家庭筛选无从判断——若仍按 homeId 过滤会把设备全部滤掉、界面整片空白，
+    // 因此当清单中没有任何设备带 homeId 时直接展示全部。
+    if (this.homeId && list.some((d) => String(d.homeId || '') !== '')) {
+      list = list.filter((d) => String(d.homeId || '') === this.homeId);
+    }
     for (const d of list) {
       const info = await getSpec(d.model, this.specCacheDir);
-      const { type, props, reads, actions } = analyze(info);
+      const { type, props, reads, actions } = analyze(info, d.model);
       // 从规格里取「取值区间」或「枚举项」，供渲染层滑杆使用
       const rangeOf = (f) => {
         const p = props[f];
@@ -309,6 +320,8 @@ class MiioProvider extends EventEmitter {
         type,
         name: d.name,
         model: d.model,
+        // 初始在线状态取自云端清单（isOnline），随后由轮询（局域网直连 / 云端回退）
+        // 用真实探测结果校正。清单里标为离线的设备先按离线展示，避免「离线却显示在线」。
         online: d.online !== false,
         on: false,
         brightness: 0,
@@ -353,6 +366,15 @@ class MiioProvider extends EventEmitter {
         filterLife: null,
         tdsIn: null,
         tdsOut: null,
+        // 路由器 / 网关（只读指标）
+        connectedDeviceNumber: null,
+        downloadSpeed: null,
+        uploadSpeed: null,
+        // 规格里是否带网络指标（路由器），渲染层据此决定展示哪些读数
+        hasNetMetrics: !!(props.connectedDeviceNumber || props.downloadSpeed || props.uploadSpeed),
+        // 规格里是否有可读属性；无（如计时器 hoto.timer.kt、青萍网关 cgllc.gateway.s1，
+        // 规格里 properties 为空）时渲染层只显示「在线/离线」并提示暂不支持读取状态。
+        hasReads: reads.length > 0,
       });
       this.binds.set(d.id, {
         id: d.id,
@@ -366,6 +388,11 @@ class MiioProvider extends EventEmitter {
         props,
         reads,
         actions,
+        // Yeelight 系灯具固件普遍只实现传统 Yeelight 局域网协议（get_prop / set_power /
+        // set_bright / set_ct_abx），而不实现 MIoT-spec 的 get_properties/set_properties。
+        // 例如吸顶灯（yeelink.light.ceiling22）走 MIoT 读必 2s 超时、写必 4s 超时，
+        // 表现为「卡且控制不了」。这里对 Yeelight 灯具标注局域网协议，读写优先走传统协议。
+        lanProto: String(d.model || '').startsWith('yeelink.light.') ? 'yeelight' : null,
       });
     }
     return this;
@@ -469,8 +496,9 @@ class MiioProvider extends EventEmitter {
     try {
       await this._cloudAction(b, { did: b.did, siid: act.siid, aiid: act.aiid });
       if (dev) dev.online = true;
-    } catch {
-      if (dev) dev.online = false;
+    } catch (e) {
+      // 与轮询一致：仅在云端「明确」判定离线时才置离线，避免动作偶发失败把在线设备误判为离线
+      if (dev && e && e.deviceOffline) dev.online = false;
     }
     this.emit('update', this.snapshot());
   }
@@ -490,28 +518,43 @@ class MiioProvider extends EventEmitter {
 
   async _pollDevice(dev) {
     const b = this.binds.get(dev.id);
-    if (!b || !b.reads.length) return;   // 无规格可读：保持云端给出的在线状态
+    if (!b || !b.reads.length) return;   // 无规格可读：保持云端清单给出的在线状态
     const params = b.reads.map((r) => ({ did: b.did, siid: r.siid, piid: r.piid }));
 
-    // 1) 局域网直连
-    if (this._lanUsable(b)) {
+    // 1) 局域网直连（仅当设备与本机同网段时才尝试，避免跨网段必然超时）
+    //    局域网直连失败原因多样（AP 隔离 / token 失效 / 设备休眠唤醒延迟），均不能判定离线，
+    //    因此失败时继续走云端做权威判定，而不是直接置离线。
+    if (this._lanUsable(b) && this._sameSubnet(b.ip)) {
+      // Yeelight 灯具优先走传统局域网协议读取（MIoT-spec 读在部分固件上必超时）
+      if (b.lanProto === 'yeelight') {
+        try {
+          await this._yeelightRead(b, dev);
+          dev.online = true;
+          return;
+        } catch { /* 回退 MIoT-spec / 云端 */ }
+      }
       try {
         const res = await this.mihome.miioProtocol.send(b.ip, 'get_properties', params, { retries: 0 });
         this._applyResults(dev, b, res);
         dev.online = true;
         return;
-      } catch { /* 局域网失败，转云端 */ }
+      } catch { /* 转云端 */ }
     }
 
-    // 2) 云端回退
-    try {
-      const res = await this._cloudGet(b, params);
-      this._applyResults(dev, b, res);
-      dev.online = true;
-      return;
-    } catch { /* 都失败 */ }
-
-    dev.online = false;
+    // 2) 云端回退（需有可用云端会话：密码登录会话或二维码会话），由云端给出权威判定
+    const cloudUsable = this.mihome.miCloudProtocol.isLoggedIn
+      || (this.login.hasCloudAuth && await this.login.hasCloudAuth());
+    if (cloudUsable) {
+      try {
+        const res = await this._cloudGet(b, params);
+        this._applyResults(dev, b, res);
+        dev.online = true;
+      } catch (e) {
+        // 仅当云端「明确」判定设备离线时才置离线（如路由器 3040「已离线」、-2「device offline」）；
+        // 应答超时 / BLE 不支持 RPC / 会话异常等一律保持原状态，避免把在线设备误判为离线。
+        if (e && e.deviceOffline) dev.online = false;
+      }
+    }
   }
 
   /* ---------------- 读写底层 ---------------- */
@@ -520,15 +563,26 @@ class MiioProvider extends EventEmitter {
     const p = b.props[field];
     if (!p) return;
     const dev = this._dev(b.id);
+    const lan = this._lanUsable(b) && this._sameSubnet(b.ip);
 
-    // 1) 局域网直连
-    if (this._lanUsable(b)) {
+    // 1) Yeelight 传统局域网协议（灯类：MIoT-spec 写在部分固件上必超时）
+    if (lan && b.lanProto === 'yeelight') {
+      try {
+        await this._yeelightWrite(b, field, value);
+        if (dev) { dev.online = true; this._setField(dev, field, value, b); }
+        this.emit('update', this.snapshot());
+        return;
+      } catch { /* 回退 MIoT-spec / 云端 */ }
+    }
+
+    // 2) MIoT-spec 局域网直连（仅同网段；跨网段必然超时，直接走云端）
+    if (lan) {
       try {
         await this.mihome.miioProtocol.send(
           b.ip,
           'set_properties',
           [{ did: b.did, siid: p.siid, piid: p.piid, value }],
-          { retries: 1 },
+          { retries: 0 },
         );
         if (dev) { dev.online = true; this._setField(dev, field, value, b); }
         this.emit('update', this.snapshot());
@@ -536,46 +590,114 @@ class MiioProvider extends EventEmitter {
       } catch { /* 转云端 */ }
     }
 
-    // 2) 云端回退
+    // 3) 云端回退
     try {
       await this._cloudSet(b, { did: b.did, siid: p.siid, piid: p.piid, value });
       if (dev) { dev.online = true; this._setField(dev, field, value, b); }
-    } catch {
-      if (dev) dev.online = false;
+    } catch (e) {
+      // 与轮询一致：仅在云端「明确」判定离线时才置离线，避免写入偶发失败把在线设备误判为离线
+      if (dev && e && e.deviceOffline) dev.online = false;
     }
     this.emit('update', this.snapshot());
   }
 
-  /** 云读：优先 @zythum02 二维码会话，其次 node-mihome 密码会话 */
+  /**
+   * Yeelight 传统局域网读：get_prop 返回字符串数组，顺序与请求一致。
+   * 请求 ['power','bright','ct'] → ['off', '100', '3200']。
+   * 仅灯类使用；非灯类实现由调用方保证不进入本方法。
+   */
+  async _yeelightRead(b, dev) {
+    const res = await this.mihome.miioProtocol.send(
+      b.ip, 'get_prop', ['power', 'bright', 'ct'], { retries: 0 },
+    );
+    if (!Array.isArray(res) || res.length < 2) throw new Error('legacy get_prop 返回异常');
+    this._setField(dev, 'on', String(res[0]) === 'on', b);
+    this._setField(dev, 'brightness', Number(res[1]), b);
+    if (b.props.colorTemperature) this._setField(dev, 'colorTemperature', Number(res[2]), b);
+    return res;
+  }
+
+  /** Yeelight 传统局域网写：on → set_power / brightness → set_bright / colorTemperature → set_ct_abx */
+  async _yeelightWrite(b, field, value) {
+    const send = (method, params) =>
+      this.mihome.miioProtocol.send(b.ip, method, params, { retries: 0 });
+    if (field === 'on') return send('set_power', [value ? 'on' : 'off', 'smooth', 500]);
+    if (field === 'brightness') return send('set_bright', [Math.round(value), 'smooth', 500]);
+    if (field === 'colorTemperature') return send('set_ct_abx', [Math.round(value), 'smooth', 500]);
+    throw new Error(`legacy 协议不支持字段 ${field}`);
+  }
+
+  /**
+   * 云读：优先 @zythum02 二维码会话，其次 node-mihome 密码会话。
+   * 蓝牙（BLE，did 形如 blt.*）设备不支持 /home/rpc 的 RPC（云端会返回
+   * 「bluetooth device does not support sending rpc」），需改用 MIoT-spec 云端点
+   * /miotspec/prop/get；其余设备的 /home/rpc 路径保留原有的「明确离线」判定语义。
+   * 仅当云端「明确」判定设备离线（如 3040「设备/路由器已离线」、-2「device offline」、
+   * 文案含「离线/offline」）时才抛带 deviceOffline 的错误；应答超时、BLE 不支持 RPC、
+   * 会话异常等情况抛普通错误，交由调用方保持原有在线状态，避免把在线设备误判为离线。
+   */
   async _cloudGet(b, params) {
     if (await this.login.hasCloudAuth()) {
       const res = await this.login.cloudGet(params);
-      return Array.isArray(res) ? res : [res];
+      const arr = Array.isArray(res) ? res : [res];
+      if (!arr.some((r) => r && Number(r.code) === 0)) throw new Error('云端未返回有效属性');
+      return arr;
     }
     const cloud = this.mihome.miCloudProtocol;
-    if (cloud.isLoggedIn) {
-      const res = await cloud.miioCall(b.did, 'get_properties', params);
-      return Array.isArray(res) ? res : [res];
+    if (!cloud.isLoggedIn) throw new Error('无可用云端会话');
+    const country = (this.login && this.login._pwdCountry) || 'cn';
+    // BLE 设备走 MIoT-spec 云端点（/home/rpc 对蓝牙设备直接拒绝）
+    const isBle = /^blt\./i.test(String(b.did || ''));
+    const data = isBle
+      ? await cloud.request('/miotspec/prop/get', { params, datasource: 1 }, country)
+      : await cloud.request(`/home/rpc/${b.did}`, { method: 'get_properties', params }, country);
+    if (data && data.result) {
+      return Array.isArray(data.result) ? data.result : [data.result];
     }
-    throw new Error('无可用云端会话');
+    const code = data && Number(data.code);
+    const msg = [data && (data.message || data.msg), data && data.error && data.error.message]
+      .filter(Boolean).join(' ');
+    if (code === 3040 || code === -2 || /离线|offline/i.test(msg)) {
+      const err = new Error('设备离线');
+      err.deviceOffline = true;
+      throw err;
+    }
+    throw new Error(`云端未返回属性（code=${code}${msg ? ' ' + msg : ''}）`);
   }
 
-  /** 云写：同上两条路径 */
+  /**
+   * 云写：优先 @zythum02 二维码会话，其次 node-mihome 密码会话。
+   * 与 _cloudGet 同理：蓝牙（BLE，did 形如 blt.*）设备不支持 /home/rpc 的 RPC，
+   * 需改用 MIoT-spec 云端点 /miotspec/prop/set；其余设备沿用 /home/rpc。
+   */
   async _cloudSet(b, param) {
     if (await this.login.hasCloudAuth()) {
       return this.login.cloudSet(param);
     }
     const cloud = this.mihome.miCloudProtocol;
-    if (cloud.isLoggedIn) {
-      return cloud.miioCall(b.did, 'set_properties', [param]);
-    }
-    throw new Error('无可用云端会话');
+    if (!cloud.isLoggedIn) throw new Error('无可用云端会话');
+    const country = (this.login && this.login._pwdCountry) || 'cn';
+    const isBle = /^blt\./i.test(String(b.did || ''));
+    return isBle
+      ? cloud.request('/miotspec/prop/set', { params: [param] }, country)
+      : cloud.miioCall(b.did, 'set_properties', [param]);
   }
 
-  /** 云动作：仅支持 @zythum02 云端会话（runAction） */
+  /**
+   * 云动作（如风扇手动上下左右）：优先 @zythum02 二维码会话（runAction）；
+   * 否则走 node-mihome 密码会话的 MIoT 云端点 /miotspec/action。
+   * 注意该端点的 params 必须是「对象」而非数组，数组会返回 -8「data type not valid」。
+   */
   async _cloudAction(b, param) {
     if (await this.login.hasCloudAuth()) {
       return this.login.cloudAction(param);
+    }
+    const cloud = this.mihome.miCloudProtocol;
+    if (cloud.isLoggedIn) {
+      const country = (this.login && this.login._pwdCountry) || 'cn';
+      return cloud.request('/miotspec/action', {
+        params: { did: param.did, siid: param.siid, aiid: param.aiid, in: [] },
+      }, country);
     }
     throw new Error('无可用云端会话');
   }
@@ -588,6 +710,12 @@ class MiioProvider extends EventEmitter {
 
   _lanUsable(b) {
     return !!(b.ip && b.token);
+  }
+
+  /** 设备 IP 是否与本机网卡处于同一 /24 网段（IPv4） */
+  _sameSubnet(ip) {
+    const p = ipv4Prefix(ip);
+    return !!p && this._localSubnets.has(p);
   }
 
   _writable(b, field) {
@@ -648,6 +776,10 @@ class MiioProvider extends EventEmitter {
       case 'filterLife': dev.filterLife = clamp(Math.round(Number(value) || 0), 0, 100); break;
       case 'tdsIn': dev.tdsIn = Math.round(Number(value) || 0); break;
       case 'tdsOut': dev.tdsOut = Math.round(Number(value) || 0); break;
+      // 路由器 / 网关（只读指标）
+      case 'connectedDeviceNumber': dev.connectedDeviceNumber = Math.round(Number(value) || 0); break;
+      case 'downloadSpeed': dev.downloadSpeed = round1(Number(value) || 0); break;
+      case 'uploadSpeed': dev.uploadSpeed = round1(Number(value) || 0); break;
       default: break;
     }
   }
@@ -672,5 +804,26 @@ const rnd = (min, max) => Math.random() * (max - min) + min;
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 const round1 = (v) => Math.round(v * 10) / 10;
 const round2 = (v) => Math.round(v * 100) / 100;
+
+/** 取 IPv4 的 /24 前缀（如 "192.168.0.5" → "192.168.0"）；非 IPv4 返回 '' */
+function ipv4Prefix(ip) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(String(ip || '').trim());
+  return m ? `${m[1]}.${m[2]}.${m[3]}` : '';
+}
+
+/** 本机所有非回环 IPv4 网卡的 /24 前缀集合 */
+function hostSubnets() {
+  const set = new Set();
+  const nics = os.networkInterfaces();
+  for (const list of Object.values(nics)) {
+    for (const ni of list || []) {
+      if (ni && ni.family === 'IPv4' && !ni.internal) {
+        const p = ipv4Prefix(ni.address);
+        if (p) set.add(p);
+      }
+    }
+  }
+  return set;
+}
 
 module.exports = { createProvider, MockProvider, MiioProvider };

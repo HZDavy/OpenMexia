@@ -8,14 +8,63 @@
 
   --text: #ececec;
   --muted: #9a9a9a;
-  --accent: #ff7a3d;
-  --accent-2: #ffb057;
-  --ok: #46d18a;
+  /* 品牌绿：米家官方绿（取自 home.mi.com 生产 CSS 变量 --mi-primary-color: #19cd90） */
+  --accent: #19cd90;
+  --accent-2: #2ee0a2;
+  --ok: #19cd90;
 
   --radius: 12px;
   /* 卡片自适应布局：单列最小宽度（窗口越宽自动排更多列） */
   --card-min: 280px;
 }
+
+/* —— 浅色主题：由 <html class="light"> 触发，覆盖主题变量与深色硬编码色 —— */
+html.light {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-hover: #f0f1f3;
+  --line: #e4e6ea;
+  --track: #dcdfe4;
+
+  --text: #1f2226;
+  --muted: #7c828b;
+  /* 浅色下用更深的米家绿，保证白字/白底上的对比度 */
+  --accent: #1daf7e;
+  --accent-2: #128a63;
+  --ok: #1daf7e;
+
+  color-scheme: light;
+}
+html.light body { color-scheme: light; }
+
+/* 浅色模式：标题栏 logo 是白色描边，浅底上看不清 —— 用滤镜转成纯黑 */
+html.light .logo img { filter: brightness(0); }
+
+html.light .menu,
+html.light .ctx-menu,
+html.light .pin-card {
+  background: #ffffff;
+  border-color: var(--line);
+  box-shadow: 0 16px 40px rgba(18, 22, 30, 0.16);
+}
+html.light .card:hover { border-color: #d4d8de; }
+html.light .card.dragging { box-shadow: 0 14px 30px rgba(18, 22, 30, 0.18); }
+html.light .meta-row b { color: #34383e; }
+html.light .chip:hover { border-color: #c7ccd4; }
+html.light .drag-placeholder { border-color: #d4d8de; background: rgba(18, 22, 30, 0.02); }
+html.light .drag-handle:hover { background: rgba(18, 22, 30, 0.06); }
+html.light .menu-item.danger,
+html.light .menu-item.danger .mi-icon,
+html.light .ctx-item.danger,
+html.light .ctx-item.danger .ctx-icon { color: #d64545; }
+html.light .menu-item.danger:hover,
+html.light .ctx-item.danger:hover { background: rgba(214, 69, 69, 0.1); }
+html.light .login-tabs { background: #eceef1; }
+html.light .login-field input,
+html.light .login-field select { background: #f7f8fa; }
+html.light .login-card::-webkit-scrollbar-thumb,
+html.light .home-list::-webkit-scrollbar-thumb { background: #c7ccd4; }
+html.light .qr-placeholder { color: #8a9099; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -54,7 +103,11 @@ html, body {
   justify-content: space-between;
   gap: 10px;
   padding: 13px 12px 10px 15px;
+  /* 用原生 drag 区域：保留系统拖动、双击标题栏最大化、拖到边缘吸附等原生行为，
+     并让 OS 缩放热区在标题栏范围内让位于拖动（不再误触发缩放）。
+     右键系统菜单由主进程的 system-context-menu 事件拦截，改弹应用内菜单。 */
   -webkit-app-region: drag;
+  user-select: none;
 }
 
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -62,8 +115,8 @@ html, body {
 .logo {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
 }
 .logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -247,7 +300,7 @@ html, body {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #1a1207;
+  color: #ffffff;
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
@@ -271,7 +324,7 @@ html, body {
 }
 .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
 .icon-btn.danger:hover { background: rgba(255, 86, 86, 0.18); color: #ff8a8a; }
-.icon-btn.active { color: var(--accent-2); background: rgba(255, 122, 61, 0.16); }
+.icon-btn.active { color: var(--accent-2); background: rgba(25, 205, 144, 0.16); }
 
 /* ---------------- 设备列表 ---------------- */
 
@@ -281,6 +334,10 @@ html, body {
   z-index: 2;
   flex: 1 1 auto;
   min-height: 0;
+  /* 横向必须 hidden：只设 overflow-y:auto 时另一轴按规范会被算成 auto，
+     窗口横向变化瞬间的亚像素溢出会闪出一条横向滚动条（深色下是灰条、
+     浅色下是浅条，正好落在 statusbar 上方），这里显式裁掉。 */
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 2px 12px 10px;
   /* 自适应多列：可用宽度达到阈值时自动排 1 → 2 → 3 … 列（列宽不低于 --card-min） */
@@ -308,6 +365,10 @@ html, body {
    auto 轨道会被压成「等分容器高度」（实测 78.86px），导致卡片重叠、缝隙变负；
    max-content 才会按内容真实高度排布，超出的部分交给 overflow-y 滚动。 */
 .devices.one-col { grid-auto-rows: max-content; row-gap: 8px; }
+/* 未登录欢迎引导：脱离多列网格，整块在窗口内水平 + 垂直居中
+   （用 margin:auto 而非 align/justify-content，内容超出窗口时可正常滚动、不被裁切） */
+.devices.welcome-mode { display: flex; }
+.devices.welcome-mode > .empty.welcome { margin: auto; }
 .devices::-webkit-scrollbar { width: 4px; }
 .devices::-webkit-scrollbar-thumb { background: var(--track); border-radius: 4px; }
 
@@ -315,7 +376,7 @@ html, body {
 .card[data-type="sensor"] { --c: #38bdf8; --c-soft: rgba(56, 189, 248, 0.16); }
 .card[data-type="plug"]   { --c: #ff7a3d; --c-soft: rgba(255, 122, 61, 0.16); }
 .card[data-type="light"]  { --c: #ffc24b; --c-soft: rgba(255, 194, 75, 0.16); }
-.card[data-type="fan"]    { --c: #4bd0a0; --c-soft: rgba(75, 208, 160, 0.16); }
+.card[data-type="fan"]    { --c: #19cd90; --c-soft: rgba(25, 205, 144, 0.16); }
 .card[data-type="aircon"] { --c: #7aa2ff; --c-soft: rgba(122, 162, 255, 0.16); }
 .card[data-type="purifier"]{ --c: #43c9e6; --c-soft: rgba(67, 201, 230, 0.16); }
 
@@ -441,6 +502,7 @@ html, body {
 .meta-row {
   display: flex;
   align-items: center;
+  justify-content: flex-end; /* 标签与值作为一组靠右对齐 */
   gap: 6px;
   min-height: 15px;
   font-size: 11px;
@@ -449,8 +511,17 @@ html, body {
   white-space: nowrap;
 }
 .meta-row[hidden] { display: none; }
-.meta-row b { color: #d6d6d6; font-weight: 500; margin-left: auto; }
-.meta-row .status-chip { margin-left: auto; }
+.meta-row b { color: #d6d6d6; font-weight: 500; }
+/* 状态行左侧提示：margin-right:auto 让它在「靠右对齐」的状态行里被顶到最左、左对齐 */
+.meta-hint {
+  margin-right: auto;
+  font-style: normal;
+  color: var(--muted);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ---------------- 开关 ---------------- */
 
@@ -597,7 +668,7 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
   transform: scale(0.94);
   background: var(--accent);
   border-color: var(--accent);
-  color: #1b1b1b;
+  color: #ffffff;
 }
 .dir-btn svg { width: 18px; height: 18px; display: block; }
 .dir-btn[data-dir="turnUpward"] { grid-area: 1 / 2; }
@@ -722,12 +793,44 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .mock-tag {
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(255, 176, 87, 0.16);
+  background: rgba(25, 205, 144, 0.16);
   color: var(--accent-2);
   font-size: 10px;
 }
 
 .empty { padding: 40px 10px; text-align: center; color: var(--muted); font-size: 12px; }
+
+/* ---------------- 未登录 / 新用户首次打开：欢迎引导 ---------------- */
+
+.empty.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 46px 20px 40px;
+}
+/* 欢迎块 logo：直接使用应用图标（绿底白米字），与应用图标完全一致 */
+.welcome-logo {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 8px;
+}
+.welcome-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+.welcome-desc {
+  margin: 2px 0 0;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.welcome-btn { margin-top: 14px; padding: 8px 20px; }
 
 /* ---------------- 登录米家 面板 ---------------- */
 
@@ -771,6 +874,7 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .login-pane[hidden] { display: none; }
 
 .login-field { display: flex; flex-direction: column; gap: 5px; }
+.login-field[hidden] { display: none; }
 .login-field > span { font-size: 11px; color: var(--muted); }
 .login-field input,
 .login-field select {
@@ -788,6 +892,28 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .login-field input:focus,
 .login-field select:focus { border-color: var(--accent); }
+
+.captcha-row { display: flex; gap: 8px; align-items: center; }
+.captcha-row input { flex: 1; }
+.captcha-img {
+  width: 96px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #fff;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  color: #8a8a8a;
+  font: inherit;
+  font-size: 11px;
+  flex: none;
+  -webkit-app-region: no-drag;
+}
+.captcha-img.empty { color: #a8a8a8; }
+.captcha-img:disabled { cursor: default; }
 
 .qr-box {
   display: grid;
@@ -814,7 +940,7 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .login-msg[hidden] { display: none; }
 .login-msg.error { background: rgba(255, 86, 86, 0.14); color: #ff9a9a; }
-.login-msg.ok { background: rgba(70, 209, 138, 0.14); color: var(--ok); }
+.login-msg.ok { background: rgba(25, 205, 144, 0.14); color: var(--ok); }
 
 .login-foot {
   display: flex;
@@ -873,3 +999,196 @@ input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .home-item .home-check { display: grid; place-items: center; color: var(--accent); opacity: 0; transition: opacity 0.14s; }
 .home-item.active .home-check { opacity: 1; }
 .home-item .home-check.restore { opacity: 1; color: var(--accent-2); }
+
+/* ---------------- 关于 面板 ---------------- */
+
+.about-card {
+  max-width: 300px;
+  padding: 16px 16px 14px;
+  text-align: center;
+}
+
+/* 3D 徽章：外层给透视，内层做 rotateX/rotateY 翻转 */
+.about-badge {
+  width: 118px;
+  height: 118px;
+  margin: 10px auto 0;
+  perspective: 720px;
+}
+.about-badge-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  /* 未拖动时（含单击翻转）走缓动过渡；拖动中 .dragging 会临时关掉 */
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: grab;
+  touch-action: none;
+  -webkit-app-region: no-drag;
+}
+.about-badge-3d.dragging { transition: none; cursor: grabbing; }
+/* 面内的装饰不拦截指针，拖动统一交给容器处理 */
+.about-badge-3d * { pointer-events: none; }
+
+/* 徽章正反两面：正面绿底金属 + 白米字，背面银色金属；两面沿 Z 轴分离形成硬币厚度 */
+.badge-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 26px;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+
+/* 正面：米家绿金属（顶部光泽 + 斜向渐变 + 底部暗调，模拟拉丝金属面） */
+.badge-front {
+  transform: translateZ(6.5px);
+  background:
+    radial-gradient(130% 90% at 26% 14%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 22%),
+    linear-gradient(145deg, #3ce0a0 0%, #1ecd90 40%, #12ab77 70%, #0a835b 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.85),
+    inset 0 -8px 16px rgba(0, 42, 28, 0.38),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 14px 26px rgba(0, 0, 0, 0.42);
+}
+
+/* 背面：银色金属（多段明暗交替 = 反光拉丝，银闪闪） */
+.badge-back {
+  transform: rotateY(180deg) translateZ(6.5px);
+  background:
+    radial-gradient(120% 85% at 30% 16%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 26%),
+    linear-gradient(145deg, #feffff 0%, #e2e6eb 15%, #b0b7c0 32%, #f4f7fa 48%, #a3aab3 66%, #dbe0e5 82%, #8d959f 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.95),
+    inset 0 -8px 16px rgba(38, 46, 56, 0.38),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 14px 26px rgba(0, 0, 0, 0.42);
+}
+
+/* 徽章外圈凹刻细边，增强「像一枚徽章」的立体边缘 */
+.badge-face::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+.badge-back::before {
+  box-shadow: inset 0 0 0 1px rgba(58, 66, 76, 0.28);
+}
+
+/* 米字：与官网 logo 同款几何/比例，铺满徽章面 */
+.badge-mark {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 30, 20, 0.45));
+}
+.badge-back .badge-mark {
+  /* 银色面上的白色米字做出浮雕感：下方深影 + 上方亮边 */
+  filter: drop-shadow(0 1.2px 1.6px rgba(30, 38, 48, 0.6)) drop-shadow(0 -0.6px 0 rgba(255, 255, 255, 0.85));
+}
+
+/* 随旋转移动的徽章高光（--lx/--ly 由 app.js 写入），制造 3D 反光 */
+.badge-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 26px;
+  background:
+    radial-gradient(
+      circle at var(--lx, 50%) var(--ly, 50%),
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.26) 22%,
+      rgba(255, 255, 255, 0) 56%
+    ),
+    radial-gradient(
+      140% 95% at calc(var(--lx, 50%) + 9%) calc(var(--ly, 50%) + 13%),
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 62%
+    );
+  mix-blend-mode: screen;
+  opacity: 0.92;
+}
+/* 银色背面：更强更冷的高光 + 一道斜向反射带 */
+.badge-sheen-back {
+  background:
+    radial-gradient(
+      circle at var(--lx, 50%) var(--ly, 50%),
+      rgba(255, 255, 255, 1) 0%,
+      rgba(255, 255, 255, 0.44) 18%,
+      rgba(255, 255, 255, 0) 48%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 28%,
+      rgba(214, 231, 255, 0.55) 46%,
+      rgba(255, 255, 255, 0) 62%
+    );
+  opacity: 0.95;
+}
+
+/* 硬币侧壁：多层银色薄片沿 Z 轴堆叠（transform/filter 由 app.js 逐层写入） */
+.badge-rim {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.badge-rim-slice {
+  position: absolute;
+  inset: 0;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 30%),
+    linear-gradient(90deg, #f6f8fa 0%, #c6ccd3 18%, #848b94 44%, #eef1f5 58%, #a6adb6 78%, #d6dbe1 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.about-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.about-name {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+.about-app { font-size: 14px; font-weight: 600; letter-spacing: 0.3px; }
+.about-ver { font-size: 11.5px; color: var(--muted); }
+
+.about-author { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.about-link {
+  color: var(--accent-2);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.about-link:hover { text-decoration: underline; }
+
+.about-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.about-actions .pin-btn { flex: 1; min-width: 0; }
+
+.about-msg {
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+.about-msg[hidden] { display: none; }
+.about-msg.ok { background: rgba(25, 205, 144, 0.14); color: var(--ok); }
+.about-msg.error { background: rgba(255, 86, 86, 0.14); color: #ff9a9a; }

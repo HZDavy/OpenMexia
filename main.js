@@ -1,8 +1,9 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const { createProvider } = require('./src/devices');
 const { MijiaLogin } = require('./src/mijia-login');
 const QRCode = require('qrcode');
@@ -145,6 +146,80 @@ function startPinTaskbar() {
   win.webContents.send('widget:open-pin-guide');
 }
 
+// 托盘菜单里「登录米家 / 选择家庭 / 隐藏的设备 / 关于」：唤起窗口并让渲染层打开对应面板
+function openPanel(name) {
+  if (!win || win.isDestroyed()) return;
+  if (!win.isVisible()) win.show();
+  win.focus();
+  win.webContents.send('widget:open-panel', name);
+}
+
+// 主题切换交给渲染层执行（它负责切换 <html class>、记住 localStorage 并回传主进程持久化）
+function toggleTheme() {
+  if (win && !win.isDestroyed()) win.webContents.send('widget:toggle-theme');
+}
+
+// 检查更新：查询 GitHub Releases 最新版本，与当前版本比较（关于窗口按钮使用）
+const RELEASES_API = 'https://api.github.com/repos/HZDavy/OpenMexia/releases/latest';
+const RELEASES_PAGE = 'https://github.com/HZDavy/OpenMexia/releases';
+
+function fetchJson(url, timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, {
+      headers: { 'User-Agent': 'OpenMexia', Accept: 'application/vnd.github+json' },
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(timeout, () => req.destroy(new Error('请求超时')));
+  });
+}
+
+// 语义化版本比较：a > b 返回 1，相等返回 0，a < b 返回 -1
+function compareVersion(a, b) {
+  const pa = String(a).replace(/^v/i, '').split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).replace(/^v/i, '').split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+async function checkUpdate() {
+  const current = app.getVersion();
+  try {
+    const rel = await fetchJson(RELEASES_API);
+    const latest = String(rel.tag_name || rel.name || '').replace(/^v/i, '');
+    if (!latest) return { ok: true, current, latest: '', hasUpdate: false, url: RELEASES_PAGE };
+    return {
+      ok: true,
+      current,
+      latest,
+      hasUpdate: compareVersion(latest, current) > 0,
+      url: rel.html_url || RELEASES_PAGE,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      current,
+      latest: '',
+      hasUpdate: false,
+      url: RELEASES_PAGE,
+      error: e && e.message ? e.message : String(e),
+    };
+  }
+}
+
 
 /* ---------------- 状态持久化（窗口位置 / 偏好） ---------------- */
 
@@ -167,6 +242,11 @@ function patchState(patch) {
     /* 忽略写入失败，不影响运行 */
   }
   return next;
+}
+
+// 主题持久化：首次打开（无记录）默认深色，之后记住用户上次的选择
+function stateTheme(state = loadState()) {
+  return state.theme === 'light' ? 'light' : 'dark';
 }
 
 /* ---------------- 窗口 ---------------- */
@@ -207,7 +287,7 @@ function createWindow() {
     // 非透明窗口：resize 热区与视觉边缘重合，垂直方向缩放不再失效；
     // 圆角与阴影交给 Windows DWM 原生处理，避免透明窗口的 margin 错位问题
     transparent: false,
-    backgroundColor: '#171717',
+    backgroundColor: stateTheme(state) === 'light' ? '#f4f5f7' : '#171717',
     roundedCorners: true,
     resizable: true,
     minWidth: 300,
@@ -259,6 +339,15 @@ function createWindow() {
   win.on('maximize', syncFullscreenFromWindow);
   win.on('unmaximize', syncFullscreenFromWindow);
 
+  // 标题栏右键：无边框窗口里 -webkit-app-region: drag 的区域被当作非客户区（标题栏），
+  // 右键会触发本事件。preventDefault() 阻止 Windows 系统菜单，再把鼠标屏幕坐标交给渲染层，
+  // 让应用内菜单跟随鼠标位置弹出（原生拖动 / 双击最大化等行为不受影响）。
+  win.on('system-context-menu', (event) => {
+    event.preventDefault();
+    const pt = screen.getCursorScreenPoint();   // 屏幕坐标（DIP）
+    win.webContents.send('widget:titlebar-menu', { x: pt.x, y: pt.y });
+  });
+
   // 关闭按钮只收起到托盘，退出走托盘菜单
   win.on('close', (e) => {
     if (!app.isQuitting) {
@@ -304,7 +393,12 @@ async function rebuildProvider() {
 async function broadcastLoginState() {
   if (!login || !win || win.isDestroyed()) return;
   try {
-    win.webContents.send('widget:login-state', await login.status());
+    const st = await login.status();
+    // isMock 与 createProvider 的选源逻辑保持一致：有设备清单才用真实源
+    win.webContents.send('widget:login-state', {
+      ...st,
+      isMock: !(st.hasDevices && st.deviceCount > 0),
+    });
   } catch { /* ignore */ }
 }
 
@@ -313,6 +407,8 @@ async function broadcastLoginState() {
 function buildTrayMenu() {
   const visible = win && win.isVisible();
   const icon = (key) => (menuIcons[key] ? { icon: menuIcons[key] } : {});
+  const light = stateTheme() === 'light';
+  // 项与顺序与渲染层右上角菜单 (#menu) 保持一致，避免两处菜单内容不一致
   return Menu.buildFromTemplate([
     {
       label: `窗口置顶${settings.alwaysOnTop ? ' ✓' : ''}`,
@@ -328,6 +424,27 @@ function buildTrayMenu() {
       label: `开机自动启动${settings.launchAtLogin ? ' ✓' : ''}`,
       ...icon('login'),
       click: toggleLogin,
+    },
+    {
+      label: '登录米家 / 设备',
+      ...icon('cloud'),
+      click: () => openPanel('login'),
+    },
+    {
+      label: '选择家庭',
+      ...icon('home'),
+      click: () => openPanel('home'),
+    },
+    {
+      label: '隐藏的设备',
+      ...icon('hidden'),
+      click: () => openPanel('hidden'),
+    },
+    { type: 'separator' },
+    {
+      label: light ? '深色模式' : '浅色模式',
+      ...icon('theme'),
+      click: toggleTheme,
     },
     { type: 'separator' },
     {
@@ -351,6 +468,11 @@ function buildTrayMenu() {
       ...icon('hide'),
       click: toggleWindow,
     },
+    {
+      label: '关于',
+      ...icon('about'),
+      click: () => openPanel('about'),
+    },
     { type: 'separator' },
     {
       label: '退出',
@@ -366,7 +488,7 @@ function buildTrayMenu() {
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
   tray = new Tray(icon);
-  tray.setToolTip('米家小组件');
+  tray.setToolTip('OpenMexia');
   // 左键切换显示，右键弹菜单（Windows 上行为最可预期）
   tray.on('click', toggleWindow);
   tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
@@ -385,6 +507,8 @@ function registerIpc() {
       currentHomeId: currentHomeId(),
       hasCustomSize: hasCustomSize(),
       fullscreen: fsMode,
+      theme: stateTheme(),
+      version: app.getVersion(),
     };
   });
 
@@ -396,10 +520,31 @@ function registerIpc() {
   }));
 
   // 密码登录：小米账号 + 密码 → 抓取设备清单（含 token）后落盘
+  // 小米风控可能要求图形验证码 / 二次安全验证，此时返回 needCaptcha / needCode，由渲染层继续输入
   ipcMain.handle('widget:login-password', async (_e, payload = {}) => {
     const res = await login.loginPassword(payload);
+    if (res.needCaptcha || res.needCode) return res;
+    // 先广播登录态（切换 演示/真实 模式），再推送设备，避免渲染层短暂闪出演示数据
+    await broadcastLoginState();
     await rebuildProvider();
-    broadcastLoginState();
+    return res;
+  });
+
+  // 密码登录续步：提交图形验证码 / 二次验证码
+  ipcMain.handle('widget:login-captcha', async (_e, payload = {}) => {
+    const res = await login.loginPasswordCaptcha(payload);
+    if (res.needCaptcha || res.needCode) return res;   // 仍需要继续输入
+    await broadcastLoginState();
+    await rebuildProvider();
+    return res;
+  });
+
+  // 刷新验证码图片（图形验证码 / 二次验证发送用的图形验证码）
+  ipcMain.handle('widget:login-refresh-captcha', async (_e, payload = {}) => {
+    const res = await login.refreshPwdCaptcha(payload);
+    if (res.needCaptcha || res.needCode) return res;
+    await broadcastLoginState();
+    await rebuildProvider();
     return res;
   });
 
@@ -412,22 +557,22 @@ function registerIpc() {
       try { if (info && info.loginUrl) dataUrl = await QRCode.toDataURL(info.loginUrl, { margin: 1, width: 220 }); } catch { /* keep empty */ }
       if (!win.isDestroyed()) win.webContents.send('widget:qr', { ...info, dataUrl });
     });
+    await broadcastLoginState();
     await rebuildProvider();
-    broadcastLoginState();
     return res;
   });
 
   ipcMain.handle('widget:refresh-devices', async () => {
     const devices = await login.refreshDevices();
+    await broadcastLoginState();
     await rebuildProvider();
-    broadcastLoginState();
     return { ok: true, count: devices.length };
   });
 
   ipcMain.handle('widget:logout', async () => {
     await login.logout();
-    await rebuildProvider();
     broadcastLoginState();
+    await rebuildProvider();
     return { ok: true };
   });
 
@@ -441,8 +586,8 @@ function registerIpc() {
   // 切换家庭：持久化后重建设备源，只展示该家庭下的设备（homeId 为空 = 全部）
   ipcMain.handle('widget:set-home', async (_e, { homeId } = {}) => {
     patchState({ currentHomeId: homeId ? String(homeId) : '' });
+    await broadcastLoginState();
     await rebuildProvider();
-    broadcastLoginState();
     return { ok: true, currentHomeId: currentHomeId() };
   });
 
@@ -480,6 +625,14 @@ function registerIpc() {
   ipcMain.on('widget:send-screen', () => sendToSecondScreen());
   // 全屏：'normal' 普通全屏（任务栏可见）/ 'cover' 隐藏任务栏全屏 / null 退出全屏
   ipcMain.on('widget:fullscreen', (_e, { mode } = {}) => applyFullscreen(mode || null));
+  // 深色 / 浅色主题：同步 Chromium 原生主题与窗口底色，避免浅色下缩放露出深色边
+  ipcMain.on('widget:set-theme', (_e, { theme } = {}) => {
+    const t = theme === 'light' ? 'light' : 'dark';
+    patchState({ theme: t });   // 记住用户选择，下次启动沿用
+    const light = t === 'light';
+    nativeTheme.themeSource = light ? 'light' : 'dark';
+    if (win && !win.isDestroyed()) win.setBackgroundColor(light ? '#f4f5f7' : '#171717');
+  });
   // 接收渲染层栅格化好的菜单图标：dataURL → nativeImage（缩放到 16×16，Windows 菜单标准尺寸），供托盘菜单使用
   ipcMain.on('widget:menu-icons', (_e, icons = {}) => {
     const next = {};
@@ -501,6 +654,14 @@ function registerIpc() {
     win.show();
     win.focus();
   });
+  // 打开外部链接（关于窗口的官网 / 作者主页）：仅允许 http(s)，交给系统默认浏览器
+  ipcMain.on('widget:open-external', (_e, url) => {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      shell.openExternal(url).catch(() => {});
+    }
+  });
+  // 检查更新（关于窗口按钮）：返回 { ok, current, latest, hasUpdate, url }
+  ipcMain.handle('widget:check-update', () => checkUpdate());
 }
 
 /* ---------------- 启动 ---------------- */
@@ -517,13 +678,22 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     app.setAppUserModelId('com.mijia.widget');
-    // 深色主题：让 Chromium 的默认底色变为深色，避免缩放窗口时露出白色底
-    nativeTheme.themeSource = 'dark';
+    // 主题：首次打开默认深色，之后沿用用户上次选择（避免浅色下启动瞬间露深色底）
+    nativeTheme.themeSource = stateTheme();
 
     login = new MijiaLogin(mijiaDataDir());
     registerIpc();
-    // 先建窗口/托盘让界面立即出现；设备源（可能联网拉规格）在后台构建，避免窗口延迟
-    providerReady = rebuildProvider().catch((err) => {
+    // 先建窗口/托盘让界面立即出现；设备源（可能联网拉规格）在后台构建，避免窗口延迟。
+    // 启动时先静默刷新一次清单：确保恢复的密码会话下能补齐中文默认名与家庭归属（homeId），
+    // 再据此重建 Provider。刷新失败（如离线）不阻断启动，退回本地清单。
+    providerReady = (async () => {
+      try {
+        if (login.hasDevices() && await login.ensurePwdSession()) await login.refreshDevices();
+      } catch (e) {
+        console.error('[main] 启动刷新失败：', e && e.message);
+      }
+      return rebuildProvider();
+    })().catch((err) => {
       console.error('[main] rebuildProvider failed:', err);
     });
     createWindow();

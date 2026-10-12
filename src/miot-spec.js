@@ -77,6 +77,25 @@ const FIELD_ALIASES = {
   filterLife: ['filter-life-level'],
   tdsIn: ['tds-in'],
   tdsOut: ['tds-out'],
+  // 路由器 / 网关（只读指标，用于展示网络状态）
+  connectedDeviceNumber: ['connected-device-number'],
+  downloadSpeed: ['download-speed'],
+  uploadSpeed: ['upload-speed'],
+  onlineTime: ['online-time'],
+};
+
+/**
+ * 型号品类（vendor.category.model 里的 category 段）→ 设备类型。
+ *
+ * 为什么不能只靠属性推断：路由器 / 网关 / 中继这类「网络设备」没有可用的开关，
+ * 但规格里常带一个「指示灯」服务（on + brightness），只按属性判断会被误认成灯或插座。
+ * 米家型号的第二段是稳定的品类标识，先按它定型，其余设备再走属性推断。
+ */
+const CATEGORY_TYPES = {
+  router: 'router',      // 路由器
+  wifi: 'router',
+  repeater: 'router',    // WiFi 中继 / 放大器
+  gateway: 'gateway',    // 网关
 };
 
 // 动作（action）-> 候选 MiOT 动作名（按优先级）。
@@ -90,14 +109,16 @@ const ACTION_ALIASES = {
 
 /**
  * 把规格解析为小组件可用的「读写绑定」。
+ * @param {object} info 设备规格（含 model / properties / actions）
+ * @param {string} [model] 设备型号；缺省时取 info.model
  * @returns {{
- *   type: 'sensor'|'plug'|'light'|'fan'|'aircon'|'purifier',
+ *   type: 'sensor'|'plug'|'light'|'fan'|'aircon'|'purifier'|'router'|'gateway'|'other',
  *   props: Record<string, {siid:number, piid:number, rw:string, range:number[]|null, list:string[]|null}>,
  *   reads: {siid:number, piid:number}[],
  *   actions: Record<string, {siid:number, aiid:number}>
  * }}
  */
-function analyze(info) {
+function analyze(info, model) {
   const props = {};
   const byName = new Map();
   if (info && Array.isArray(info.properties)) {
@@ -150,19 +171,27 @@ function analyze(info) {
   const canWrite = (f) => props[f] && props[f].rw.includes('w');
   const canRead = (f) => props[f] && props[f].rw.includes('r');
 
-  // 类型推断：
-  //   净饮机（含制冰）→ 制冰/水质字段独有；
-  //   空调 → 可写目标温度（须在 light 之前，因空调也带 brightness 指示灯）；
-  //   有可写 on + 风速档位 → 风扇；有可写 on + 亮度 → 灯；
-  //   其它有可写 on 的 → 插座/通用开关；只有读属性 → 传感器
-  let type = 'sensor';
+  // 类型推断（顺序即优先级）：
+  //   0. 品类优先：路由器 / 网关 / 中继等网络设备没有可用开关，规格里的「指示灯」
+  //      (on + brightness) 会让纯属性推断把它们误认成灯或插座，故先按型号品类定型；
+  //   1. 净饮机（含制冰）→ 制冰/水质字段独有；
+  //   2. 空调 → 可写目标温度（须在 light 之前，因空调也带 brightness 指示灯）；
+  //   3. 有可写 on + 风速档位 → 风扇；有可写 on + 亮度 → 灯；
+  //   4. 其它有可写 on 的 → 插座/通用开关；
+  //   5. 只读的温度 / 湿度 / 电量 → 传感器；
+  //   6. 其余（无可控开关、无遥测，如计时器）→ 其它，避免被错认成插座。
+  const category = String(model || (info && info.model) || '').split('.')[1] || '';
   const isPurifier = !!(props.iceMakerStatus || props.iceMakerOn || props.tdsIn || props.tdsOut);
-  if (isPurifier) type = 'purifier';
+
+  let type;
+  if (CATEGORY_TYPES[category]) type = CATEGORY_TYPES[category];
+  else if (isPurifier) type = 'purifier';
   else if (canWrite('targetTemperature') || (canWrite('mode') && canWrite('speed') && props.targetTemperature)) type = 'aircon';
   else if (canWrite('on') && props.speed) type = 'fan';
   else if (canWrite('on') && props.brightness) type = 'light';
   else if (canWrite('on')) type = 'plug';
-  else if (!canRead('temperature') && !canRead('humidity') && !canRead('battery')) type = 'plug';
+  else if (canRead('temperature') || canRead('humidity') || canRead('battery')) type = 'sensor';
+  else type = 'other';
 
   // 读属性列表（去重）
   const reads = [];

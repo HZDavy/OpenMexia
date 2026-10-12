@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('mijia', {
   hide: () => ipcRenderer.send('widget:hide'),
   resize: (height) => ipcRenderer.send('widget:resize', { height }),
   quit: () => ipcRenderer.send('widget:quit'),
+  // 深色 / 浅色主题：通知主进程同步窗口底色与原生主题
+  setTheme: (theme) => ipcRenderer.send('widget:set-theme', { theme }),
   toggleOnTop: () => ipcRenderer.send('widget:toggle-top'),
   pinTaskbar: () => ipcRenderer.send('widget:pin-taskbar'),
   pinTaskbarDone: () => ipcRenderer.send('widget:pin-taskbar-done'),
@@ -29,10 +31,21 @@ contextBridge.exposeInMainWorld('mijia', {
   setMenuIcons: (icons) => ipcRenderer.send('widget:menu-icons', icons),
   // 托盘菜单点了「固定到任务栏」：主进程已让窗口临时出现在任务栏，通知渲染层弹引导
   onOpenPinGuide: (cb) => ipcRenderer.on('widget:open-pin-guide', () => cb()),
+  // 托盘菜单点了「登录米家 / 选择家庭 / 隐藏的设备」：渲染层打开对应面板（'login'|'home'|'hidden'）
+  onOpenPanel: (cb) => ipcRenderer.on('widget:open-panel', (_e, name) => cb(name)),
+  // 托盘菜单点了「浅色/深色模式」：渲染层执行主题切换
+  onToggleTheme: (cb) => ipcRenderer.on('widget:toggle-theme', () => cb()),
+  // 标题栏右键：主进程拦截了 Windows 系统菜单，把鼠标屏幕坐标传回渲染层弹应用内菜单
+  onTitlebarMenu: (cb) => ipcRenderer.on('widget:titlebar-menu', (_e, pt) => cb(pt)),
+  // 关于窗口：打开外部链接（官网 / 作者主页）与检查更新
+  openExternal: (url) => ipcRenderer.send('widget:open-external', url),
+  checkUpdate: () => ipcRenderer.invoke('widget:check-update'),
 
   // ---- 登录 / 设备管理 ----
   loginStatus: () => ipcRenderer.invoke('widget:login-status'),
   loginPassword: (payload) => ipcRenderer.invoke('widget:login-password', payload),
+  loginCaptcha: (payload) => ipcRenderer.invoke('widget:login-captcha', payload),
+  loginRefreshCaptcha: (payload) => ipcRenderer.invoke('widget:login-refresh-captcha', payload),
   loginQR: () => ipcRenderer.invoke('widget:login-qr'),
   refreshDevices: () => ipcRenderer.invoke('widget:refresh-devices'),
   logout: () => ipcRenderer.invoke('widget:logout'),
