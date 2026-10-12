@@ -98,7 +98,8 @@ header.nav{
 .values{border-bottom:1px solid var(--line)}
 .values-in{display:grid;grid-template-columns:repeat(4,1fr)}
 .value{padding:44px 32px 42px;display:flex;gap:15px;border-left:1px solid var(--line)}
-.values-in .value:first-child{border-left:0}
+.values-in .value:first-child{border-left:0;padding-left:0}
+.values-in .value:last-child{padding-right:0}
 .value svg{width:25px;height:25px;color:var(--green-deep);flex:none;margin-top:3px}
 .value h3{font-size:15.5px;font-weight:600;margin-bottom:4px}
 .value p{font-size:13px;color:var(--ink-3);line-height:1.55}
@@ -295,6 +296,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .hero-in{grid-template-columns:1fr;padding:52px 24px 60px}
   .hero-shot{order:-1}
   .values-in{grid-template-columns:1fr 1fr}
+  .values-in .value:nth-child(2){padding-right:0}
+  .values-in .value:nth-child(3){padding-left:0}
   .value:nth-child(3){border-left:0}
   .value{border-top:1px solid var(--line)}
   .values-in .value:nth-child(-n+2){border-top:0}
