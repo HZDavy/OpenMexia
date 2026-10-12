@@ -71,7 +71,7 @@ header.nav{
 .lang{font-size:13px;color:var(--ink-3);display:flex;gap:8px;user-select:none}
 .lang button{background:none;border:0;padding:0;font:inherit;color:var(--ink-3);cursor:pointer}
 .lang button.on{color:var(--ink);font-weight:600}
-.lang i{width:1px;height:12px;background:var(--line);align-self:center}
+.lang i{width:1px;height:12px;background:var(--ink-3);align-self:center}
 .gh-link{color:var(--ink-2);display:flex;transition:color .15s}
 .gh-link:hover{color:var(--ink)}
 .gh-link svg{width:21px;height:21px}
@@ -145,7 +145,7 @@ section{padding:96px 0}
 .tile{position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg-soft)}
 .tile-big{height:496px}
 .tile-tall{height:496px;background:var(--green-tint)}
-.tile-sm{height:316px;padding:42px 40px;display:flex;flex-direction:column}
+.tile-sm{height:262px;padding:38px 40px;display:flex;flex-direction:column}
 .tile-copy{position:relative;z-index:2}
 .tile-big{display:flex;flex-direction:column;padding:0}
 .tile-big .tile-copy{position:static;padding:30px 34px 0;max-width:440px}
@@ -153,7 +153,7 @@ section{padding:96px 0}
 .tile .d{font-size:14px;color:var(--ink-2);line-height:1.65}
 .tile-big .imgwrap{position:static;flex:1;display:flex;align-items:flex-start;margin:22px 34px 0;min-height:0;overflow:hidden}
 .tile-big .imgwrap .win{width:100%}
-.tile-tall .tile-copy{padding:40px 38px 0}
+.tile-tall .tile-copy{padding:30px 38px 0}
 .tile-tall .imgwrap{position:absolute;left:0;right:0;bottom:0;height:70%;display:flex;align-items:flex-start;justify-content:center;padding:0 38px;overflow:hidden}
 .tile-tall .imgwrap .win-narrow{width:100%}
 .tile-sm .ic{width:46px;height:46px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--green-deep);margin-bottom:auto}
@@ -162,77 +162,115 @@ section{padding:96px 0}
 .tile-sm .d{font-size:13.5px}
 
 /* ---------- live app mock（真实 HTML/CSS 复刻应用界面） ---------- */
-.win{background:#171717;border-radius:12px;overflow:hidden;color:#ececec;font-size:13px;font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;user-select:none}
-.win-bar{display:flex;align-items:center;gap:10px;padding:13px 12px 10px 15px}
+/* 主题变量：默认深色，与真实应用 renderer/style.css 的 :root 一致；.light 为浅色 */
+.win{
+  --bg:#171717;--surface:#212121;--surface-hover:#2a2a2a;--line:#333333;--track:#3a3a3a;
+  --text:#ececec;--muted:#9a9a9a;--accent:#19cd90;--accent-2:#2ee0a2;
+  --accent-soft:rgba(25,205,144,.16);--ok:#19cd90;
+  background:var(--bg);border-radius:12px;overflow:hidden;color:var(--text);
+  font-size:13px;font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;
+  user-select:none;transition:background .2s,color .2s
+}
+.win.light{
+  --bg:#f4f5f7;--surface:#ffffff;--surface-hover:#f0f1f3;--line:#e4e6ea;--track:#dcdfe4;
+  --text:#1f2226;--muted:#7c828b;--accent:#1daf7e;--accent-2:#128a63;
+  --accent-soft:rgba(29,175,126,.14);--ok:#1daf7e
+}
+.hero-shot .win{border-radius:0}
+.win-bar{position:relative;display:flex;align-items:center;gap:10px;padding:13px 12px 10px 15px}
 .win-logo{flex:none;width:30px;height:30px;display:grid;place-items:center;color:#fff}
+.win.light .win-logo{color:var(--text)}
 .win-logo svg{width:30px;height:30px}
 .win-tt{flex:1;min-width:0}
 .win-tt b{display:block;font-size:14px;font-weight:600;letter-spacing:.4px;line-height:1.3}
-.win-tt i{display:block;font-style:normal;font-size:11px;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.win-burger{flex:none;width:24px;height:24px;display:grid;place-items:center;color:#9a9a9a}
+.win-tt i{display:block;font-style:normal;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.win-burger{flex:none;width:24px;height:24px;display:grid;place-items:center;color:var(--muted);border-radius:6px;transition:background .15s,color .15s}
+.win-burger:hover{background:var(--surface-hover);color:var(--text)}
 .win-burger svg{width:16px;height:16px}
+/* 汉堡下拉菜单：只保留一个「浅色/深色模式」按钮，与真实应用菜单同款浮层与弹入动画 */
+.win-menu{position:absolute;top:44px;right:10px;z-index:30;min-width:184px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:12px;border:1px solid var(--line);background:#1d1d1d;box-shadow:0 16px 38px rgba(0,0,0,.6);transform-origin:top right;animation:win-menu-in .12s ease}
+.win.light .win-menu{background:#fff;box-shadow:0 16px 40px rgba(18,22,30,.16)}
+.win-menu[hidden]{display:none}
+@keyframes win-menu-in{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+.win-mi{display:flex;align-items:center;gap:9px;padding:8px 9px;border:0;border-radius:8px;background:none;font:inherit;font-size:12.5px;color:var(--text);text-align:left;cursor:pointer}
+.win-mi:hover{background:var(--surface-hover)}
+.win-mi-ic{flex:none;width:15px;display:grid;place-items:center;color:var(--muted)}
+.win-mi-ic svg{width:15px;height:15px}
 .win-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:8px;padding:2px 12px 10px}
 .win[data-cols="1"] .win-grid{grid-template-columns:1fr}
 /* 窄窗只露前两张常用卡（灯 + 温湿度计），循环扇顺延到裁切区之外，保证温度计可见 */
 .win[data-cols="1"] .m-fan{order:1}
-.win-narrow{border:1px solid #333;box-shadow:0 18px 44px rgba(0,0,0,.18)}
-.mcard{padding:12px;border-radius:12px;border:1px solid #333;background:#212121}
+.win-narrow{border:1px solid var(--line);box-shadow:0 18px 44px rgba(0,0,0,.18)}
+.mcard{padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);transition:background .15s,border-color .15s,box-shadow .18s}
+.mcard:hover{background:var(--surface-hover);border-color:#3d3d3d}
+.win.light .mcard:hover{border-color:#d4d8de}
+/* 拖动排序：被拖起的卡片浮起高亮（与真实应用一致） */
+.mcard.dragging{background:var(--surface-hover);border-color:var(--c,#3d3d3d);box-shadow:0 14px 30px rgba(0,0,0,.6);position:relative;z-index:5;opacity:.96}
+.mcard.dragging *{cursor:grabbing}
 .m-light{--c:#ffc24b;--cs:rgba(255,194,75,.16)}
-.m-fan{--c:#4bd0a0;--cs:rgba(75,208,160,.16)}
+.m-fan{--c:#19cd90;--cs:rgba(25,205,144,.16)}
 .m-sensor{--c:#38bdf8;--cs:rgba(56,189,248,.16)}
-.mc-head{display:flex;align-items:center;gap:8px}
+.mc-head{display:flex;align-items:center;gap:8px;user-select:none}
 .mc-ic{flex:none;width:26px;height:26px;border-radius:8px;background:var(--cs);color:var(--c);display:grid;place-items:center}
 .mcard.active .mc-ic{background:var(--c);color:#14161c}
 .mc-ic svg{width:15px;height:15px}
 .mc-name{flex:1;min-width:0}
 .mc-name b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mc-name i{display:block;font-style:normal;font-size:10.5px;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m-sw{flex:none;position:relative;width:38px;height:22px;border-radius:999px;background:#3a3a3a}
+.mc-name i{display:block;font-style:normal;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-sw{flex:none;position:relative;width:38px;height:22px;border-radius:999px;background:var(--track);transition:background .15s}
 .m-sw.on{background:var(--c)}
-.m-sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.m-sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .18s ease}
 .m-sw.on::after{transform:translateX(16px)}
-/* 点阵拖拽把手（位于卡片头部最右，与真实应用一致） */
-.m-grip{flex:none;display:grid;place-items:center;width:18px;height:20px;margin-left:2px;color:#9a9a9a;opacity:.5}
-.m-grip svg{width:15px;height:15px;display:block}
-.m-grip.on{color:#d6d6d6;opacity:.95}
+/* 点阵拖拽把手（位于卡片头部最右，与真实应用一致；悬停时显现） */
+.m-grip{flex:none;display:grid;place-items:center;width:20px;height:24px;margin-left:2px;color:var(--muted);opacity:.45;cursor:grab;touch-action:none;transition:background .15s,opacity .15s,color .15s}
+.mcard:hover .m-grip{opacity:.9}
+.m-grip:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.win.light .m-grip:hover{background:rgba(18,22,30,.06)}
+.m-grip svg{width:16px;height:16px;display:block}
 .mc-body{display:flex;align-items:flex-start;gap:12px;margin-top:10px}
+.sensor-body{align-items:flex-end}
 .m-hero{flex:none;display:flex;flex-direction:column;gap:4px;min-width:0}
-.m-hero>i{font-style:normal;font-size:10.5px;color:#9a9a9a}
+.m-hero>i,.m-ro-label{font-style:normal;font-size:10.5px;color:var(--muted)}
 .m-hero>b{font-size:26px;font-weight:300;letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
-.m-hero>b u{text-decoration:none;font-size:11px;color:#9a9a9a;margin-left:3px}
+.m-hero>b u{text-decoration:none;font-size:11px;color:var(--muted);margin-left:3px}
 .m-meta{flex:1;display:flex;flex-direction:column;gap:4px;padding-top:1px;min-width:0}
-.m-meta span{display:flex;justify-content:flex-end;gap:6px;font-size:11px;color:#9a9a9a;min-height:15px;white-space:nowrap}
+.m-meta span{display:flex;justify-content:flex-end;gap:6px;font-size:11px;color:var(--muted);min-height:15px;white-space:nowrap}
 .m-meta i{font-style:normal}
 .m-meta b{font-weight:500;color:#d6d6d6;font-variant-numeric:tabular-nums}
+.win.light .m-meta b{color:#34383e}
 .m-readouts{flex:1;display:flex;gap:20px}
 .m-readouts .ro{display:flex;flex-direction:column;gap:4px}
-.m-sep{height:1px;margin:11px 0;background:#333}
+.m-sep{height:1px;margin:11px 0;background:var(--line)}
 .m-slider{display:flex;align-items:center;gap:9px;margin-top:11px}
-.m-slider:first-of-type{margin-top:11px}
 .ms-ic{flex:none;display:grid;place-items:center;color:var(--c)}
 .ms-ic svg{width:13px;height:13px}
-.ms-track{flex:1;position:relative;height:5px;border-radius:999px;background:#3a3a3a}
+.ms-track{flex:1;position:relative;height:5px;border-radius:999px;background:var(--track);touch-action:none}
 .ms-track::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--pct,0%);border-radius:999px;background:var(--c)}
 .ms-track::after{content:"";position:absolute;top:50%;left:var(--pct,0%);transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--c)}
 .ms-track.ct{background:linear-gradient(to right,#ecdfb2 0%,#c3d6d6 48%,#9fc6dd 100%)}
 .ms-track.ct::before{display:none}
 .ms-track.ct::after{border-color:#8fa9b8}
-.m-slider em{flex:none;width:36px;text-align:right;font-style:normal;font-size:11px;color:#9a9a9a;font-variant-numeric:tabular-nums}
+.m-slider em{flex:none;width:36px;text-align:right;font-style:normal;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .m-ctrl{display:flex;align-items:center;gap:8px;margin-top:10px}
-.m-ctrl>i{flex:none;font-style:normal;font-size:10.5px;color:#9a9a9a;white-space:nowrap}
+.m-ctrl>i{flex:none;font-style:normal;font-size:10.5px;color:var(--muted);white-space:nowrap}
 .m-ctrl .cf{margin-left:auto;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:7px}
-.m-seg{display:inline-flex;padding:2px;gap:2px;border-radius:8px;background:#3a3a3a}
-.m-seg span{padding:3px 9px;border-radius:6px;font-size:10.5px;line-height:1.4;color:#9a9a9a;white-space:nowrap}
+.m-seg{display:inline-flex;padding:2px;gap:2px;border-radius:8px;background:var(--track)}
+.m-seg span{padding:3px 9px;border-radius:6px;font-size:10.5px;line-height:1.4;color:var(--muted);white-space:nowrap}
 .m-seg span.on{background:var(--c);color:#14161c;font-weight:600}
-.m-chip{border:1px solid #333;padding:3px 11px;border-radius:999px;color:#9a9a9a;font-size:10.5px;white-space:nowrap}
+.m-chip{border:1px solid var(--line);padding:3px 11px;border-radius:999px;color:var(--muted);font-size:10.5px;white-space:nowrap}
+.m-chip:hover{border-color:#4a4a4a;color:var(--text)}
+.win.light .m-chip:hover{border-color:#c7ccd4}
 .m-chip.on{background:var(--cs);border-color:var(--c);color:var(--c);font-weight:600}
-.win-status{display:flex;align-items:center;gap:6px;padding:7px 15px 10px;border-top:1px solid #333;font-size:10.5px;color:#9a9a9a}
-.win-status .d-ok{width:6px;height:6px;border-radius:50%;background:#46d18a}
+.win-status{display:flex;align-items:center;gap:6px;padding:7px 15px 10px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted)}
+.win-status .d-ok{width:6px;height:6px;border-radius:50%;background:var(--ok)}
 .win-status .sp{flex:1}
-.win-status .mock-tag{padding:1px 6px;border-radius:999px;background:rgba(255,176,87,.16);color:#ffb057;font-size:10px}
-/* 演示界面可交互：开关 / 滑杆 / 分段 / 开关片均可点击 */
-.m-sw,.ms-track,.m-seg span,.m-chip{cursor:pointer}
-.ms-track{touch-action:none}
+.win-status .mock-tag{padding:1px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent-2);font-size:10px}
+/* 演示界面可交互：开关 / 滑杆 / 分段 / 开关片 / 汉堡 / 把手均可点击 */
+.m-sw,.ms-track,.m-seg span,.m-chip,.win-burger,.m-grip{cursor:pointer}
+/* 收折：卡片内除头部/主体外的直接子元素各加 .m-extra，双击卡片即折叠（与真实应用一致） */
+.m-extra{overflow:hidden;max-height:800px;transition:max-height .34s cubic-bezier(.22,1,.36,1),opacity .26s ease,margin .34s cubic-bezier(.22,1,.36,1),padding .34s cubic-bezier(.22,1,.36,1)}
+.mcard.collapsed .m-extra{max-height:0;opacity:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;pointer-events:none}
+/* 未开启的卡片其滑杆/控制区弱化（放在收折规则之后，保证折叠态 opacity:0 优先） */
 .mcard:not(.active) .m-slider,.mcard:not(.active) .m-ctrl,.mcard:not(.active) .m-sep{opacity:.4;pointer-events:none}
 
 /* ---------- dark device section ---------- */
@@ -282,7 +320,7 @@ details[open] summary::after{transform:rotate(45deg)}
 .dl-card .s{font-size:16px;color:var(--ink-2);margin-bottom:40px}
 .dl-card .btn{margin-bottom:22px}
 .dl-meta{font-size:13px;color:var(--ink-3)}
-.dl-warn{max-width:560px;margin:26px auto 0;font-size:13px;color:var(--ink-3);line-height:1.7;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 22px}
+.dl-warn{max-width:700px;margin:26px auto 0;font-size:13px;color:var(--ink-3);line-height:1.7;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 24px;text-wrap:balance}
 
 /* ---------- footer ---------- */
 footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0 34px;margin-top:96px}
@@ -716,7 +754,13 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   <div class="win-bar">
     <span class="win-logo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><path d="M14 32h36M32 14v36M19.3 19.3l25.4 25.4M44.7 19.3 19.3 44.7"/></svg></span>
     <span class="win-tt"><b>OpenMexia</b><i>3 台设备 · 3 在线 · 2 开启</i></span>
-    <span class="win-burger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+    <span class="win-burger" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+    <div class="win-menu" hidden>
+      <button class="win-mi" type="button" role="menuitem">
+        <span class="win-mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></svg></span>
+        <span class="win-mi-label"><span class="hidden-zh">浅色模式</span><span class="hidden-en">Light mode</span></span>
+      </button>
+    </div>
   </div>
   <div class="win-grid">
     <div class="mcard m-light active">
@@ -724,18 +768,18 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="mc-ic"><svg viewBox="0 0 24 24"><path d="M12 2.4a7.1 7.1 0 0 0-4.1 12.9v1.6h8.2v-1.6A7.1 7.1 0 0 0 12 2.4Zm-2.6 16.7h5.2v1.1a2.1 2.1 0 0 1-2.1 2.1h-1a2.1 2.1 0 0 1-2.1-2.1v-1.1Z" fill="currentColor"/></svg></span>
         <span class="mc-name"><b>客厅吸顶灯</b><i>yeelink.light.ceil26</i></span>
         <span class="m-sw on"></span>
-        <span class="m-grip on"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
+        <span class="m-grip"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
       </div>
       <div class="mc-body">
         <span class="m-hero"><i>亮度</i><b>72<u>%</u></b></span>
         <span class="m-meta"><span><i>状态</i><b>已开启</b></span></span>
       </div>
-      <div class="m-sep"></div>
-      <div class="m-slider">
+      <div class="m-sep m-extra"></div>
+      <div class="m-slider m-extra">
         <span class="ms-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
         <i class="ms-track" style="--pct:72%"></i><em>72%</em>
       </div>
-      <div class="m-slider">
+      <div class="m-slider m-extra">
         <span class="ms-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.6V5a2 2 0 1 1 4 0v8.6a4 4 0 1 1-4 0Z"/><path d="M12 9v5"/></svg></span>
         <i class="ms-track ct" style="--pct:50%"></i><em>4000K</em>
       </div>
@@ -745,20 +789,20 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="mc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z"/></svg></span>
         <span class="mc-name"><b>循环扇</b><i>zhimi.fan.fa1</i></span>
         <span class="m-sw on"></span>
-        <span class="m-grip on"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
+        <span class="m-grip"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
       </div>
       <div class="mc-body">
         <span class="m-hero"><i>风速</i><b>3<u>档</u></b></span>
         <span class="m-meta"><span><i>状态</i><b>直吹风</b></span></span>
       </div>
-      <div class="m-slider">
+      <div class="m-slider m-extra">
         <span class="ms-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z"/></svg></span>
         <i class="ms-track" style="--pct:60%"></i><em>3 档</em>
       </div>
-      <div class="m-sep"></div>
-      <div class="m-ctrl"><i>模式</i><span class="cf"><span class="m-seg"><span>自然风</span><span class="on">直吹风</span></span></span></div>
-      <div class="m-ctrl"><i>左右扫风</i><span class="cf"><span class="m-chip on">开</span></span></div>
-      <div class="m-ctrl"><i>上下扫风</i><span class="cf"><span class="m-chip">关</span></span></div>
+      <div class="m-sep m-extra"></div>
+      <div class="m-ctrl m-extra"><i>模式</i><span class="cf"><span class="m-seg"><span>自然风</span><span class="on">直吹风</span></span></span></div>
+      <div class="m-ctrl m-extra"><i>左右扫风</i><span class="cf"><span class="m-chip on">开</span></span></div>
+      <div class="m-ctrl m-extra"><i>上下扫风</i><span class="cf"><span class="m-chip">关</span></span></div>
     </div>
     <div class="mcard m-sensor">
       <div class="mc-head">
@@ -766,13 +810,13 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="mc-name"><b>温湿度计</b><i>miaomiaoce.sensor_ht</i></span>
         <span class="m-grip"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
       </div>
-      <div class="mc-body" style="align-items:flex-end">
+      <div class="mc-body sensor-body">
         <span class="m-readouts">
-          <span class="ro"><i style="font-style:normal;font-size:10.5px;color:#9a9a9a">温度</i><span class="m-hero" style="gap:0"><b>25.8<u>°C</u></b></span></span>
-          <span class="ro"><i style="font-style:normal;font-size:10.5px;color:#9a9a9a">湿度</i><span class="m-hero" style="gap:0"><b>56<u>%</u></b></span></span>
+          <span class="ro"><i class="m-ro-label">温度</i><span class="m-hero" style="gap:0"><b>25.8<u>°C</u></b></span></span>
+          <span class="ro"><i class="m-ro-label">湿度</i><span class="m-hero" style="gap:0"><b>56<u>%</u></b></span></span>
         </span>
+        <span class="m-meta"><span><i>电量</i><b>88%</b></span></span>
       </div>
-      <div class="m-meta" style="margin-top:10px"><span><i>电量</i><b>88%</b></span></div>
     </div>
   </div>
   <div class="win-status"><i class="d-ok"></i><span><span class="hidden-zh">设备正常</span><span class="hidden-en">All devices OK</span></span><span class="sp"></span><span class="mock-tag hidden-zh">演示数据</span><span class="mock-tag hidden-en">Demo data</span></div>
@@ -856,9 +900,107 @@ switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
     tr.addEventListener('pointercancel', function(){ dragging = false; });
   }
 
+  // 汉堡菜单：只含一个「浅色/深色模式」按钮；点击别处收起
+  function closeMenus(){
+    document.querySelectorAll('.win-menu').forEach(function(m){ m.hidden = true; });
+    document.querySelectorAll('.win-burger').forEach(function(b){ b.setAttribute('aria-expanded','false'); });
+  }
+  function bindMenu(root){
+    var burger = root.querySelector('.win-burger');
+    var menu = root.querySelector('.win-menu');
+    if(!burger || !menu) return;
+    var item = menu.querySelector('.win-mi');
+    burger.addEventListener('click', function(e){
+      e.stopPropagation();
+      var willOpen = menu.hidden;
+      closeMenus();
+      menu.hidden = !willOpen;
+      burger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+    burger.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); burger.click(); }
+    });
+    if(!item) return;
+    item.addEventListener('click', function(e){
+      e.stopPropagation();
+      var toLight = !root.classList.contains('light');
+      root.classList.toggle('light', toLight);
+      item.querySelectorAll('.hidden-zh').forEach(function(s){ s.textContent = toLight ? '深色模式' : '浅色模式'; });
+      item.querySelectorAll('.hidden-en').forEach(function(s){ s.textContent = toLight ? 'Dark mode' : 'Light mode'; });
+      menu.hidden = true;
+      burger.setAttribute('aria-expanded','false');
+    });
+  }
+  document.addEventListener('click', closeMenus);
+
+  // 收折：双击卡片折叠/展开其可折叠区（与真实应用一致；无 extras 的卡不可折叠）
+  function toggleCollapse(card){
+    if(!card || !card.querySelector('.m-extra')) return;
+    card.classList.toggle('collapsed');
+  }
+
+  // 拖动排序：按住点阵把手拖动卡片，插入到目标位置
+  function bindDrag(grip){
+    var card = grip.closest('.mcard');
+    var grid = grip.closest('.win-grid');
+    if(!card || !grid) return;
+    grip.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      var dragging = true;
+      card.classList.add('dragging');
+      try { grip.setPointerCapture(e.pointerId); } catch(_){}
+
+      function columns(){
+        var t = getComputedStyle(grid).gridTemplateColumns;
+        return t ? t.trim().split(/\s+/).length : 1;
+      }
+      function target(ev){
+        var kids = grid.querySelectorAll('.mcard');
+        for(var i=0;i<kids.length;i++){
+          var k = kids[i];
+          if(k === card) continue;
+          var r = k.getBoundingClientRect();
+          if(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) return k;
+        }
+        return null;
+      }
+      function move(ev){
+        if(!dragging) return;
+        var over = target(ev);
+        if(!over) return;
+        var r = over.getBoundingClientRect();
+        var after = columns() > 1 ? (ev.clientX > r.left + r.width / 2) : (ev.clientY > r.top + r.height / 2);
+        grid.insertBefore(card, after ? over.nextSibling : over);
+      }
+      function end(){
+        if(!dragging) return;
+        dragging = false;
+        card.classList.remove('dragging');
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', end);
+        grip.removeEventListener('pointercancel', end);
+      }
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', end);
+      grip.addEventListener('pointercancel', end);
+    });
+  }
+
   document.querySelectorAll('.win').forEach(function(root){
     root.querySelectorAll('.m-sw').forEach(bindSwitch);
     root.querySelectorAll('.ms-track').forEach(bindTrack);
+    root.querySelectorAll('.m-grip').forEach(bindDrag);
+    bindMenu(root);
+
+    // 双击卡片主体收折（避开开关/滑杆/分段/开关片/把手/汉堡等交互控件）
+    var grid = root.querySelector('.win-grid');
+    if(grid){
+      grid.addEventListener('dblclick', function(e){
+        if(e.target.closest('.m-sw,.ms-track,.m-seg,.m-chip,.m-grip,.win-burger,.win-menu')) return;
+        toggleCollapse(e.target.closest('.mcard'));
+      });
+    }
 
     // 分段选择（模式）
     root.querySelectorAll('.m-seg').forEach(function(seg){
