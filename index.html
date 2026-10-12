@@ -101,10 +101,10 @@ header.nav{
 /* ---------- values strip ---------- */
 .values{border-bottom:1px solid var(--line)}
 .values-in{display:grid;grid-template-columns:repeat(4,1fr)}
-.value{padding:44px 32px 42px;display:flex;gap:15px;border-left:1px solid var(--line)}
+.value{padding:44px 32px 42px;display:flex;align-items:center;gap:15px;border-left:1px solid var(--line)}
 .values-in .value:first-child{border-left:0;padding-left:0}
 .values-in .value:last-child{padding-right:0}
-.value svg{width:25px;height:25px;color:var(--green-deep);flex:none;margin-top:3px}
+.value svg{width:25px;height:25px;color:var(--green-deep);flex:none;margin-top:0}
 .value h3{font-size:15.5px;font-weight:600;margin-bottom:4px}
 .value p{font-size:13px;color:var(--ink-3);line-height:1.55}
 
@@ -145,7 +145,7 @@ section{padding:96px 0}
 .tile{position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg-soft)}
 .tile-big{height:496px}
 .tile-tall{height:496px;background:var(--green-tint)}
-.tile-sm{height:262px;padding:38px 40px;display:flex;flex-direction:column}
+.tile-sm{height:216px;padding:32px 40px;display:flex;flex-direction:column}
 .tile-copy{position:relative;z-index:2}
 .tile-big{display:flex;flex-direction:column;padding:0}
 .tile-big .tile-copy{position:static;padding:30px 34px 0;max-width:440px}
@@ -158,7 +158,7 @@ section{padding:96px 0}
 .tile-tall .imgwrap .win-narrow{width:100%}
 .tile-sm .ic{width:46px;height:46px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--green-deep);margin-bottom:auto}
 .tile-sm .ic svg{width:23px;height:23px}
-.tile-sm h3{font-size:19px;margin:20px 0 8px}
+.tile-sm h3{font-size:19px;margin:16px 0 8px}
 .tile-sm .d{font-size:13.5px}
 
 /* ---------- live app mock（真实 HTML/CSS 复刻应用界面） ---------- */
