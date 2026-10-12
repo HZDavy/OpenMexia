@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -23,7 +23,6 @@
   --w:1226px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
 body{
   background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
@@ -48,13 +47,11 @@ header.nav{
   -webkit-backdrop-filter:saturate(180%) blur(18px);
   backdrop-filter:saturate(180%) blur(18px);
   border-bottom:1px solid rgba(0,0,0,0.06);
-  transition:box-shadow .3s ease,background .3s ease,border-color .3s ease;
 }
 /* 不支持 backdrop-filter 时退回近乎不透明底色，避免文字压在内容上看不清 */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   header.nav{background:rgba(255,255,255,0.97)}
 }
-header.nav.scrolled{box-shadow:0 8px 28px rgba(0,0,0,.06);background:rgba(255,255,255,0.82)}
 .nav-in{height:64px;display:flex;align-items:center;gap:34px}
 .logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em;flex-shrink:0}
 .logo img{width:30px;height:30px}
@@ -144,10 +141,10 @@ section{padding:96px 0}
 .tile-sm .d{font-size:13.5px}
 
 /* ---------- live app mock（真实 HTML/CSS 复刻应用界面） ---------- */
-.win{background:#171717;border-radius:12px;overflow:hidden;color:#ececec;font-size:13px;font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;pointer-events:none;user-select:none}
+.win{background:#171717;border-radius:12px;overflow:hidden;color:#ececec;font-size:13px;font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;user-select:none}
 .win-bar{display:flex;align-items:center;gap:10px;padding:13px 12px 10px 15px}
-.win-logo{flex:none;width:26px;height:26px;display:grid;place-items:center;color:#fff}
-.win-logo svg{width:22px;height:22px}
+.win-logo{flex:none;width:30px;height:30px;display:grid;place-items:center;color:#fff}
+.win-logo svg{width:30px;height:30px}
 .win-tt{flex:1;min-width:0}
 .win-tt b{display:block;font-size:14px;font-weight:600;letter-spacing:.4px;line-height:1.3}
 .win-tt i{display:block;font-style:normal;font-size:11px;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -210,6 +207,10 @@ section{padding:96px 0}
 .win-status .d-ok{width:6px;height:6px;border-radius:50%;background:#46d18a}
 .win-status .sp{flex:1}
 .win-status .mock-tag{padding:1px 6px;border-radius:999px;background:rgba(255,176,87,.16);color:#ffb057;font-size:10px}
+/* 演示界面可交互：开关 / 滑杆 / 分段 / 开关片均可点击 */
+.m-sw,.ms-track,.m-seg span,.m-chip{cursor:pointer}
+.ms-track{touch-action:none}
+.mcard:not(.active) .m-slider,.mcard:not(.active) .m-ctrl,.mcard:not(.active) .m-sep{opacity:.4;pointer-events:none}
 
 /* ---------- dark device section ---------- */
 .dark{background:var(--dark);color:#fff}
@@ -263,42 +264,6 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 .foot-col a{display:block;font-size:13.5px;color:var(--ink-3);padding:5px 0;transition:color .15s}
 .foot-col a:hover{color:var(--ink)}
 .foot-bottom{border-top:1px solid var(--line);padding-top:26px;font-size:12.5px;color:var(--ink-3);line-height:1.85}
-
-/* ---------- reveal ---------- */
-.reveal{opacity:0;transform:translateY(14px);transition:opacity .6s cubic-bezier(.22,.61,.36,1),transform .6s cubic-bezier(.22,.61,.36,1)}
-.reveal.visible{opacity:1;transform:none}
-
-/* ---------- micro animations ---------- */
-@keyframes om-pulse{0%{box-shadow:0 0 0 0 rgba(70,209,138,.55)}70%{box-shadow:0 0 0 5px rgba(70,209,138,0)}100%{box-shadow:0 0 0 0 rgba(70,209,138,0)}}
-@keyframes om-spin{to{transform:rotate(360deg)}}
-@keyframes om-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-
-@media (prefers-reduced-motion:no-preference){
-  /* 状态指示灯呼吸 */
-  .win-status .d-ok{animation:om-pulse 2.4s ease-out infinite}
-  /* 风扇叶片缓慢旋转 */
-  .m-fan .mc-ic svg,.m-fan .ms-ic svg{animation:om-spin 7s linear infinite;transform-origin:50% 50%}
-  /* 开关滑块平滑过渡 */
-  .m-sw::after{transition:transform .25s ease}
-  /* hero 应用截图轻微浮动 */
-  .hero-shot>.win{animation:om-float 6s ease-in-out infinite}
-  /* 平台卡悬停上浮 */
-  .plat{transition:transform .3s cubic-bezier(.22,.61,.36,1),box-shadow .3s ease,border-color .3s ease}
-  .plat:hover{transform:translateY(-5px);box-shadow:0 18px 40px rgba(0,0,0,.08)}
-  /* bento 小卡图标悬停放大 */
-  .tile-sm .ic{transition:transform .3s cubic-bezier(.22,.61,.36,1)}
-  .tile-sm:hover .ic{transform:scale(1.08) rotate(-3deg)}
-  /* 设备格图标悬停放大 + 光晕 */
-  .dev .ic{transition:transform .3s cubic-bezier(.22,.61,.36,1),box-shadow .3s ease}
-  .dev:hover .ic{transform:scale(1.08);box-shadow:0 0 0 6px rgba(26,200,134,.09)}
-  /* 步骤编号悬停微亮 */
-  .step .no{transition:color .3s ease}
-  .step:hover .no{color:var(--green-tint)}
-  .dark .step:hover .no{color:rgba(255,255,255,.24)}
-  /* logo 米字悬停旋转 */
-  .logo img{transition:transform .5s cubic-bezier(.22,.61,.36,1)}
-  .logo:hover img{transform:rotate(90deg)}
-}
 
 @media (max-width:980px){
   .nav-menu{display:none}
@@ -391,7 +356,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="hidden-zh">免费开源 · AGPL-3.0</span><span class="hidden-en">Free &amp; open source · AGPL-3.0</span>
       </div>
     </div>
-    <div class="hero-shot reveal">
+    <div class="hero-shot">
       <div class="win" data-cols="3" data-mock></div>
     </div>
   </div>
@@ -400,28 +365,28 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= VALUES ================= -->
 <div class="values">
   <div class="w values-in">
-    <div class="value reveal">
+    <div class="value">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7M17.5 14v7"/></svg>
       <div>
         <h3><span class="hidden-zh">米家扫码登录</span><span class="hidden-en">QR sign-in</span></h3>
         <p><span class="hidden-zh">与米家 App 一致的官方登录流程</span><span class="hidden-en">The same official flow as Mi Home</span></p>
       </div>
     </div>
-    <div class="value reveal">
+    <div class="value">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       <div>
         <h3><span class="hidden-zh">状态实时同步</span><span class="hidden-en">Live sync</span></h3>
         <p><span class="hidden-zh">开关、温湿度、电量自动刷新</span><span class="hidden-en">State, sensors and energy auto-refresh</span></p>
       </div>
     </div>
-    <div class="value reveal">
+    <div class="value">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <div>
         <h3><span class="hidden-zh">凭据只存本机</span><span class="hidden-en">Local only</span></h3>
         <p><span class="hidden-zh">不经过任何第三方服务器</span><span class="hidden-en">No third-party servers involved</span></p>
       </div>
     </div>
-    <div class="value reveal">
+    <div class="value">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
       <div>
         <h3><span class="hidden-zh">免费且开源</span><span class="hidden-en">Free &amp; open</span></h3>
@@ -434,12 +399,12 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= PLATFORMS ================= -->
 <section id="platforms">
   <div class="w">
-    <div class="sec-head reveal">
+    <div class="sec-head">
       <div class="eyebrow">CROSS-PLATFORM ROADMAP</div>
       <h2><span class="hidden-zh">多平台，一套体验</span><span class="hidden-en">One experience, every platform</span></h2>
       <p><span class="hidden-zh">同一套账号、同一套卡片、同一份实时状态</span><span class="hidden-en">One account, one set of cards, one live state — everywhere</span></p>
     </div>
-    <div class="plats reveal">
+    <div class="plats">
       <div class="plat on">
         <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l7.3-1v7.2H3V5.5zM11.4 4.3 21 3v8.7h-9.6V4.3zM3 12.3h7.3v7.2L3 18.5v-6.2zM11.4 12.3H21V21l-9.6-1.3v-7.4z"/></svg></div>
         <h3>Windows <span class="tag tag-on"><span class="hidden-zh">已发布</span><span class="hidden-en">Available</span></span></h3>
@@ -467,20 +432,20 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= BENTO FEATURES ================= -->
 <section id="features">
   <div class="w">
-    <div class="sec-head reveal">
+    <div class="sec-head">
       <h2><span class="hidden-zh">为每个屏幕打磨的米家体验</span><span class="hidden-en">Mi Home, crafted for every screen</span></h2>
       <p><span class="hidden-zh">桌面版先行：大窗口看全局，小窗口看常用，怎么摆都顺手</span><span class="hidden-en">Starting on desktop: a full dashboard or a compact widget — arranged your way</span></p>
     </div>
 
     <div class="bento bento-row1">
-      <div class="tile tile-big reveal">
+      <div class="tile tile-big">
         <div class="tile-copy">
           <h3><span class="hidden-zh">瀑布流卡片布局</span><span class="hidden-en">Masonry card layout</span></h3>
           <p class="d"><span class="hidden-zh">展开一张卡片，只顺延它所在的列；其它设备纹丝不动。列数随窗口宽度自动增减。</span><span class="hidden-en">Expanding a card extends only its own column. Columns adapt automatically to window width.</span></p>
         </div>
         <div class="imgwrap"><div class="win" data-cols="3" data-mock></div></div>
       </div>
-      <div class="tile tile-tall reveal">
+      <div class="tile tile-tall">
         <div class="tile-copy">
           <h3><span class="hidden-zh">常驻桌面的小窗</span><span class="hidden-en">A widget that stays</span></h3>
           <p class="d"><span class="hidden-zh">置顶显示在桌面一角，自动记住位置与大小，抬眼可见、随手可控。</span><span class="hidden-en">Pinned to a corner, always on top. Position and size are remembered for you.</span></p>
@@ -490,17 +455,17 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     </div>
 
     <div class="bento bento-row2" style="margin-top:20px">
-      <div class="tile tile-sm reveal">
+      <div class="tile tile-sm">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg></div>
         <h3><span class="hidden-zh">拖动排序</span><span class="hidden-en">Drag to reorder</span></h3>
         <p class="d"><span class="hidden-zh">按住手柄把常用设备拖到最顺手的位置，顺序自动保存。</span><span class="hidden-en">Grab the handle and arrange devices your way — the order is saved automatically.</span></p>
       </div>
-      <div class="tile tile-sm reveal">
+      <div class="tile tile-sm">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
         <h3><span class="hidden-zh">双击收折</span><span class="hidden-en">Collapse instantly</span></h3>
         <p class="d"><span class="hidden-zh">双击或右键即可收折卡片，网关、温度计等只读设备默认精简显示。</span><span class="hidden-en">Double-click or right-click to collapse. Read-only devices stay compact by default.</span></p>
       </div>
-      <div class="tile tile-sm reveal">
+      <div class="tile tile-sm">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="14" height="10" rx="1.5"/><rect x="16" y="10" width="6" height="10" rx="1.5"/><path d="M8 14v4M6 18h4"/></svg></div>
         <h3><span class="hidden-zh">全屏与副屏</span><span class="hidden-en">Fullscreen &amp; 2nd screen</span></h3>
         <p class="d"><span class="hidden-zh">两种全屏模式可做信息墙，多显示器下一键发送到副屏。</span><span class="hidden-en">Two fullscreen modes for a dashboard wall; send it to another monitor in one click.</span></p>
@@ -512,12 +477,12 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= DEVICES (DARK) ================= -->
 <section class="dark" id="devices">
   <div class="w">
-    <div class="sec-head reveal">
+    <div class="sec-head">
       <div class="eyebrow">MIOT NATIVE</div>
       <h2><span class="hidden-zh">你家里的设备，大多都能管</span><span class="hidden-en">Most of your devices, supported</span></h2>
       <p><span class="hidden-zh">按设备 MIoT 规格自动生成控制项，无需逐个适配</span><span class="hidden-en">Controls are generated from each device's MIoT spec automatically</span></p>
     </div>
-    <div class="devs reveal">
+    <div class="devs">
       <div class="dev">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 3z"/></svg></div>
         <h3><span class="hidden-zh">灯光照明</span><span class="hidden-en">Lights</span></h3>
@@ -559,28 +524,28 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <p><span class="hidden-zh">在线状态与功率信息</span><span class="hidden-en">Online status and power info</span></p>
       </div>
     </div>
-    <p class="dark-note reveal"><span class="hidden-zh">设备支持情况取决于型号是否提供标准 MIoT 规格；不支持的设备可到 GitHub Issues 反馈型号。</span><span class="hidden-en">Support depends on the model's standard MIoT spec. Unsupported models? Report them on GitHub Issues.</span></p>
+    <p class="dark-note"><span class="hidden-zh">设备支持情况取决于型号是否提供标准 MIoT 规格；不支持的设备可到 GitHub Issues 反馈型号。</span><span class="hidden-en">Support depends on the model's standard MIoT spec. Unsupported models? Report them on GitHub Issues.</span></p>
   </div>
 </section>
 
 <!-- ================= STEPS ================= -->
 <section id="start">
   <div class="w">
-    <div class="sec-head reveal">
+    <div class="sec-head">
       <h2><span class="hidden-zh">三步，用上它</span><span class="hidden-en">Up in three steps</span></h2>
     </div>
     <div class="steps">
-      <div class="step reveal">
+      <div class="step">
         <div class="no">01</div>
         <h3><span class="hidden-zh">下载并安装</span><span class="hidden-en">Download &amp; install</span></h3>
         <p><span class="hidden-zh">在 Releases 下载 NSIS 安装包，可自选安装目录，无需安装任何运行环境。</span><span class="hidden-en">Get the NSIS installer from Releases. Choose your install folder — no runtime needed.</span></p>
       </div>
-      <div class="step reveal">
+      <div class="step">
         <div class="no">02</div>
         <h3><span class="hidden-zh">米家 App 扫码</span><span class="hidden-en">Scan with Mi Home</span></h3>
         <p><span class="hidden-zh">启动应用后用米家 App 扫码授权，设备列表自动拉取，登录凭据仅保存在本机。</span><span class="hidden-en">Launch, authorize with a Mi Home QR scan. Devices appear automatically; credentials stay local.</span></p>
       </div>
-      <div class="step reveal">
+      <div class="step">
         <div class="no">03</div>
         <h3><span class="hidden-zh">摆在桌面，开始控制</span><span class="hidden-en">Place it, control all</span></h3>
         <p><span class="hidden-zh">拖动卡片排好顺序，把小窗钉在顺手的位置，抬眼可见、一键控制。</span><span class="hidden-en">Arrange the cards, pin the window where you like, and take control at a glance.</span></p>
@@ -592,31 +557,31 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= FAQ ================= -->
 <section class="faq" id="faq">
   <div class="w">
-    <div class="sec-head reveal">
+    <div class="sec-head">
       <h2><span class="hidden-zh">常见问题</span><span class="hidden-en">Frequently asked</span></h2>
     </div>
     <div class="faq-list">
-      <details class="reveal">
+      <details>
         <summary><span class="hidden-zh">安装时 SmartScreen 提示「已保护你的电脑」？</span><span class="hidden-en">SmartScreen says “Windows protected your PC”?</span></summary>
         <div class="faq-body"><span class="hidden-zh">本软件是个人开源项目，暂未购买代码签名证书。点击「更多信息」→「仍要运行」即可继续安装。软件完全开源，可自行审计源码或从源码构建。</span><span class="hidden-en">The app is an unsigned personal open-source project. Click “More info” → “Run anyway”. The source is fully open and auditable.</span></div>
       </details>
-      <details class="reveal">
+      <details>
         <summary><span class="hidden-zh">米家账号和设备数据安全吗？</span><span class="hidden-en">Is my Mi Home account safe?</span></summary>
         <div class="faq-body"><span class="hidden-zh">应用走米家官方扫码登录，不接触你的账号密码。登录凭据与设备数据仅保存在本机应用数据目录（userData），直接与米家官方接口通信，不经过任何第三方服务器。</span><span class="hidden-en">It uses the official Mi Home QR login and never sees your password. Credentials and device data live only in the local userData folder and talk directly to Mi Home.</span></div>
       </details>
-      <details class="reveal">
+      <details>
         <summary><span class="hidden-zh">为什么我的设备没有控制项？</span><span class="hidden-en">Why does a device have no controls?</span></summary>
         <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。欢迎到 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Report the model on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
-      <details class="reveal">
+      <details>
         <summary><span class="hidden-zh">软件收费吗？会收集数据吗？</span><span class="hidden-en">Is it free? Does it collect data?</span></summary>
         <div class="faq-body"><span class="hidden-zh">完全免费、开源，没有内购、广告和任何统计追踪。你也可以自行从源码构建可执行文件。</span><span class="hidden-en">Completely free and open source — no purchases, ads or analytics. You can build the executable yourself.</span></div>
       </details>
-      <details class="reveal">
+      <details>
         <summary><span class="hidden-zh">为什么使用 AGPL-3.0 协议？</span><span class="hidden-en">Why AGPL-3.0?</span></summary>
         <div class="faq-body"><span class="hidden-zh">项目依赖 GPL-3.0-or-later 的开源组件 <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>，作为衍生作品须以 GPL 兼容协议分发，因此本项目采用 AGPL-3.0-or-later，详见仓库 LICENSE。</span><span class="hidden-en">It builds on the GPL-3.0-or-later component <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>, so this derivative work ships under the compatible AGPL-3.0-or-later license. See LICENSE.</span></div>
       </details>
-      <details class="reveal">
+      <details>
         <summary><span class="hidden-zh">会支持 macOS、iOS、Android 吗？</span><span class="hidden-en">Will it support macOS, iOS and Android?</span></summary>
         <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMijia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>。Linux 暂未列入近期计划。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. Follow the progress on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>. Linux is not planned for the near term.</span></div>
       </details>
@@ -627,7 +592,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= DOWNLOAD ================= -->
 <section id="download" style="padding-bottom:0">
   <div class="w">
-    <div class="dl-card reveal">
+    <div class="dl-card">
       <h2><span class="hidden-zh">现在，把米家放上桌面</span><span class="hidden-en">Put Mi Home on your desktop</span></h2>
       <p class="s"><span class="hidden-zh">免费开源，扫码即用。</span><span class="hidden-en">Free, open source, ready after one scan.</span></p>
       <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
@@ -681,7 +646,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <template id="t-win">
   <div class="win-bar">
     <span class="win-logo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><path d="M14 32h36M32 14v36M19.3 19.3l25.4 25.4M44.7 19.3 19.3 44.7"/></svg></span>
-    <span class="win-tt"><b>OpenMijia</b><i>3 个设备 · 全部在线</i></span>
+    <span class="win-tt"><b>OpenMijia</b><i>3 台设备 · 3 在线 · 2 开启</i></span>
     <span class="win-burger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
   </div>
   <div class="win-grid">
@@ -741,7 +706,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="m-meta" style="margin-top:10px"><span><i>电量</i><b>88%</b></span></div>
     </div>
   </div>
-  <div class="win-status"><i class="d-ok"></i><span><span class="hidden-zh">已连接</span><span class="hidden-en">Connected</span></span><span class="sp"></span><span class="mock-tag hidden-zh">演示数据</span><span class="mock-tag hidden-en">Demo data</span><span><span class="hidden-zh">刚刚同步</span><span class="hidden-en">Synced just now</span></span></div>
+  <div class="win-status"><i class="d-ok"></i><span><span class="hidden-zh">设备正常</span><span class="hidden-en">All devices OK</span></span><span class="sp"></span><span class="mock-tag hidden-zh">演示数据</span><span class="mock-tag hidden-en">Demo data</span></div>
 </template>
 
 <script>
@@ -767,24 +732,84 @@ switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
   });
 })();
 
-// 滚动淡入 + 同组交错延迟，让内容依次浮现
-var ob = new IntersectionObserver(function(entries){
-  entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); ob.unobserve(e.target); } });
-},{threshold:0.07});
-document.querySelectorAll('.reveal').forEach(function(el){
-  var sibs = el.parentElement ? el.parentElement.querySelectorAll(':scope > .reveal') : null;
-  var i = sibs ? Array.prototype.indexOf.call(sibs, el) : 0;
-  if(i > 0) el.style.transitionDelay = Math.min(i,5)*70 + 'ms';
-  ob.observe(el);
-});
-
-// 导航栏滚动后加深阴影（毛玻璃层次感）
+// 让 banner 里的应用界面真正可点击可交互，操作手感与真实应用一致
 (function(){
-  var nav = document.querySelector('header.nav');
-  if(!nav) return;
-  var onScroll = function(){ nav.classList.toggle('scrolled', window.scrollY > 8); };
-  window.addEventListener('scroll', onScroll, {passive:true});
-  onScroll();
+  function isEn(){ return document.body.classList.contains('lang-en'); }
+
+  // 开关：切换开/关，联动卡片态与状态文字
+  function bindSwitch(sw){
+    sw.addEventListener('click', function(e){
+      e.stopPropagation();
+      var card = sw.closest('.mcard');
+      if(!card) return;
+      var on = !sw.classList.contains('on');
+      sw.classList.toggle('on', on);
+      card.classList.toggle('active', on);
+      var st = card.querySelector('.m-meta b');
+      if(st) st.textContent = isEn() ? (on ? 'On' : 'Off') : (on ? '已开启' : '已关闭');
+    });
+  }
+
+  // 滑杆：按下或拖动改变 --pct，并同步数值（亮度%/风速档/色温K）
+  function bindTrack(tr){
+    var em = tr.parentElement.querySelector('em');
+    var card = tr.closest('.mcard');
+    var isFan = !!card && card.classList.contains('m-fan');
+    var isCt = tr.classList.contains('ct');
+    var dragging = false;
+
+    function set(clientX){
+      var r = tr.getBoundingClientRect();
+      var p = Math.max(0, Math.min(100, Math.round((clientX - r.left) / r.width * 100)));
+      tr.style.setProperty('--pct', p + '%');
+      var hero = card ? card.querySelector('.m-hero b') : null;
+      if(isCt){
+        var k = Math.round((3000 + p * 20) / 50) * 50;
+        if(em) em.textContent = k + 'K';
+      } else if(isFan){
+        var g = Math.max(1, Math.min(4, Math.round(p / 20) || 1));
+        if(em) em.textContent = g + ' 档';
+        if(hero) hero.innerHTML = g + '<u>档</u>';
+      } else {
+        if(em) em.textContent = p + '%';
+        if(hero) hero.innerHTML = p + '<u>%</u>';
+      }
+    }
+
+    tr.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      dragging = true;
+      try { tr.setPointerCapture(e.pointerId); } catch(_){}
+      set(e.clientX);
+    });
+    tr.addEventListener('pointermove', function(e){ if(dragging) set(e.clientX); });
+    tr.addEventListener('pointerup', function(){ dragging = false; });
+    tr.addEventListener('pointercancel', function(){ dragging = false; });
+  }
+
+  document.querySelectorAll('.win').forEach(function(root){
+    root.querySelectorAll('.m-sw').forEach(bindSwitch);
+    root.querySelectorAll('.ms-track').forEach(bindTrack);
+
+    // 分段选择（模式）
+    root.querySelectorAll('.m-seg').forEach(function(seg){
+      seg.querySelectorAll('span').forEach(function(s){
+        s.addEventListener('click', function(){
+          seg.querySelectorAll('span').forEach(function(x){ x.classList.remove('on'); });
+          s.classList.add('on');
+        });
+      });
+    });
+
+    // 开关片（扫风等）
+    root.querySelectorAll('.m-chip').forEach(function(ch){
+      ch.addEventListener('click', function(){
+        var on = !ch.classList.contains('on');
+        ch.classList.toggle('on', on);
+        ch.textContent = on ? '开' : '关';
+      });
+    });
+  });
 })();
 </script>
 </body>
