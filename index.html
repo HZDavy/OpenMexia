@@ -41,8 +41,20 @@ body.lang-en h1.hidden-en,body.lang-en h2.hidden-en,body.lang-en h3.hidden-en,
 body.lang-en p.hidden-en,body.lang-en div.hidden-en,body.lang-en li.hidden-en,
 body.lang-en label.hidden-en,summary.hidden-en{display:block !important}
 
-/* ---------- nav ---------- */
-header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.92);border-bottom:1px solid var(--line)}
+/* ---------- nav（毛玻璃：半透明底 + 高斯模糊，滚动内容透出但不全透） ---------- */
+header.nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(255,255,255,0.72);
+  -webkit-backdrop-filter:saturate(180%) blur(18px);
+  backdrop-filter:saturate(180%) blur(18px);
+  border-bottom:1px solid rgba(0,0,0,0.06);
+  transition:box-shadow .3s ease,background .3s ease,border-color .3s ease;
+}
+/* 不支持 backdrop-filter 时退回近乎不透明底色，避免文字压在内容上看不清 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  header.nav{background:rgba(255,255,255,0.97)}
+}
+header.nav.scrolled{box-shadow:0 8px 28px rgba(0,0,0,.06);background:rgba(255,255,255,0.82)}
 .nav-in{height:64px;display:flex;align-items:center;gap:34px}
 .logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em;flex-shrink:0}
 .logo img{width:30px;height:30px}
@@ -134,8 +146,8 @@ section{padding:96px 0}
 /* ---------- live app mock（真实 HTML/CSS 复刻应用界面） ---------- */
 .win{background:#171717;border-radius:12px;overflow:hidden;color:#ececec;font-size:13px;font-family:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;pointer-events:none;user-select:none}
 .win-bar{display:flex;align-items:center;gap:10px;padding:13px 12px 10px 15px}
-.win-logo{flex:none;width:22px;height:22px;display:grid;place-items:center;color:#fff}
-.win-logo svg{width:20px;height:20px}
+.win-logo{flex:none;width:26px;height:26px;display:grid;place-items:center;color:#fff}
+.win-logo svg{width:22px;height:22px}
 .win-tt{flex:1;min-width:0}
 .win-tt b{display:block;font-size:14px;font-weight:600;letter-spacing:.4px;line-height:1.3}
 .win-tt i{display:block;font-style:normal;font-size:11px;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -159,6 +171,10 @@ section{padding:96px 0}
 .m-sw.on{background:var(--c)}
 .m-sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff}
 .m-sw.on::after{transform:translateX(16px)}
+/* 点阵拖拽把手（位于卡片头部最右，与真实应用一致） */
+.m-grip{flex:none;display:grid;place-items:center;width:18px;height:20px;margin-left:2px;color:#9a9a9a;opacity:.5}
+.m-grip svg{width:15px;height:15px;display:block}
+.m-grip.on{color:#d6d6d6;opacity:.95}
 .mc-body{display:flex;align-items:flex-start;gap:12px;margin-top:10px}
 .m-hero{flex:none;display:flex;flex-direction:column;gap:4px;min-width:0}
 .m-hero>i{font-style:normal;font-size:10.5px;color:#9a9a9a}
@@ -193,6 +209,7 @@ section{padding:96px 0}
 .win-status{display:flex;align-items:center;gap:6px;padding:7px 15px 10px;border-top:1px solid #333;font-size:10.5px;color:#9a9a9a}
 .win-status .d-ok{width:6px;height:6px;border-radius:50%;background:#46d18a}
 .win-status .sp{flex:1}
+.win-status .mock-tag{padding:1px 6px;border-radius:999px;background:rgba(255,176,87,.16);color:#ffb057;font-size:10px}
 
 /* ---------- dark device section ---------- */
 .dark{background:var(--dark);color:#fff}
@@ -248,8 +265,40 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 .foot-bottom{border-top:1px solid var(--line);padding-top:26px;font-size:12.5px;color:var(--ink-3);line-height:1.85}
 
 /* ---------- reveal ---------- */
-.reveal{opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease}
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .6s cubic-bezier(.22,.61,.36,1),transform .6s cubic-bezier(.22,.61,.36,1)}
 .reveal.visible{opacity:1;transform:none}
+
+/* ---------- micro animations ---------- */
+@keyframes om-pulse{0%{box-shadow:0 0 0 0 rgba(70,209,138,.55)}70%{box-shadow:0 0 0 5px rgba(70,209,138,0)}100%{box-shadow:0 0 0 0 rgba(70,209,138,0)}}
+@keyframes om-spin{to{transform:rotate(360deg)}}
+@keyframes om-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+@media (prefers-reduced-motion:no-preference){
+  /* 状态指示灯呼吸 */
+  .win-status .d-ok{animation:om-pulse 2.4s ease-out infinite}
+  /* 风扇叶片缓慢旋转 */
+  .m-fan .mc-ic svg,.m-fan .ms-ic svg{animation:om-spin 7s linear infinite;transform-origin:50% 50%}
+  /* 开关滑块平滑过渡 */
+  .m-sw::after{transition:transform .25s ease}
+  /* hero 应用截图轻微浮动 */
+  .hero-shot>.win{animation:om-float 6s ease-in-out infinite}
+  /* 平台卡悬停上浮 */
+  .plat{transition:transform .3s cubic-bezier(.22,.61,.36,1),box-shadow .3s ease,border-color .3s ease}
+  .plat:hover{transform:translateY(-5px);box-shadow:0 18px 40px rgba(0,0,0,.08)}
+  /* bento 小卡图标悬停放大 */
+  .tile-sm .ic{transition:transform .3s cubic-bezier(.22,.61,.36,1)}
+  .tile-sm:hover .ic{transform:scale(1.08) rotate(-3deg)}
+  /* 设备格图标悬停放大 + 光晕 */
+  .dev .ic{transition:transform .3s cubic-bezier(.22,.61,.36,1),box-shadow .3s ease}
+  .dev:hover .ic{transform:scale(1.08);box-shadow:0 0 0 6px rgba(26,200,134,.09)}
+  /* 步骤编号悬停微亮 */
+  .step .no{transition:color .3s ease}
+  .step:hover .no{color:var(--green-tint)}
+  .dark .step:hover .no{color:rgba(255,255,255,.24)}
+  /* logo 米字悬停旋转 */
+  .logo img{transition:transform .5s cubic-bezier(.22,.61,.36,1)}
+  .logo:hover img{transform:rotate(90deg)}
+}
 
 @media (max-width:980px){
   .nav-menu{display:none}
@@ -632,7 +681,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <template id="t-win">
   <div class="win-bar">
     <span class="win-logo"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"><path d="M14 32h36M32 14v36M19.3 19.3l25.4 25.4M44.7 19.3 19.3 44.7"/></svg></span>
-    <span class="win-tt"><b>米家</b><i>3 个设备 · 全部在线</i></span>
+    <span class="win-tt"><b>OpenMijia</b><i>3 个设备 · 全部在线</i></span>
     <span class="win-burger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
   </div>
   <div class="win-grid">
@@ -641,6 +690,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="mc-ic"><svg viewBox="0 0 24 24"><path d="M12 2.4a7.1 7.1 0 0 0-4.1 12.9v1.6h8.2v-1.6A7.1 7.1 0 0 0 12 2.4Zm-2.6 16.7h5.2v1.1a2.1 2.1 0 0 1-2.1 2.1h-1a2.1 2.1 0 0 1-2.1-2.1v-1.1Z" fill="currentColor"/></svg></span>
         <span class="mc-name"><b>客厅吸顶灯</b><i>yeelink.light.ceil26</i></span>
         <span class="m-sw on"></span>
+        <span class="m-grip on"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
       </div>
       <div class="mc-body">
         <span class="m-hero"><i>亮度</i><b>72<u>%</u></b></span>
@@ -661,6 +711,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="mc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z"/></svg></span>
         <span class="mc-name"><b>循环扇</b><i>zhimi.fan.fa1</i></span>
         <span class="m-sw on"></span>
+        <span class="m-grip on"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
       </div>
       <div class="mc-body">
         <span class="m-hero"><i>风速</i><b>3<u>档</u></b></span>
@@ -679,6 +730,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="mc-head">
         <span class="mc-ic"><svg viewBox="0 0 24 24"><path d="M12 2.6a2.9 2.9 0 0 0-2.9 2.9v6.9a5 5 0 1 0 5.8 0V5.5A2.9 2.9 0 0 0 12 2.6Zm1.2 4.9v6.6l.5.35a3.1 3.1 0 1 1-3.4 0l.5-.35V7.5a1.2 1.2 0 0 1 2.4 0Z" fill="currentColor"/></svg></span>
         <span class="mc-name"><b>温湿度计</b><i>miaomiaoce.sensor_ht</i></span>
+        <span class="m-grip"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="12" r="1.3"/><circle cx="10" cy="12" r="1.3"/></svg></span>
       </div>
       <div class="mc-body" style="align-items:flex-end">
         <span class="m-readouts">
@@ -689,7 +741,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="m-meta" style="margin-top:10px"><span><i>电量</i><b>88%</b></span></div>
     </div>
   </div>
-  <div class="win-status"><i class="d-ok"></i>已连接<span class="sp"></span><span>刚刚同步</span></div>
+  <div class="win-status"><i class="d-ok"></i><span><span class="hidden-zh">已连接</span><span class="hidden-en">Connected</span></span><span class="sp"></span><span class="mock-tag hidden-zh">演示数据</span><span class="mock-tag hidden-en">Demo data</span><span><span class="hidden-zh">刚刚同步</span><span class="hidden-en">Synced just now</span></span></div>
 </template>
 
 <script>
@@ -715,10 +767,25 @@ switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
   });
 })();
 
+// 滚动淡入 + 同组交错延迟，让内容依次浮现
 var ob = new IntersectionObserver(function(entries){
   entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); ob.unobserve(e.target); } });
 },{threshold:0.07});
-document.querySelectorAll('.reveal').forEach(function(el){ ob.observe(el); });
+document.querySelectorAll('.reveal').forEach(function(el){
+  var sibs = el.parentElement ? el.parentElement.querySelectorAll(':scope > .reveal') : null;
+  var i = sibs ? Array.prototype.indexOf.call(sibs, el) : 0;
+  if(i > 0) el.style.transitionDelay = Math.min(i,5)*70 + 'ms';
+  ob.observe(el);
+});
+
+// 导航栏滚动后加深阴影（毛玻璃层次感）
+(function(){
+  var nav = document.querySelector('header.nav');
+  if(!nav) return;
+  var onScroll = function(){ nav.classList.toggle('scrolled', window.scrollY > 8); };
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
 </script>
 </body>
 </html>
