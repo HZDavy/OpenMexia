@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenMexia · 开源、全平台、多协议的智能控制中枢</title>
-<meta name="description" content="OpenMexia：开源、全平台、多协议、多厂商的智能家居控制中枢。打破单一品牌生态壁垒，把米家、Matter 及各厂商开放接口的设备汇聚到同一个本地掌控的控制台。米家 App 扫码即可接入，Windows 已发布，macOS、iOS、Android 等平台规划中。免费开源。">
+<meta name="description" content="OpenMexia：开源、全平台、多协议、多厂商的智能家居控制中枢。目标是支持所有智能协议，任何品牌、不只是小米，凡能以开源方式支持的协议都尽力纳入；目前已支持米家。米家 App 扫码即可接入，Windows 已发布，macOS、iOS、Android 等平台规划中。免费开源。">
 <link rel="icon" href="docs/favicon.svg" type="image/svg+xml">
 <style>
 :root{
@@ -365,8 +365,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="hidden-en">One hub for<br>all your smart devices</span>
       </h1>
       <p class="sub">
-        <span class="hidden-zh">OpenMexia 是开源、全平台、多协议的智能家居控制中枢。它不绑定任何一家生态——以米家作为首个支持的生态，并逐步通过 Matter 及各厂商开放接口接入更多设备，把家里的灯、风扇、空调与传感器汇聚成同一套卡片、同一份实时状态，凭据只留在本机。Windows 版现已可用，macOS、iOS、Android 等平台即将到来。</span>
-        <span class="hidden-en">OpenMexia is an open-source, cross-platform, multi-protocol smart home hub. It is not tied to any single ecosystem — starting with Mi Home as the first supported one and gradually adding Matter and other vendors' open APIs, it gathers your lights, fans, ACs and sensors into one set of cards with one live state, with credentials kept local. Windows is available now; macOS, iOS, Android and more are on the way.</span>
+        <span class="hidden-zh">OpenMexia 是开源、全平台、多协议的智能家居控制中枢。它不绑定任何一家品牌——目标是支持所有智能协议，力图把一切能以开源方式支持的协议都纳入其中，任何品牌、不只是小米，目前已支持米家。它把家里的灯、风扇、空调与传感器汇聚成同一套卡片、同一份实时状态，凭据只留在本机。Windows 版现已可用，macOS、iOS、Android 等平台即将到来。</span>
+        <span class="hidden-en">OpenMexia is an open-source, cross-platform, multi-protocol smart home hub. It is not tied to any single brand — the goal is to support every smart-home protocol, aiming to cover whatever open source allows, any brand, not just Xiaomi; Mi Home is supported today. It gathers your lights, fans, ACs and sensors into one set of cards with one live state, with credentials kept local. Windows is available now; macOS, iOS, Android and more are on the way.</span>
       </p>
       <div class="hero-acts">
         <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMexia/releases/latest" target="_blank" rel="noopener">
@@ -651,7 +651,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       </details>
       <details>
         <summary><span class="hidden-zh">为什么我的设备没有控制项？</span><span class="hidden-en">Why does a device have no controls?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。随着 Matter 与更多厂商开放接口的接入，支持范围会持续扩大。欢迎到 <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Support will keep expanding as Matter and more vendors' open APIs are integrated. Report the model on <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+        <div class="faq-body"><span class="hidden-zh">控制项按设备的标准 MIoT 规格自动生成。部分老型号或第三方品牌设备未提供标准规格，会只显示状态。随着更多协议与厂商开放接口的接入，支持范围会持续扩大。欢迎到 <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a> 反馈设备型号。</span><span class="hidden-en">Controls are generated from the device's standard MIoT spec. Some older or third-party models expose no spec and show status only. Support will keep expanding as more protocols and vendors' open APIs are integrated. Report the model on <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
       <details>
         <summary><span class="hidden-zh">软件收费吗？会收集数据吗？</span><span class="hidden-en">Is it free? Does it collect data?</span></summary>
@@ -663,7 +663,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       </details>
       <details>
         <summary><span class="hidden-zh">会支持 macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 吗？</span><span class="hidden-en">Will it support macOS, iOS, Android, watchOS, Wear OS, Linux and HarmonyOS?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMexia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。面向 Apple Watch 的 watchOS、面向 Android 手表的 Wear OS，以及 Linux、HarmonyOS 同样在规划之中。在协议层面，除米家 MIoT 外还将逐步接入 Matter 及各厂商开放接口。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. watchOS for Apple Watch, Wear OS for Android watches, plus Linux and HarmonyOS, are also planned. On the protocol side, beyond Mi Home MIoT we will gradually add Matter and other vendors' open APIs. Follow the progress on <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMexia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。面向 Apple Watch 的 watchOS、面向 Android 手表的 Wear OS，以及 Linux、HarmonyOS 同样在规划之中。在协议层面，目标是支持所有智能协议、任何品牌，不只小米，目前已完成米家 MIoT 的接入，后续还将逐步纳入 Matter 等更多协议与厂商开放接口。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. watchOS for Apple Watch, Wear OS for Android watches, plus Linux and HarmonyOS, are also planned. On the protocol side, the goal is to support every smart-home protocol and any brand, not just Xiaomi; Mi Home MIoT is supported today, and Matter plus more protocols and vendors' open APIs will follow. Follow the progress on <a href="https://github.com/HZDavy/OpenMexia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
     </div>
   </div>
@@ -693,7 +693,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="foot-brand">
         <img src="docs/favicon.svg" alt="">
         <div class="nm"><span class="hidden-zh">OpenMexia</span><span class="hidden-en">OpenMexia</span></div>
-        <p><span class="hidden-zh">开源、全平台、多协议的智能家居控制中枢。以米家为首个支持的生态，逐步接入 Matter 及各厂商开放接口。Windows 已发布，macOS / iOS / Android 等平台规划中。</span><span class="hidden-en">An open-source, cross-platform, multi-protocol smart home hub. Mi Home is the first supported ecosystem; Matter and other vendors' open APIs come next. Windows available; macOS, iOS, Android and more planned.</span></p>
+        <p><span class="hidden-zh">开源、全平台、多协议的智能家居控制中枢。目标是支持所有智能协议，任何品牌、不只是小米，凡能以开源方式支持的协议都尽力纳入；目前已支持米家。Windows 已发布，macOS / iOS / Android 等平台规划中。</span><span class="hidden-en">An open-source, cross-platform, multi-protocol smart home hub. The goal is to support every smart-home protocol — any brand, not just Xiaomi, covering whatever open source allows; Mi Home is supported today. Windows available; macOS, iOS, Android and more planned.</span></p>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">产品</span><span class="hidden-en">Product</span></h4>
