@@ -107,8 +107,35 @@ class MijiaLogin {
     }
   }
 
+  /**
+   * 落盘设备清单。写入前按 did 继承已落盘的 homeId：
+   * 密码登录刷新时设备清单来自 /home/device_list，该接口不返回 home_id，家庭归属只能
+   * 靠 /v2/homeroom/gethome 反查补写；一旦该接口偶发失败（超时/断网），本次清单的 homeId
+   * 会全为空串，若直接覆盖就会抹掉上次已写入的家庭归属，使 MiioProvider 的家庭筛选退化成
+   * 「展示全部设备」并反复回退。因此这里只对空值补全，永不覆盖已有的非空归属。
+   */
   saveDevices(devices: any[]): any[] {
     fs.mkdirSync(this.dataDir, { recursive: true });
+    const prevHome = new Map<string, string>();
+    const prevRoom = new Map<string, { id: string; name: string }>();
+    for (const d of this.loadDevices()) {
+      const id = String((d && d.id) || '');
+      const hid = String((d && d.homeId) || '');
+      if (id && hid) prevHome.set(id, hid);
+      const rid = String((d && d.roomId) || '');
+      if (id && rid) prevRoom.set(id, { id: rid, name: String((d && d.roomName) || '') });
+    }
+    for (const d of devices || []) {
+      if (!d) continue;
+      if (String(d.homeId || '') === '') {
+        const hid = prevHome.get(String(d.id));
+        if (hid) d.homeId = hid;
+      }
+      if (String(d.roomId || '') === '') {
+        const rm = prevRoom.get(String(d.id));
+        if (rm) { d.roomId = rm.id; d.roomName = rm.name; }
+      }
+    }
     fs.writeFileSync(this.devicesFile, JSON.stringify(devices, null, 2), 'utf8');
     return devices;
   }
@@ -178,20 +205,28 @@ class MijiaLogin {
    * 走 /v2/homeroom/gethome（POST，params 为空），返回 result.homelist；
    * 每个 home 顶层 dids 常为空，设备实际挂在 roomlist[].dids 里，故取并集。
    */
-  async _fetchPwdHomes(): Promise<{ id: string; name: string; dids: string[] }[]> {
+  async _fetchPwdHomes(): Promise<{ id: string; name: string; dids: string[]; rooms: { id: string; name: string; dids: string[] }[] }[]> {
     const cloud = this._mihome && this._mihome.miCloudProtocol;
     if (!cloud || !cloud.isLoggedIn) return [];
     try {
       const r = await cloud.request('/v2/homeroom/gethome', {}, this._pwdCountry || 'cn');
       const list = (r && r.result && r.result.homelist) || [];
-      return list.map((h: any) => ({
-        id: String(h.id || ''),
-        name: String(h.name || h.id || ''),
-        dids: [
-          ...(Array.isArray(h.dids) ? h.dids : []),
-          ...((h.roomlist || []).flatMap((rm: any) => (Array.isArray(rm.dids) ? rm.dids : []))),
-        ].map(String),
-      })).filter((h: { id: string }) => h.id);
+      return list.map((h: any) => {
+        const rooms = (Array.isArray(h.roomlist) ? h.roomlist : []).map((rm: any) => ({
+          id: String(rm.id || ''),
+          name: String(rm.name || ''),
+          dids: (Array.isArray(rm.dids) ? rm.dids : []).map(String),
+        })).filter((rm: { id: string }) => rm.id);
+        return {
+          id: String(h.id || ''),
+          name: String(h.name || h.id || ''),
+          dids: [
+            ...(Array.isArray(h.dids) ? h.dids : []),
+            ...rooms.flatMap((rm: { dids: string[] }) => rm.dids),
+          ].map(String),
+          rooms,
+        };
+      }).filter((h: { id: string }) => h.id);
     } catch {
       return [];
     }
@@ -209,6 +244,39 @@ class MijiaLogin {
       if (id) d.homeId = id;
     }
     return devices;
+  }
+
+  /** 用房间 did 归属反查，写入每台设备的 roomId / roomName（供按房间分类使用） */
+  _applyRoomIds(devices: any[], homes: any[]): any[] {
+    const map = new Map<string, { id: string; name: string }>();
+    for (const h of homes || []) {
+      for (const rm of h.rooms || []) {
+        for (const did of rm.dids || []) map.set(String(did), { id: String(rm.id), name: String(rm.name || '') });
+      }
+    }
+    if (!map.size) return devices;
+    for (const d of devices || []) {
+      const rm = map.get(String(d.id));
+      if (rm && rm.id) { d.roomId = rm.id; d.roomName = rm.name; }
+    }
+    return devices;
+  }
+
+  /** 二维码会话：用 getHomesList() 的 roomlist 写入每台设备的 roomId / roomName */
+  async _applyCloudRooms(api: any, devices: any[]): Promise<any[]> {
+    try {
+      const list = await api.getHomesList();
+      const homes = (list || []).map((h: any) => ({
+        rooms: (Array.isArray(h.roomlist) ? h.roomlist : []).map((rm: any) => ({
+          id: String(rm.id || ''),
+          name: String(rm.name || ''),
+          dids: (Array.isArray(rm.dids) ? rm.dids : []).map(String),
+        })).filter((rm: { id: string }) => rm.id),
+      }));
+      return this._applyRoomIds(devices, homes);
+    } catch {
+      return devices;
+    }
   }
 
   /** 二维码云端会话是否有效（auth.json 齐全且在有效期） */
@@ -468,6 +536,7 @@ class MijiaLogin {
     if (homes.length) {
       this.saveHomes(homes.map((h) => ({ id: h.id, name: h.name })));
       this._applyHomeIds(devices, homes);
+      this._applyRoomIds(devices, homes);
     }
     this.saveDevices(devices);
     this._savePwdSession();
@@ -755,13 +824,16 @@ class MijiaLogin {
       if (homes.length) {
         this.saveHomes(homes.map((h) => ({ id: h.id, name: h.name })));
         this._applyHomeIds(devices, homes);
+        this._applyRoomIds(devices, homes);
       }
       return this.saveDevices(devices);
     }
     // 二维码登录：走 @zythum02 的云端会话（auth.json）
     if (await this.hasCloudAuth()) {
       const api = await this._getApi();
-      return this.saveDevices(await this._fetchCloudDevices(api));
+      const devices = await this._fetchCloudDevices(api);
+      await this._applyCloudRooms(api, devices);
+      return this.saveDevices(devices);
     }
     // 无任何云端会话（如重启后仅剩本地清单）：退回本地清单，避免「刷新」直接报错
     const local = this.loadDevices();
@@ -976,6 +1048,8 @@ function normalizeDevices(list: any[]): any[] {
       // 子设备（如 ZigBee）会带 parent_id，运行时需经网关
       parentId: d.parent_id || d.parentId || '',
       homeId: d.home_id || d.homeId || '',
+      roomId: d.room_id || d.roomId || '',
+      roomName: d.room_name || d.roomName || '',
     });
   }
   return out;

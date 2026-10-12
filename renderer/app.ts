@@ -41,6 +41,9 @@ const EYE_ICON =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
 const COLLAPSE_ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9.5 12 4.5l5 5"/><path d="M7 14.5 12 19.5l5-5"/></svg>';
+// 房间收折头部的单书名号（展开态开口向下 ∧，收折态由 CSS 旋转 180° 变成开口向上 ∨）
+const ROOM_CHEVRON_ICON =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14.5 12 9.5l5 5"/></svg>';
 
 const listEl = document.getElementById('devices');
 const subtitleEl = document.getElementById('subtitle');
@@ -57,6 +60,10 @@ let hiddenSet = readHidden(); // 被隐藏（不在列表显示）的设备 id
 let collapsedSet = readCollapsed(); // 被收折（只留基本信息）的卡片 id
 let allDevices = [];    // 最近一次拿到的完整设备列表（隐藏恢复面板需要）
 let mockMode = false;   // 未登录、无真实设备时：显示欢迎引导，而不是演示数据
+let groupByRoom = readGroupByRoom();     // 是否按房间分类显示
+let showRoomName = readShowRoomName();   // 是否在设备代号前显示「房间名 | 」
+let collapsedRooms = readCollapsedRooms(); // 被收折的房间 key
+const roomSections = new Map(); // 房间 key -> { section, head, nameEl, countEl, list }
 
 const h = (tag, cls, html) => {
   const node = document.createElement(tag);
@@ -742,7 +749,10 @@ function updateCard(entry, d) {
   const r = entry.refs;
   entry.last = d;
   entry.el.querySelector('.card-name b').textContent = d.name;
-  entry.el.querySelector('.card-name span').textContent = d.model;
+  // 显示房间名称时，把房间名以小字前缀写在设备代号（model）前，用「 | 」分隔；
+  // 两者同处 .card-name span，字号与字体天然一致。
+  entry.el.querySelector('.card-name span').textContent =
+    (showRoomName && d.roomName ? String(d.roomName) + ' · ' : '') + d.model;
   entry.el.classList.toggle('offline', d.online === false);
   // 只有「带开关且已开启」的设备才显示激活态（实色）图标；
   // 传感器、净饮机等没有开关的设备始终显示淡底（关闭态）图标，
@@ -954,11 +964,34 @@ function setCollapsed(card, collapsed) {
 
 // 双击卡片（正文区域）即可收折 / 展开
 listEl.addEventListener('dblclick', (e) => {
-  if (e.target.closest('input, button, .switch, .seg, .chip, .drag-handle')) return;
+  if (e.target.closest('input, button, .switch, .seg, .chip, .drag-handle, .room-head')) return;
   const card = e.target.closest('.card');
   if (!card) return;
   setCollapsed(card, !card.classList.contains('collapsed'));
 });
+
+/* ---------------- 房间分组：收折持久化 / 显示选项 ---------------- */
+
+function readCollapsedRooms() {
+  try {
+    const arr = JSON.parse(localStorage.getItem('mijia.collapsedRooms') || '[]');
+    return new Set(Array.isArray(arr) ? arr.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeCollapsedRooms() {
+  try { localStorage.setItem('mijia.collapsedRooms', JSON.stringify([...collapsedRooms])); } catch {}
+}
+
+function readGroupByRoom() {
+  try { return localStorage.getItem('mijia.groupByRoom') === '1'; } catch { return false; }
+}
+
+function readShowRoomName() {
+  try { return localStorage.getItem('mijia.showRoomName') !== '0'; } catch { return true; }
+}
 
 /* ---------------- 拖动排序 ---------------- */
 
@@ -979,6 +1012,8 @@ const DRAG_EVAL_EPS = 3;          // px
 
 listEl.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
+  // 按房间分类显示时禁用拖动排序（卡片归属由房间决定，顺序仅在同一房间内有效）
+  if (groupByRoom) return;
   const handle = e.target.closest('.drag-handle');
   if (!handle) return;
   const card = handle.closest('.card');
@@ -1292,12 +1327,12 @@ window.addEventListener('blur', () => {
 // 列锁定：按 DOM 顺序把卡片轮流分配到各列（i % 列数），写入 grid-column 钉死。
 // 这样每张卡片的列是固定的 —— 展开某张卡片只会撑高它自己所在的列、顺延其后的卡片，
 // 其它列不会因为高度差而横向换列（避免卡片「随意移动」）。
-function assignColumns() {
-  if (!listEl) return;
-  const cols = gridCols();
-  isSingleCol();
+function assignColumns(container = listEl) {
+  if (!container) return;
+  const cols = gridCols(container);
+  isSingleCol(container);
   let i = 0;
-  for (const el of listEl.children) {
+  for (const el of container.children) {
     if (!el.classList) continue;
     const placed = el.classList.contains('card')
       ? !el.classList.contains('dragging')
@@ -1312,20 +1347,20 @@ function assignColumns() {
 // 每张卡片测量自身自然高度，换算成「跨多少行」（行高 2px + 行间距 8px）。
 // 这样展开某张卡片时，只有它自己的网格区域变高、其所在列向下顺延，
 // 同一排的其它卡片高度不受影响 —— 即真·瀑布流。
-function layoutSpans() {
-  if (!listEl) return;
+function layoutSpans(container = listEl) {
+  if (!container) return;
   // 单列用内容自适应行高：卡片各占一行、缝隙由 row-gap 精确决定，无需（也不应）写跨度
-  if (isSingleCol()) {
-    for (const el of listEl.children) {
+  if (isSingleCol(container)) {
+    for (const el of container.children) {
       if (el.classList && el.classList.contains('card') && el.style.gridRowEnd) el.style.gridRowEnd = '';
     }
     return;
   }
-  const cs = getComputedStyle(listEl);
+  const cs = getComputedStyle(container);
   const gap = parseFloat(cs.columnGap) || 8;      // 横竖缝统一：纵向缝隙 = 列间距
   const unit = parseFloat(cs.gridAutoRows) || 1;  // 多列下为 1px（配合 row-gap:0）
   if (unit <= 0) return;
-  for (const el of listEl.children) {
+  for (const el of container.children) {
     if (!el.classList || !el.classList.contains('card')) continue;
     // 拖动中的卡片已脱离文档流（absolute），不要给它写网格跨度，否则
     // 「确定的网格定位」会让它的包含块变成网格区域，left/top 基准又错位（卡片飞走）。
@@ -1371,13 +1406,13 @@ function makeMeasureClone(el) {
   return clone;
 }
 
-function equalizeCollapsed() {
-  if (!listEl) return;
-  const items = [...listEl.children].filter(
+function equalizeCollapsed(container = listEl) {
+  if (!container) return;
+  const items = [...container.children].filter(
     (el) => el.classList && el.classList.contains('card') && !el.classList.contains('dragging')
   );
   // 单列 / 不足两张卡片：不需要等高，把可能残留的限高平滑收回
-  if (items.length < 2 || isSingleCol()) {
+  if (items.length < 2 || isSingleCol(container)) {
     for (const el of items) if (el.style.minHeight && el.style.minHeight !== '0px') el.style.minHeight = '0px';
     return;
   }
@@ -1397,7 +1432,7 @@ function equalizeCollapsed() {
   target = Math.ceil(target - 0.01);
   // 瀑布流按 grid-auto-rows 的整数倍占行（span 向上取整），会残留最多一格的行间空隙。
   // 把统一高度吸附到「占满 n 行后正好留下一个行间距」的尺寸，让纵向缝隙与横向一致。
-  const gcs = getComputedStyle(listEl);
+  const gcs = getComputedStyle(container);
   const rgap = parseFloat(gcs.rowGap) || 0;
   const runit = parseFloat(gcs.gridAutoRows) || 0;
   const rpitch = runit + rgap;
@@ -1418,12 +1453,29 @@ function trackSpans(ms = 380) {
   if (spanRAF) cancelAnimationFrame(spanRAF);
   const t0 = performance.now();
   const tick = () => {
-    layoutSpans();
+    relayoutSpans();
     if (performance.now() - t0 < ms) spanRAF = requestAnimationFrame(tick);
     else spanRAF = 0;
   };
   spanRAF = requestAnimationFrame(tick);
 }
+
+/* ---------------- 分组容器（扁平列表 + 各房间瀑布流）统一重排 ---------------- */
+
+// 按房间分类时，每个 .room-list 各自是一个独立瀑布流容器；扁平模式下只有 #devices 一个。
+// 这些遍历器把「列分配 / 等高 / 跨度」应用到所有可见容器上（收折隐藏的容器跳过，
+// 否则 clientWidth=0 会把列数误判为 1，展开后布局错乱）。
+function forEachContainer(fn) {
+  if (!listEl) return;
+  fn(listEl);
+  for (const l of listEl.querySelectorAll('.room-list')) {
+    if (l.clientWidth === 0) continue;
+    fn(l);
+  }
+}
+function relayoutColumns() { forEachContainer(assignColumns); }
+function relayoutEqualize() { forEachContainer(equalizeCollapsed); }
+function relayoutSpans() { forEachContainer(layoutSpans); }
 
 /* ---------------- 窗口高度自适应 ---------------- */
 
@@ -1436,10 +1488,10 @@ function fitWindow() {
   const statusbar = widget.querySelector('.statusbar');
   const listCs = getComputedStyle(listEl);
   const padBottom = parseFloat(listCs.paddingBottom) || 0;
-  // 瀑布流各列高低不一，不能再按「行」累加；取最低一张卡片的底边作为列表内容高度。
+  // 瀑布流各列高低不一，不能再按「行」累加；取最低一张卡片（或房间头）的底边作为列表内容高度。
   const listRect = listEl.getBoundingClientRect();
   let maxB = 0;
-  for (const el of listEl.querySelectorAll('.card, .empty')) {
+  for (const el of listEl.querySelectorAll('.card, .room-head, .empty')) {
     const r = el.getBoundingClientRect();
     maxB = Math.max(maxB, r.bottom - listRect.top + listEl.scrollTop);
   }
@@ -1457,25 +1509,25 @@ function fitWindow() {
 // 读取网格当前的「自然」列数：按容器内容宽度与 --card-min 反推 auto-fill 的轨道数。
 // 不能用 gridTemplateColumns 的轨道数 —— 卡片被写入显式 grid-column 后会撑出隐式轨道，
 // 使轨道数只增不减，窗口收窄时列数无法回落（即「收窄不恢复单列」）。
-function gridCols() {
-  if (!listEl) return 1;
-  const cs = getComputedStyle(listEl);
+function gridCols(container = listEl) {
+  if (!container) return 1;
+  const cs = getComputedStyle(container);
   const gap = parseFloat(cs.columnGap) || 0;
   const padL = parseFloat(cs.paddingLeft) || 0;
   const padR = parseFloat(cs.paddingRight) || 0;
   const cardMin = parseFloat(cs.getPropertyValue('--card-min')) || 280;
-  const avail = listEl.clientWidth - padL - padR;
+  const avail = container.clientWidth - padL - padR;
   if (avail <= 0) return 1;
   const track = Math.min(cardMin, avail);
   return Math.max(1, Math.floor((avail + gap) / (track + gap)));
 }
 
-// 单列与否：同步 listEl 上的 one-col class（CSS 据此把行高切成内容自适应），
+// 单列与否：同步容器上的 one-col class（CSS 据此把行高切成内容自适应），
 // 返回是否为单列。所有需要判断单列的地方都走这里，保证 class 与判断结果一致。
-function isSingleCol() {
-  if (!listEl) return true;
-  const one = gridCols() <= 1;
-  if (listEl.classList.contains('one-col') !== one) listEl.classList.toggle('one-col', one);
+function isSingleCol(container = listEl) {
+  if (!container) return true;
+  const one = gridCols(container) <= 1;
+  if (container.classList.contains('one-col') !== one) container.classList.toggle('one-col', one);
   return one;
 }
 
@@ -1514,13 +1566,13 @@ let reflowPrevCols = 0;
 const listRO = new ResizeObserver(() => {
   // 列数变化 → 重新分配列；列宽变化 → 卡片高度随之变化 → 先重算各自跨度，
   // 再做列数切换的 FLIP
-  const cols = gridCols();
-  if (cols !== reflowPrevCols) assignColumns();
-  equalizeCollapsed();
-  layoutSpans();
+  const cols = gridCols(listEl);
+  if (cols !== reflowPrevCols) relayoutColumns();
+  relayoutEqualize();
+  relayoutSpans();
   trackSpans();
-  const items = [...listEl.children].filter(
-    (el) => el.classList.contains('card') && !el.classList.contains('dragging')
+  const items = [...listEl.querySelectorAll('.card')].filter(
+    (el) => !el.classList.contains('dragging')
   );
   const nowRects = new Map(items.map((el) => [el, el.getBoundingClientRect()]));
   if (reflowPrevRects && cols !== reflowPrevCols) playColumnReflow(items, reflowPrevRects);
@@ -1534,6 +1586,7 @@ listRO.observe(listEl);
 // 未登录 / 无真实设备时的欢迎引导（新用户首次打开看到的样子）
 function renderWelcome() {
   cards.clear();
+  roomSections.clear();
   listEl.classList.add('welcome-mode');   // 欢迎引导居中显示
   let wrap = listEl.querySelector('.empty.welcome');
   if (!wrap) {
@@ -1553,6 +1606,120 @@ function renderWelcome() {
   fitWindow();
 }
 
+/* ---------------- 按房间分类渲染 ---------------- */
+
+// 取（或新建）一张卡片的 entry，并刷新其内容
+function ensureCard(d) {
+  let entry = cards.get(d.id);
+  if (!entry) {
+    entry = buildCard(d);
+    cards.set(d.id, entry);
+  }
+  updateCard(entry, d);
+  return entry;
+}
+
+// 设备按房间聚合：返回 [{ key, name, devices[] }]，无房间归入「未分类」并排到最后
+function groupDevices(devices) {
+  const map = new Map();
+  for (const d of devices) {
+    const key = String(d.roomId || '');
+    if (!map.has(key)) map.set(key, { key, name: String(d.roomName || ''), devices: [] });
+    map.get(key).devices.push(d);
+  }
+  const groups = [...map.values()];
+  groups.sort((a, b) => (a.key ? (b.key ? 0 : -1) : 1));   // 未分类殿后（其余保持出现顺序）
+  return groups;
+}
+
+// 一个房间 = 全宽房间头 + 独立瀑布流容器
+function makeRoomSection(key) {
+  const section = h('section', 'room');
+  section.dataset.roomId = key;
+  const head = h('div', 'room-head');
+  head.title = '点击收折 / 展开该房间';
+  const chevron = h('span', 'room-chevron', ROOM_CHEVRON_ICON);
+  const nameEl = h('span', 'room-name');
+  const countEl = h('span', 'room-count');
+  head.append(chevron, nameEl, countEl);
+  head.addEventListener('click', () => {
+    const collapsed = !section.classList.contains('room-collapsed');
+    section.classList.toggle('room-collapsed', collapsed);
+    if (collapsed) collapsedRooms.add(key); else collapsedRooms.delete(key);
+    writeCollapsedRooms();
+    relayoutColumns();
+    relayoutEqualize();
+    relayoutSpans();
+    trackSpans();
+    fitWindow();
+  });
+  const list = h('div', 'room-list');
+  section.append(head, list);
+  return { section, head, nameEl, countEl, list };
+}
+
+// 退回到扁平网格：移除所有房间分组（其中的卡片会被 renderFlat 重新挂回 #devices）
+function clearGrouped() {
+  listEl.classList.remove('grouped');
+  for (const [, sec] of roomSections) sec.section.remove();
+  roomSections.clear();
+}
+
+// 扁平（多列瀑布流）渲染：卡片按顺序直接排在 #devices 下
+function renderFlat(devices) {
+  clearGrouped();
+  devices.forEach((d, index) => {
+    try {
+      const entry = ensureCard(d);
+      // 拖动过程中不按数据顺序重排 DOM，避免覆盖用户拖动的结果
+      if (!(drag && drag.moved) && listEl.children[index] !== entry.el) {
+        listEl.insertBefore(entry.el, listEl.children[index] || null);
+      }
+    } catch (err) {
+      // 单台设备渲染异常不影响其它设备与后续统计
+      console.error('渲染设备失败', d && d.id, err);
+    }
+  });
+}
+
+// 按房间渲染：房间头横跨整行，其下每个房间各自是一个细分瀑布流
+function renderGrouped(devices) {
+  listEl.classList.add('grouped');
+  const groups = groupDevices(devices);
+  const keys = new Set(groups.map((g) => g.key));
+  // 移除已不存在的房间分组
+  for (const [key, sec] of roomSections) {
+    if (!keys.has(key)) { sec.section.remove(); roomSections.delete(key); }
+  }
+  groups.forEach((g, gi) => {
+    let sec = roomSections.get(g.key);
+    if (!sec) { sec = makeRoomSection(g.key); roomSections.set(g.key, sec); }
+    sec.nameEl.textContent = g.name || '未分类';
+    sec.countEl.textContent = String(g.devices.length);
+    sec.section.classList.toggle('room-collapsed', collapsedRooms.has(g.key));
+    const memberIds = new Set();
+    g.devices.forEach((d, i) => {
+      try {
+        const entry = ensureCard(d);
+        memberIds.add(String(d.id));
+        if (sec.list.children[i] !== entry.el) {
+          sec.list.insertBefore(entry.el, sec.list.children[i] || null);
+        }
+      } catch (err) {
+        console.error('渲染设备失败', d && d.id, err);
+      }
+    });
+    // 清掉不再属于该房间的残留卡片
+    for (const child of [...sec.list.children]) {
+      if (child.classList.contains('card') && !memberIds.has(String(child.dataset.id))) child.remove();
+    }
+    // 房间顺序与分组顺序一致
+    if (listEl.children[gi] !== sec.section) {
+      listEl.insertBefore(sec.section, listEl.children[gi] || null);
+    }
+  });
+}
+
 function render(devices) {
   if (mockMode) { renderWelcome(); return; }
   allDevices = devices;
@@ -1560,13 +1727,10 @@ function render(devices) {
 
   // 兜底：拖动已结束但仍残留的占位 / 拖动态卡片会破坏网格排布，这里清掉
   if (!drag) {
-    const stray = listEl.querySelector('.drag-placeholder');
-    if (stray) stray.remove();
-    for (const c of listEl.children) {
-      if (c.classList && c.classList.contains('dragging')) {
-        c.classList.remove('dragging');
-        c.style.cssText = '';
-      }
+    listEl.querySelector('.drag-placeholder')?.remove();
+    for (const c of listEl.querySelectorAll('.dragging')) {
+      c.classList.remove('dragging');
+      c.style.cssText = '';
     }
   }
 
@@ -1582,6 +1746,7 @@ function render(devices) {
   }
 
   if (devices.length === 0) {
+    clearGrouped();
     const text = allDevices.length ? '设备已全部隐藏（可在菜单「隐藏的设备」中恢复）' : '还没有设备';
     let emptyEl = listEl.querySelector('.empty');
     if (!emptyEl) {
@@ -1592,25 +1757,9 @@ function render(devices) {
     }
   } else {
     listEl.querySelector('.empty')?.remove();
+    if (groupByRoom) renderGrouped(devices);
+    else renderFlat(devices);
   }
-
-  devices.forEach((d, index) => {
-    try {
-      let entry = cards.get(d.id);
-      if (!entry) {
-        entry = buildCard(d);
-        cards.set(d.id, entry);
-      }
-      updateCard(entry, d);
-      // 拖动过程中不按数据顺序重排 DOM，避免覆盖用户拖动的结果
-      if (!(drag && drag.moved) && listEl.children[index] !== entry.el) {
-        listEl.insertBefore(entry.el, listEl.children[index] || null);
-      }
-    } catch (err) {
-      // 单台设备渲染异常不影响其它设备与后续统计
-      console.error('渲染设备失败', d && d.id, err);
-    }
-  });
 
   const online = devices.filter((d) => d.online !== false).length;
   const active = devices.filter((d) => d.on).length;
@@ -1631,9 +1780,9 @@ function render(devices) {
     statusDot.classList.add('ok');
   }
 
-  assignColumns();
-  equalizeCollapsed();
-  layoutSpans();
+  relayoutColumns();
+  relayoutEqualize();
+  relayoutSpans();
   // 多列等高后若统一高度发生变化（如隐藏了最高的卡片），min-height 在过渡，
   // 用 trackSpans 跟随刷新跨度，让下方卡片平滑顺延、缝隙一起收回。
   trackSpans();
@@ -1741,6 +1890,40 @@ miTheme.addEventListener('click', () => {
 });
 
 applyTheme(readTheme());
+
+/* ---------------- 按房间分类 / 房间名称显示 ---------------- */
+
+const miRoom = document.getElementById('mi-room');
+const miRoomName = document.getElementById('mi-roomname');
+const miRoomNameLabel = miRoomName.querySelector('.mi-label');
+
+function applyRoomGroupState() {
+  miRoom.setAttribute('aria-checked', String(groupByRoom));
+}
+
+// 参照主题项：菜单文字显示「将切换到的目标状态」
+function applyRoomNameState() {
+  miRoomNameLabel.textContent = showRoomName ? '隐藏房间名称' : '显示房间名称';
+}
+
+miRoom.addEventListener('click', () => {
+  groupByRoom = !groupByRoom;
+  try { localStorage.setItem('mijia.groupByRoom', groupByRoom ? '1' : '0'); } catch {}
+  applyRoomGroupState();
+  render(allDevices);
+});
+
+miRoomName.addEventListener('click', () => {
+  showRoomName = !showRoomName;
+  try { localStorage.setItem('mijia.showRoomName', showRoomName ? '1' : '0'); } catch {}
+  applyRoomNameState();
+  for (const [, entry] of cards) {
+    if (entry.last) updateCard(entry, entry.last);
+  }
+});
+
+applyRoomGroupState();
+applyRoomNameState();
 
 // 托盘菜单 → 打开对应面板（与应用内菜单共用同一套面板）
 window.mijia.onOpenPanel((name) => {

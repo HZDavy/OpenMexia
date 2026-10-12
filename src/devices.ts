@@ -366,6 +366,9 @@ class MiioProvider extends EventEmitter {
         type,
         name: d.name,
         model: d.model,
+        // 房间归属（来自云端 gethome / homelist 的 roomlist），供按房间分类展示
+        roomId: String(d.roomId || ''),
+        roomName: String(d.roomName || ''),
         // 初始在线状态取自云端清单（isOnline），随后由轮询（局域网直连 / 云端回退）
         // 用真实探测结果校正。清单里标为离线的设备先按离线展示，避免「离线却显示在线」。
         online: d.online !== false,

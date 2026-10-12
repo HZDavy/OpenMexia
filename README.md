@@ -17,7 +17,7 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 
 | 平台 | 状态 | 说明 |
 |---|---|---|
-| Windows 10 / 11（x64） | ✅ 已发布 v0.1.0 | NSIS 安装包，见 [Releases](https://github.com/HZDavy/OpenMexia/releases) |
+| Windows 10 / 11（x64） | ✅ 已发布 v0.1.1 | NSIS 安装包，见 [Releases](https://github.com/HZDavy/OpenMexia/releases) |
 | macOS | 🚧 规划中 | 桌面端基于 Electron，下一个目标平台 |
 | iOS（iPhone / iPad） | 📋 计划中 | 复用同一套设备核心，卡片交互一致 |
 | Android（手机 / 平板） | 📋 计划中 | 同 iOS |

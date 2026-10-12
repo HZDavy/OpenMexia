@@ -372,6 +372,61 @@ html, body {
 .devices::-webkit-scrollbar { width: 4px; }
 .devices::-webkit-scrollbar-thumb { background: var(--track); border-radius: 4px; }
 
+/* ---------------- 按房间分类 ---------------- */
+
+/* 分组模式：外层不再是网格，改为「房间头 + 瀑布流」纵向堆叠 */
+.devices.grouped { display: block; }
+/* 分组模式下禁用拖动排序（卡片归属由房间决定） */
+.devices.grouped .drag-handle { display: none; }
+
+.room { margin: 0 0 6px; }
+.room:last-child { margin-bottom: 0; }
+
+/* 房间头：横向占满整行 */
+.room-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 4px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.room-head:hover { background: var(--surface-hover); }
+
+/* 单书名号（chevron）：展开态开口向下，收折态旋转 180° 开口向上 */
+.room-chevron {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  color: var(--muted);
+  transition: transform 0.18s ease;
+}
+.room-chevron svg { width: 14px; height: 14px; display: block; }
+.room.room-collapsed .room-chevron { transform: rotate(180deg); }
+
+.room-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-count { flex: 0 0 auto; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+
+/* 每个房间各自一个独立瀑布流容器：沿用 #devices 的网格规则 */
+.room-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 280px), 100%), 1fr));
+  grid-auto-rows: 1px;
+  grid-auto-flow: row dense;
+  align-content: start;
+  column-gap: 8px;
+  row-gap: 0;
+}
+.room-list.one-col { grid-auto-rows: max-content; row-gap: 8px; }
+.room.room-collapsed .room-list { display: none; }
+
 /* 按设备类型分色：--c 主色，--c-soft 浅色底 */
 .card[data-type="sensor"] { --c: #38bdf8; --c-soft: rgba(56, 189, 248, 0.16); }
 .card[data-type="plug"]   { --c: #ff7a3d; --c-soft: rgba(255, 122, 61, 0.16); }

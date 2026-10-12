@@ -54,6 +54,9 @@ export interface Device {
   type: DeviceType;
   name: string;
   model: string;
+  /** 房间归属（来自云端 gethome / homelist 的 roomlist），供按房间分类展示 */
+  roomId: string;
+  roomName: string;
   online: boolean;
   on: boolean;
 
@@ -149,6 +152,8 @@ export interface DeviceRecord {
   token?: string;
   parentId?: string;
   homeId?: string;
+  roomId?: string;
+  roomName?: string;
   online?: boolean;
   [k: string]: unknown;
 }
