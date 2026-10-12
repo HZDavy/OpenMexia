@@ -152,6 +152,8 @@ section{padding:96px 0}
 .win-burger svg{width:16px;height:16px}
 .win-grid{display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:8px;padding:2px 12px 10px}
 .win[data-cols="1"] .win-grid{grid-template-columns:1fr}
+/* 窄窗只露前两张常用卡（灯 + 温湿度计），循环扇顺延到裁切区之外，保证温度计可见 */
+.win[data-cols="1"] .m-fan{order:1}
 .win-narrow{width:300px;max-width:100%;margin:0 auto;border:1px solid #333;box-shadow:0 18px 44px rgba(0,0,0,.18)}
 .mcard{padding:12px;border-radius:12px;border:1px solid #333;background:#212121}
 .m-light{--c:#ffc24b;--cs:rgba(255,194,75,.16)}
@@ -178,9 +180,9 @@ section{padding:96px 0}
 .m-hero>b{font-size:26px;font-weight:300;letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
 .m-hero>b u{text-decoration:none;font-size:11px;color:#9a9a9a;margin-left:3px}
 .m-meta{flex:1;display:flex;flex-direction:column;gap:4px;padding-top:1px;min-width:0}
-.m-meta span{display:flex;font-size:11px;color:#9a9a9a;min-height:15px;white-space:nowrap}
+.m-meta span{display:flex;justify-content:flex-end;gap:6px;font-size:11px;color:#9a9a9a;min-height:15px;white-space:nowrap}
 .m-meta i{font-style:normal}
-.m-meta b{margin-left:auto;font-weight:500;color:#d6d6d6;font-variant-numeric:tabular-nums}
+.m-meta b{font-weight:500;color:#d6d6d6;font-variant-numeric:tabular-nums}
 .m-readouts{flex:1;display:flex;gap:20px}
 .m-readouts .ro{display:flex;flex-direction:column;gap:4px}
 .m-sep{height:1px;margin:11px 0;background:#333}
