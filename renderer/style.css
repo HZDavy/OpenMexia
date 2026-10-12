@@ -62,8 +62,8 @@ html, body {
 .logo {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   flex: 0 0 auto;
 }
 .logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -290,12 +290,24 @@ html, body {
      每张卡片的列由 JS 写入 grid-column 钉死（见 app.js assignColumns）。
      dense 让卡片在自己所在的列里占据最靠上的空位，从而按列向下堆叠。
      这样展开某张卡片只会撑高它自己所在的列并顺延其后卡片，其它列不会横向换列。 */
-  grid-auto-rows: 2px;
+  grid-auto-rows: 1px;
   grid-auto-flow: row dense;
   align-content: start;
   column-gap: 8px;
-  row-gap: 8px;
+  /* 纵向缝隙由每张卡片的行跨度内嵌（span = 卡片高度取整 + 8），不再用 row-gap。
+     原因：row-gap 会与 grid-auto-rows 叠加成一个 ≥9px 的量化粒度，高度不是它整数倍的
+     卡片（主要是展开态卡片）下方就残留最多约 10px 的多余空隙，使「横缝 ≠ 竖缝」。
+     改成 1px 行高 + 0 row-gap 后量化粒度降到 1px，纵向缝隙稳定在 8px（±0.5px），与
+     横向的 column-gap 一致。单列模式仍用 row-gap（见下 .devices.one-col）。 */
+  row-gap: 0;
 }
+/* 单列：卡片改用「内容自适应行高」逐行排布，相邻卡片的缝隙正好等于 row-gap(8px)，
+   不会像 2px 微行高 + 跨度向上取整那样残留最多一整格（约 10px）的多余空隙。
+   列数由 JS 按容器宽度判定并切换此 class（见 app.js isSingleCol）。
+   注意用 max-content 而不是 auto：list 是「有确定高度」的 flex 子项，
+   auto 轨道会被压成「等分容器高度」（实测 78.86px），导致卡片重叠、缝隙变负；
+   max-content 才会按内容真实高度排布，超出的部分交给 overflow-y 滚动。 */
+.devices.one-col { grid-auto-rows: max-content; row-gap: 8px; }
 .devices::-webkit-scrollbar { width: 4px; }
 .devices::-webkit-scrollbar-thumb { background: var(--track); border-radius: 4px; }
 
@@ -315,7 +327,9 @@ html, body {
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  /* min-height 参与过渡：多列等高时统一高度的变化（如隐藏最高卡片）会平滑回缩，
+     而不是硬跳；配合 .card-extra 的 max-height 过渡，收折/展开整体连续。 */
+  transition: background 0.15s, border-color 0.15s, transform 0.15s, min-height 0.28s ease;
 }
 .card:hover { background: var(--surface-hover); border-color: #3d3d3d; }
 .card.offline { opacity: 0.55; }
@@ -336,6 +350,22 @@ html, body {
   pointer-events: none;
 }
 .card.collapsed .card-body { margin-top: 8px; }
+/* 测量收折态高度：移除可收折区（display:none 不计入布局且无过渡）。
+   只作用于「可收折」卡片 —— 不可收折卡片没有收折态，按其自然高度参与对齐即可。
+   注意：.measuring 只加在「离屏克隆」上（见 .measure-host），绝不动活卡片的 display，
+   否则 display 切换会重置 CSS transition，掐断收折/展开动画。 */
+.card.measuring:not(.no-collapse) .card-extra { display: none; }
+.card.measuring:not(.no-collapse) .card-body { margin-top: 8px; }
+/* 离屏测量宿主：克隆卡片放这里量高（visibility:hidden 仍参与布局且能测量） */
+.measure-host {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 /* 拖动排序中的卡片：浮起 */
 .card.dragging {
   background: var(--surface-hover);

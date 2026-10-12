@@ -1,6 +1,6 @@
 {
   "name": "mijia-widget",
-  "productName": "米家小组件",
+  "productName": "OpenMijia",
   "version": "0.1.0",
   "private": true,
   "description": "OpenMijia：开源米家客户端，多平台一致的米家设备体验（Windows 已发布，macOS / iOS / Android 规划中）",
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.hzdavy.mijia-widget",
-    "productName": "米家小组件",
+    "productName": "OpenMijia",
     "copyright": "Copyright © 2026 HZDavy",
     "directories": {
       "output": "release"
@@ -48,8 +48,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "米家小组件",
-      "uninstallDisplayName": "米家小组件"
+      "shortcutName": "OpenMijia",
+      "uninstallDisplayName": "OpenMijia"
     }
   },
   "devDependencies": {

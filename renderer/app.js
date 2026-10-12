@@ -887,6 +887,7 @@ function setCollapsed(card, collapsed) {
   const id = String(card.dataset.id);
   if (collapsed) collapsedSet.add(id); else collapsedSet.delete(id);
   writeCollapsed();
+  equalizeCollapsed();
   trackSpans();
   fitWindow();
 }
@@ -904,6 +905,9 @@ listEl.addEventListener('dblclick', (e) => {
 // 仅在点阵把手上按下才进入拖动。卡片改为绝对定位跟手，原位置以等高占位撑住，
 // 多列网格下按「二维最近网格单元」决定落点，其它卡片让位时用 FLIP 平滑过渡。
 const DRAG_THRESHOLD = 4;
+// 拖动时卡片放大倍数：transform-origin 固定为左上角(0 0)，跟手公式据此按比例换算抓取点，
+// 保证指针始终压住把手上按下时的那个点（见 startDrag / layoutDrag）。
+const DRAG_SCALE = 1.04;
 
 listEl.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
@@ -933,15 +937,18 @@ listEl.addEventListener('pointerdown', (e) => {
 function startDrag() {
   const el = drag.el;
   drag.moved = true;
-  // 记录脱离文档流前的几何信息（offsetParent 为 listEl）
-  drag.baseTop = el.offsetTop;
-  drag.baseLeft = el.offsetLeft;
-  drag.width = el.offsetWidth;
-  drag.height = el.offsetHeight;
-
-  const rect = listEl.getBoundingClientRect();
-  drag.grabX = (drag.startX - rect.left + listEl.scrollLeft) - drag.baseLeft;
-  drag.grabY = (drag.startY - rect.top + listEl.scrollTop) - drag.baseTop;
+  // 记录脱离文档流前的几何信息：用视觉矩形（getBoundingClientRect）而不是 offsetLeft/Top。
+  // 网格列宽/间隙是亚像素分配，offset 系列与视觉矩形能差 1~2px；若以 offset 为基准，
+  // 切到绝对定位的一瞬间卡片会平移这一点点，抓取点也就随之偏离指针。
+  const listRect = listEl.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  drag.baseLeft = rect.left - listRect.left + listEl.scrollLeft;
+  drag.baseTop = rect.top - listRect.top + listEl.scrollTop;
+  drag.width = rect.width;
+  drag.height = rect.height;
+  // 指针在卡片内的视觉偏移（放大前），跟手时按 DRAG_SCALE 换算
+  drag.grabX = drag.startX - rect.left;
+  drag.grabY = drag.startY - rect.top;
 
   const ph = document.createElement('div');
   ph.className = 'drag-placeholder';
@@ -953,6 +960,13 @@ function startDrag() {
 
   el.classList.add('dragging');
   el.style.position = 'absolute';
+  // 关键：绝对定位的网格子元素若保留显式 grid-column，其包含块会变成「所在网格区域」，
+  // 于是 left/top 变成相对该区域偏移（第 2 列会凭空多出一个列宽），卡片就会「飞」。
+  // 清掉列/行定位，让包含块回落到列表容器的 padding 盒，left/top 即内容坐标。
+  el.style.gridColumn = '';
+  el.style.gridRowEnd = '';
+  // 放大以左上角为原点，跟手换算才与抓取位置无关
+  el.style.transformOrigin = '0 0';
   el.style.left = drag.baseLeft + 'px';
   el.style.top = drag.baseTop + 'px';
   el.style.width = drag.width + 'px';
@@ -960,7 +974,6 @@ function startDrag() {
   el.style.zIndex = '20';
   el.style.pointerEvents = 'none';
   el.style.transition = 'none';
-  el.style.gridRowEnd = '';
 
   drag.lastX = drag.startX;
   drag.lastY = drag.startY;
@@ -972,9 +985,12 @@ function layoutDrag(cursorX, cursorY) {
   const rect = listEl.getBoundingClientRect();
   const cx = cursorX - rect.left + listEl.scrollLeft; // 指针在列表内容坐标系中的位置
   const cy = cursorY - rect.top + listEl.scrollTop;
-  const dx = cx - drag.grabX - drag.baseLeft;
-  const dy = cy - drag.grabY - drag.baseTop;
-  drag.el.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+  // transform-origin 为左上角(0 0)，放大后卡片上任意点 p 的落位 = 原点 + DRAG_SCALE*p + 位移。
+  // 要让「按下时抓住的那一点」(grabX,grabY) 始终停在指针下，位移应为：
+  //   dx = cx - baseLeft - DRAG_SCALE*grabX（y 同理）
+  const dx = cx - drag.baseLeft - DRAG_SCALE * drag.grabX;
+  const dy = cy - drag.baseTop - DRAG_SCALE * drag.grabY;
+  drag.el.style.transform = `translate(${dx}px, ${dy}px) scale(${DRAG_SCALE})`;
 
   // 落点判定：优先取包含指针的网格单元，否则取中心最近的单元
   const cards = [...listEl.children].filter(
@@ -983,6 +999,7 @@ function layoutDrag(cursorX, cursorY) {
   let target = null;
   let best = Infinity;
   for (const c of cards) {
+    // 用 offset 系列（不受 transform 影响）做判定，避免读到还在过渡中的视觉位置
     const l = c.offsetLeft, t = c.offsetTop, w = c.offsetWidth, h = c.offsetHeight;
     if (cx >= l && cx <= l + w && cy >= t && cy <= t + h) { target = c; break; }
     const d = (cx - (l + w / 2)) ** 2 + (cy - (t + h / 2)) ** 2;
@@ -998,14 +1015,19 @@ function layoutDrag(cursorX, cursorY) {
     insertAfter = sameRow ? cx > tcx : cy > tcy;
   }
 
-  // 记录让位前位置，插入占位后再按二维差值做 FLIP
-  const before = new Map(cards.map((c) => [c, c.getBoundingClientRect()]));
+  // 占位当前是否已经在正确位置：是则直接返回 —— 不重排、不 FLIP。
+  // 这是消除「多列拖动一闪一闪」的关键：pointermove 每帧都会触发，
+  // 若每帧都重排 + FLIP，会反复读到未结束的过渡位置并叠加位移，造成抖动/不跟手。
+  const alreadyPlaced = target
+    ? (insertAfter ? target.nextElementSibling === drag.ph : drag.ph.nextElementSibling === target)
+    : listEl.lastElementChild === drag.ph;
+  if (alreadyPlaced) return;
+
+  // 记录让位前位置：用 offset 快照（不含 transform），FLIP 差值才稳定不累积
+  const before = new Map(cards.map((c) => [c, [c.offsetLeft, c.offsetTop]]));
   if (target) {
-    const needMove = insertAfter
-      ? target.nextElementSibling !== drag.ph
-      : drag.ph.nextElementSibling !== target;
-    if (needMove) listEl.insertBefore(drag.ph, insertAfter ? target.nextElementSibling : target);
-  } else if (listEl.lastElementChild !== drag.ph) {
+    listEl.insertBefore(drag.ph, insertAfter ? target.nextElementSibling : target);
+  } else {
     listEl.append(drag.ph);
   }
 
@@ -1013,12 +1035,12 @@ function layoutDrag(cursorX, cursorY) {
   assignColumns();
   cards.forEach((c) => {
     const b = before.get(c);
-    const a = c.getBoundingClientRect();
-    const mdx = b.left - a.left;
-    const mdy = b.top - a.top;
+    const mdx = b[0] - c.offsetLeft;
+    const mdy = b[1] - c.offsetTop;
     if (Math.abs(mdx) < 0.5 && Math.abs(mdy) < 0.5) return;
     c.style.transition = 'none';
     c.style.transform = `translate(${mdx}px, ${mdy}px)`;
+    void c.offsetWidth; // 强制应用起始帧，避免被合并导致动画起点错位
     requestAnimationFrame(() => {
       c.style.transition = 'transform 0.18s ease';
       c.style.transform = '';
@@ -1073,7 +1095,9 @@ function endDrag() {
     // 清除绝对定位等内联样式，让卡片重新受网格排布，再 FLIP 到最终位置
     el.style.cssText = '';
     assignColumns();
+    equalizeCollapsed();
     layoutSpans();
+    trackSpans();
     const to = el.getBoundingClientRect();
     const fx = from.left - to.left;
     const fy = from.top - to.top;
@@ -1094,7 +1118,9 @@ function endDrag() {
     el.style.cssText = '';
     // 未真正拖动也会清空内联样式，这里把列/跨度补回来，避免卡片被自动放置到第一列
     assignColumns();
+    equalizeCollapsed();
     layoutSpans();
+    trackSpans();
   }
   drag = null;
 }
@@ -1131,6 +1157,7 @@ window.addEventListener('blur', () => {
 function assignColumns() {
   if (!listEl) return;
   const cols = gridCols();
+  isSingleCol();
   let i = 0;
   for (const el of listEl.children) {
     if (!el.classList) continue;
@@ -1149,17 +1176,100 @@ function assignColumns() {
 // 同一排的其它卡片高度不受影响 —— 即真·瀑布流。
 function layoutSpans() {
   if (!listEl) return;
+  // 单列用内容自适应行高：卡片各占一行、缝隙由 row-gap 精确决定，无需（也不应）写跨度
+  if (isSingleCol()) {
+    for (const el of listEl.children) {
+      if (el.classList && el.classList.contains('card') && el.style.gridRowEnd) el.style.gridRowEnd = '';
+    }
+    return;
+  }
   const cs = getComputedStyle(listEl);
-  const gap = parseFloat(cs.rowGap) || 0;
-  const unit = parseFloat(cs.gridAutoRows) || 0;
-  const pitch = unit + gap;
-  if (pitch <= 0) return;
+  const gap = parseFloat(cs.columnGap) || 8;      // 横竖缝统一：纵向缝隙 = 列间距
+  const unit = parseFloat(cs.gridAutoRows) || 1;  // 多列下为 1px（配合 row-gap:0）
+  if (unit <= 0) return;
   for (const el of listEl.children) {
     if (!el.classList || !el.classList.contains('card')) continue;
-    const hgt = el.getBoundingClientRect().height;
-    const n = Math.max(1, Math.ceil((hgt + gap) / pitch));
+    // 拖动中的卡片已脱离文档流（absolute），不要给它写网格跨度，否则
+    // 「确定的网格定位」会让它的包含块变成网格区域，left/top 基准又错位（卡片飞走）。
+    if (el.classList.contains('dragging')) continue;
+    // 高度取整到整数像素：实测高度常带子像素噪声（如 112.00002），
+    // 直接向上取整会多占一行、把同列相邻卡片的缝隙撑大。
+    const hgt = Math.round(el.getBoundingClientRect().height);
+    // 行跨度把「一个纵向缝隙」内嵌进去：区域高 = n*unit（unit=1，row-gap=0），
+    // 下一张卡片的顶部 = 本卡顶部 + n，视觉缝隙 = n - 高度 ≈ gap（±0.5px）。
+    // 因为量化粒度是 1px 而不是「unit+row-gap」，展开态卡片也不会残留大缝，横竖缝一致。
+    const n = Math.max(1, Math.round(hgt / unit) + Math.round(gap / unit));
     const v = 'span ' + n;
     if (el.style.gridRowEnd !== v) el.style.gridRowEnd = v;
+  }
+}
+
+// 多列模式下让所有卡片的「默认（收折）态」等高：取各卡片收折态高度（含当前展开中的卡片、
+// 以及不可收折卡片）的最大值，给收折态卡片与不可收折卡片写入 min-height；仅展开中的卡片
+// 不加限高（用户要求只对齐默认态，展开态保持自然高度）。
+// 测量用「离屏克隆」完成（.measure-host + .measuring），绝不触碰活卡片的 display ——
+// 否则 display 切换会重置 CSS transition，导致多列下收折/展开没有过渡动画。
+let measureHost = null;
+function getMeasureHost() {
+  if (!measureHost || !measureHost.isConnected) {
+    measureHost = document.createElement('div');
+    measureHost.className = 'measure-host';
+    document.body.append(measureHost);
+  }
+  return measureHost;
+}
+
+// 生成一张「收折态」克隆：清掉内联限高/列跨度，加 .measuring 隐藏可收折区，按原宽度量高
+function makeMeasureClone(el) {
+  const clone = el.cloneNode(true);
+  clone.classList.remove('dragging', 'collapsed');
+  clone.classList.add('measuring');
+  clone.style.minHeight = '';
+  clone.style.gridColumn = '';
+  clone.style.gridRowEnd = '';
+  clone.style.transform = '';
+  clone.style.position = '';
+  clone.style.width = el.offsetWidth + 'px';
+  return clone;
+}
+
+function equalizeCollapsed() {
+  if (!listEl) return;
+  const items = [...listEl.children].filter(
+    (el) => el.classList && el.classList.contains('card') && !el.classList.contains('dragging')
+  );
+  // 单列 / 不足两张卡片：不需要等高，把可能残留的限高平滑收回
+  if (items.length < 2 || isSingleCol()) {
+    for (const el of items) if (el.style.minHeight && el.style.minHeight !== '0px') el.style.minHeight = '0px';
+    return;
+  }
+
+  // 先把克隆全部挂到离屏宿主，再统一量高（减少同步布局次数）
+  const host = getMeasureHost();
+  const clones = items.map((el) => {
+    const c = makeMeasureClone(el);
+    host.append(c);
+    return c;
+  });
+  let target = 0;
+  for (const c of clones) target = Math.max(target, c.getBoundingClientRect().height);
+  for (const c of clones) c.remove();
+
+  // 去掉子像素噪声（如 112.00002 → 112），否则后续网格跨度会多算一行、把缝隙撑大
+  target = Math.ceil(target - 0.01);
+  // 瀑布流按 grid-auto-rows 的整数倍占行（span 向上取整），会残留最多一格的行间空隙。
+  // 把统一高度吸附到「占满 n 行后正好留下一个行间距」的尺寸，让纵向缝隙与横向一致。
+  const gcs = getComputedStyle(listEl);
+  const rgap = parseFloat(gcs.rowGap) || 0;
+  const runit = parseFloat(gcs.gridAutoRows) || 0;
+  const rpitch = runit + rgap;
+  if (rpitch > 0) target = Math.ceil((target + rgap - 0.01) / rpitch) * rpitch - rgap;
+  for (const el of items) {
+    // 展开中的可收折卡片不限高（用 0px 而不是空值，保证 min-height 能在 px↔px 间过渡）；
+    // 收折态卡片与不可收折卡片统一到最高值
+    const expanded = !el.classList.contains('no-collapse') && !el.classList.contains('collapsed');
+    const v = expanded ? '0px' : target + 'px';
+    if (el.style.minHeight !== v) el.style.minHeight = v;
   }
 }
 
@@ -1206,11 +1316,29 @@ function fitWindow() {
 
 /* ---------------- 多列自适应：列数切换时的平滑过渡 ---------------- */
 
-// 读取网格当前实际列数（gridTemplateColumns 会展开成 N 个轨道尺寸）
+// 读取网格当前的「自然」列数：按容器内容宽度与 --card-min 反推 auto-fill 的轨道数。
+// 不能用 gridTemplateColumns 的轨道数 —— 卡片被写入显式 grid-column 后会撑出隐式轨道，
+// 使轨道数只增不减，窗口收窄时列数无法回落（即「收窄不恢复单列」）。
 function gridCols() {
-  const tpl = getComputedStyle(listEl).gridTemplateColumns;
-  if (!tpl || tpl === 'none') return 1;
-  return tpl.split(' ').filter(Boolean).length;
+  if (!listEl) return 1;
+  const cs = getComputedStyle(listEl);
+  const gap = parseFloat(cs.columnGap) || 0;
+  const padL = parseFloat(cs.paddingLeft) || 0;
+  const padR = parseFloat(cs.paddingRight) || 0;
+  const cardMin = parseFloat(cs.getPropertyValue('--card-min')) || 280;
+  const avail = listEl.clientWidth - padL - padR;
+  if (avail <= 0) return 1;
+  const track = Math.min(cardMin, avail);
+  return Math.max(1, Math.floor((avail + gap) / (track + gap)));
+}
+
+// 单列与否：同步 listEl 上的 one-col class（CSS 据此把行高切成内容自适应），
+// 返回是否为单列。所有需要判断单列的地方都走这里，保证 class 与判断结果一致。
+function isSingleCol() {
+  if (!listEl) return true;
+  const one = gridCols() <= 1;
+  if (listEl.classList.contains('one-col') !== one) listEl.classList.toggle('one-col', one);
+  return one;
 }
 
 // 用「上一次」的卡片位置做 FLIP：让卡片在 1→2→3 列切换时平滑滑入新位置，而非硬切。
@@ -1250,7 +1378,9 @@ const listRO = new ResizeObserver(() => {
   // 再做列数切换的 FLIP
   const cols = gridCols();
   if (cols !== reflowPrevCols) assignColumns();
+  equalizeCollapsed();
   layoutSpans();
+  trackSpans();
   const items = [...listEl.children].filter(
     (el) => el.classList.contains('card') && !el.classList.contains('dragging')
   );
@@ -1338,7 +1468,11 @@ function render(devices) {
   }
 
   assignColumns();
+  equalizeCollapsed();
   layoutSpans();
+  // 多列等高后若统一高度发生变化（如隐藏了最高的卡片），min-height 在过渡，
+  // 用 trackSpans 跟随刷新跨度，让下方卡片平滑顺延、缝隙一起收回。
+  trackSpans();
   fitWindow();
 }
 
