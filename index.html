@@ -134,7 +134,8 @@ section{padding:96px 0}
 
 /* ---------- bento ---------- */
 .bento{display:grid;gap:20px}
-.bento-row1{grid-template-columns:1.92fr 1fr;display:grid;gap:20px}
+.bento-row1{grid-template-columns:repeat(3,1fr);display:grid;gap:20px}
+.bento-row1>.tile-big{grid-column:span 2}
 .bento-row2{grid-template-columns:repeat(3,1fr);display:grid;gap:20px}
 .tile{position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg-soft)}
 .tile-big{height:496px}
@@ -298,6 +299,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .value{border-top:1px solid var(--line)}
   .values-in .value:nth-child(-n+2){border-top:0}
   .bento-row1,.bento-row2{grid-template-columns:1fr}
+  .bento-row1>.tile-big{grid-column:auto}
   .tile-big,.tile-tall{height:auto;min-height:0}
   .tile-big .imgwrap{margin:22px 34px 20px}
   .tile-tall .imgwrap{position:static;height:400px;margin-top:24px}
