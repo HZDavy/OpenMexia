@@ -1,7 +1,8 @@
-'use strict';
+import { contextBridge, ipcRenderer } from 'electron';
+import type { IpcApi } from './shared/ipc';
 
-const { contextBridge, ipcRenderer } = require('electron');
-
+// 暴露给渲染层的调用面，必须与 shared/ipc.d.ts 的 IpcApi 保持一致。
+// 通道名拼错、参数签名不符都会在 `npm run typecheck` 时报错。
 contextBridge.exposeInMainWorld('mijia', {
   init: () => ipcRenderer.invoke('widget:init'),
   onDevices: (cb) => ipcRenderer.on('widget:devices', (_e, devices) => cb(devices)),
@@ -56,4 +57,4 @@ contextBridge.exposeInMainWorld('mijia', {
   onQR: (cb) => ipcRenderer.on('widget:qr', (_e, info) => cb(info)),
   // 登录状态变化（登录成功 / 登出 / 刷新）
   onLoginState: (cb) => ipcRenderer.on('widget:login-state', (_e, state) => cb(state)),
-});
+} satisfies IpcApi);

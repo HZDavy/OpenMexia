@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * MiOT 规格（siid/piid）通用解析。
  *
@@ -11,16 +9,51 @@
  * 该模块是「所有设备都能用」的关键：型号只是用来查规格，不需要在代码里枚举。
  */
 
-let _mod = null;
-const memCache = new Map();   // model -> DeviceInfo | null
+import type {
+  DeviceAction,
+  DeviceProperty,
+  DeviceType,
+  PropertyItem,
+  SpecAnalysis,
+} from '../shared/types';
 
-async function loadMod() {
+/** miot-spec 规格里的一条属性（外部库无类型，这里只声明本模块用到的字段） */
+interface MiotProperty {
+  name: string;
+  method?: { siid: number; piid: number };
+  rw?: string;
+  'value-range'?: unknown;
+  valueRange?: unknown;
+  range?: unknown;
+  'value-list'?: unknown;
+  valueList?: unknown;
+  value_list?: unknown;
+}
+
+/** miot-spec 规格里的一条动作 */
+interface MiotAction {
+  name: string;
+  method?: { siid: number; aiid: number };
+}
+
+/** miot-spec 返回的设备规格 */
+interface MiotInfo {
+  model?: string;
+  name?: string;
+  properties?: MiotProperty[];
+  actions?: MiotAction[];
+}
+
+let _mod: any = null;
+const memCache = new Map<string, MiotInfo | null>();   // model -> DeviceInfo | null
+
+async function loadMod(): Promise<any> {
   if (!_mod) _mod = await import('@zythum02/mijia-api');
   return _mod;
 }
 
-let _diskCache = null;
-async function diskCache(cacheDir) {
+let _diskCache: any = null;
+async function diskCache(cacheDir?: string): Promise<any> {
   if (!cacheDir) return null;
   if (!_diskCache) {
     const mod = await import('@zythum02/mijia-api/cache/disk-cache');
@@ -31,14 +64,13 @@ async function diskCache(cacheDir) {
 
 /**
  * 取设备规格（带内存 + 磁盘缓存）。
- * @param {string} model 设备型号，如 yeelink.light.lamp4
- * @param {string} [cacheDir] 规格缓存目录
- * @returns {Promise<object|null>}
+ * @param model 设备型号，如 yeelink.light.lamp4
+ * @param cacheDir 规格缓存目录
  */
-async function getSpec(model, cacheDir) {
+async function getSpec(model: string, cacheDir?: string): Promise<MiotInfo | null> {
   if (!model) return null;
-  if (memCache.has(model)) return memCache.get(model);
-  let info = null;
+  if (memCache.has(model)) return memCache.get(model) ?? null;
+  let info: MiotInfo | null = null;
   try {
     const mod = await loadMod();
     info = await mod.getDeviceInfo(model, await diskCache(cacheDir));
@@ -50,7 +82,7 @@ async function getSpec(model, cacheDir) {
 }
 
 // 字段 -> 候选 MiOT 属性名（按优先级）
-const FIELD_ALIASES = {
+const FIELD_ALIASES: Record<string, string[]> = {
   on: ['on'],
   brightness: ['brightness'],
   colorTemperature: ['color-temperature'],
@@ -91,7 +123,7 @@ const FIELD_ALIASES = {
  * 但规格里常带一个「指示灯」服务（on + brightness），只按属性判断会被误认成灯或插座。
  * 米家型号的第二段是稳定的品类标识，先按它定型，其余设备再走属性推断。
  */
-const CATEGORY_TYPES = {
+const CATEGORY_TYPES: Record<string, DeviceType> = {
   router: 'router',      // 路由器
   wifi: 'router',
   repeater: 'router',    // WiFi 中继 / 放大器
@@ -100,7 +132,7 @@ const CATEGORY_TYPES = {
 
 // 动作（action）-> 候选 MiOT 动作名（按优先级）。
 // 注意：手动调节方向在米家规格里是 action 而非 property，需按 siid/aiid 调用。
-const ACTION_ALIASES = {
+const ACTION_ALIASES: Record<string, string[]> = {
   turnLeft: ['turn-left'],
   turnRight: ['turn-right'],
   turnUpward: ['turn-upward'],
@@ -109,18 +141,12 @@ const ACTION_ALIASES = {
 
 /**
  * 把规格解析为小组件可用的「读写绑定」。
- * @param {object} info 设备规格（含 model / properties / actions）
- * @param {string} [model] 设备型号；缺省时取 info.model
- * @returns {{
- *   type: 'sensor'|'plug'|'light'|'fan'|'aircon'|'purifier'|'router'|'gateway'|'other',
- *   props: Record<string, {siid:number, piid:number, rw:string, range:number[]|null, list:string[]|null}>,
- *   reads: {siid:number, piid:number}[],
- *   actions: Record<string, {siid:number, aiid:number}>
- * }}
+ * @param info 设备规格（含 model / properties / actions）
+ * @param model 设备型号；缺省时取 info.model
  */
-function analyze(info, model) {
-  const props = {};
-  const byName = new Map();
+function analyze(info: MiotInfo | null, model?: string): SpecAnalysis {
+  const props: Record<string, DeviceProperty> = {};
+  const byName = new Map<string, MiotProperty>();
   if (info && Array.isArray(info.properties)) {
     for (const p of info.properties) byName.set(p.name, p);
   }
@@ -133,7 +159,7 @@ function analyze(info, model) {
         const range = p['value-range'] || p.valueRange || p.range || null;
         const rawList = p['value-list'] || p.valueList || p['value_list'] || null;
         // 枚举项既可能是字符串，也可能是 {value, description} 对象，统一成对象数组
-        const list = Array.isArray(rawList)
+        const list: PropertyItem[] | null = Array.isArray(rawList)
           ? rawList.map((it) =>
               it && typeof it === 'object'
                 ? { value: it.value, description: it.description || it.name || String(it.value) }
@@ -144,7 +170,7 @@ function analyze(info, model) {
           siid: p.method.siid,
           piid: p.method.piid,
           rw: p.rw || '',
-          range: Array.isArray(range) ? range : null,
+          range: Array.isArray(range) ? (range as number[]) : null,
           list,
         };
         break;
@@ -153,8 +179,8 @@ function analyze(info, model) {
   }
 
   // 动作解析（如风扇手动上下左右）：规格里作为 action 提供 siid/aiid
-  const actions = {};
-  const actByName = new Map();
+  const actions: Record<string, DeviceAction> = {};
+  const actByName = new Map<string, MiotAction>();
   if (info && Array.isArray(info.actions)) {
     for (const a of info.actions) actByName.set(a.name, a);
   }
@@ -168,8 +194,8 @@ function analyze(info, model) {
     }
   }
 
-  const canWrite = (f) => props[f] && props[f].rw.includes('w');
-  const canRead = (f) => props[f] && props[f].rw.includes('r');
+  const canWrite = (f: string): boolean => !!(props[f] && props[f].rw.includes('w'));
+  const canRead = (f: string): boolean => !!(props[f] && props[f].rw.includes('r'));
 
   // 类型推断（顺序即优先级）：
   //   0. 品类优先：路由器 / 网关 / 中继等网络设备没有可用开关，规格里的「指示灯」
@@ -183,7 +209,7 @@ function analyze(info, model) {
   const category = String(model || (info && info.model) || '').split('.')[1] || '';
   const isPurifier = !!(props.iceMakerStatus || props.iceMakerOn || props.tdsIn || props.tdsOut);
 
-  let type;
+  let type: DeviceType;
   if (CATEGORY_TYPES[category]) type = CATEGORY_TYPES[category];
   else if (isPurifier) type = 'purifier';
   else if (canWrite('targetTemperature') || (canWrite('mode') && canWrite('speed') && props.targetTemperature)) type = 'aircon';
@@ -194,8 +220,8 @@ function analyze(info, model) {
   else type = 'other';
 
   // 读属性列表（去重）
-  const reads = [];
-  const seen = new Set();
+  const reads: { siid: number; piid: number }[] = [];
+  const seen = new Set<string>();
   for (const f of Object.keys(props)) {
     if (!canRead(f)) continue;
     const k = `${props[f].siid}.${props[f].piid}`;
@@ -208,9 +234,9 @@ function analyze(info, model) {
 }
 
 /** 从云端设备项推断一个可读的展示名（规格里带产品名） */
-async function productName(model, cacheDir) {
+async function productName(model: string, cacheDir?: string): Promise<string> {
   const info = await getSpec(model, cacheDir);
   return info && info.name ? info.name : '';
 }
 
-module.exports = { getSpec, analyze, productName };
+export { getSpec, analyze, productName };

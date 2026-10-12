@@ -1,12 +1,20 @@
-'use strict';
+import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme, shell } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as https from 'https';
+import { createProvider } from './src/devices';
+import { MijiaLogin } from './src/mijia-login';
+import * as QRCode from 'qrcode';
+import type { FullscreenMode, Settings, Theme } from './shared/types';
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme, shell } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const https = require('https');
-const { createProvider } = require('./src/devices');
-const { MijiaLogin } = require('./src/mijia-login');
-const QRCode = require('qrcode');
+// Electron 未内置「退出标记」这个应用私有属性，这里给 App 补上类型
+declare global {
+  namespace Electron {
+    interface App {
+      isQuitting?: boolean;
+    }
+  }
+}
 
 // 兜底：任何未捕获异常/未处理的 Promise 拒绝都只记录，不让主进程静默退出（避免“闪退”）
 process.on('uncaughtException', (err) => {
@@ -20,22 +28,22 @@ process.on('unhandledRejection', (reason) => {
 const WIN_SIZE = { width: 364, height: 480 };
 const EDGE_GAP = 20; // 默认位置距屏幕边缘的留白
 
-let win = null;
-let tray = null;
-let provider = null;
-let providerReady = Promise.resolve();   // 设备源首次构建完成信号（窗口先显示，数据后到）
-let login = null;   // MijiaLogin：登录 / 设备清单 / 云端回退
-let settings = { alwaysOnTop: true, launchAtLogin: false };
+let win: BrowserWindow;
+let tray: Tray;
+let provider: Awaited<ReturnType<typeof createProvider>>;
+let providerReady: Promise<unknown> = Promise.resolve();   // 设备源首次构建完成信号（窗口先显示，数据后到）
+let login: MijiaLogin;   // MijiaLogin：登录 / 设备清单 / 云端回退
+let settings: Settings = { alwaysOnTop: true, launchAtLogin: false };
 // 渲染层首次按内容自适应高度时置位，避免这段程序化 resize 被当作「用户调整的大小」持久化
 let sizingProgrammatically = false;
 // 托盘菜单图标：由渲染层把与应用内菜单同一套 SVG 栅格化成 PNG dataURL 后传回
-let menuIcons = {};
+let menuIcons: Record<string, Electron.NativeImage> = {};
 // 全屏模式：null 未全屏；'normal' 铺满当前屏工作区（任务栏可见）；'cover' 铺满整屏并置顶（盖住任务栏）
-let fsMode = null;
-let fsSavedBounds = null;   // 进入全屏前的窗口矩形，退出全屏时还原
+let fsMode: FullscreenMode = null;
+let fsSavedBounds: Electron.Rectangle | null = null;   // 进入全屏前的窗口矩形，退出全屏时还原
 
 // 登录相关数据目录：userData/mijia（devices.json + cloud/auth.json）
-const mijiaDataDir = () => path.join(app.getPath('userData'), 'mijia');
+const mijiaDataDir = (): string => path.join(app.getPath('userData'), 'mijia');
 
 /* ---------------- 公共操作（托盘菜单与应用内菜单共用同一套逻辑） ---------------- */
 
@@ -61,7 +69,7 @@ function sendToSecondScreen() {
   const b = win.getBounds();
   // 先找出窗口当前所在的显示器（副屏坐标可能为负，必须用 getDisplayMatching 判定）
   const cur = screen.getDisplayMatching(b);
-  let target;
+  let target: Electron.Display;
   if (displays.length > 1) {
     const i = displays.findIndex((d) => d.id === cur.id);
     // 切到下一块屏；idx 未命中(i<0)时回到第一块
@@ -89,7 +97,7 @@ function sendToSecondScreen() {
 //   'cover'  → 原生「全屏」，覆盖整屏并盖住任务栏；
 //   null     → 退出全屏，还原进入前的窗口矩形。
 // 传入与当前相同的模式时视为「再次点击」→ 退出全屏。
-function applyFullscreen(mode) {
+function applyFullscreen(mode: FullscreenMode) {
   if (!win) return;
   mode = mode === 'cover' ? 'cover' : mode === 'normal' ? 'normal' : null;
   if (mode && fsMode === mode) mode = null;   // 再次点同一项 → 关掉
@@ -128,7 +136,7 @@ function broadcastFullscreenState() {
 function syncFullscreenFromWindow() {
   if (!win || win.isDestroyed()) return;
   if (sizingProgrammatically) return;
-  const next = win.isFullScreen() ? 'cover' : win.isMaximized() ? 'normal' : null;
+  const next: FullscreenMode = win.isFullScreen() ? 'cover' : win.isMaximized() ? 'normal' : null;
   if (next !== fsMode) {
     fsMode = next;
     broadcastFullscreenState();
@@ -147,7 +155,7 @@ function startPinTaskbar() {
 }
 
 // 托盘菜单里「登录米家 / 选择家庭 / 隐藏的设备 / 关于」：唤起窗口并让渲染层打开对应面板
-function openPanel(name) {
+function openPanel(name: string) {
   if (!win || win.isDestroyed()) return;
   if (!win.isVisible()) win.show();
   win.focus();
@@ -163,7 +171,7 @@ function toggleTheme() {
 const RELEASES_API = 'https://api.github.com/repos/HZDavy/OpenMexia/releases/latest';
 const RELEASES_PAGE = 'https://github.com/HZDavy/OpenMexia/releases';
 
-function fetchJson(url, timeout = 8000) {
+function fetchJson(url: string, timeout = 8000): Promise<any> {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
       headers: { 'User-Agent': 'OpenMexia', Accept: 'application/vnd.github+json' },
@@ -171,10 +179,11 @@ function fetchJson(url, timeout = 8000) {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
+        const sc = res.statusCode ?? 0;
+        if (sc >= 200 && sc < 300) {
           try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
         } else {
-          reject(new Error(`HTTP ${res.statusCode}`));
+          reject(new Error(`HTTP ${sc}`));
         }
       });
     });
@@ -184,7 +193,7 @@ function fetchJson(url, timeout = 8000) {
 }
 
 // 语义化版本比较：a > b 返回 1，相等返回 0，a < b 返回 -1
-function compareVersion(a, b) {
+function compareVersion(a: string | number, b: string | number): number {
   const pa = String(a).replace(/^v/i, '').split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
   const pb = String(b).replace(/^v/i, '').split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
   const len = Math.max(pa.length, pb.length);
@@ -195,7 +204,14 @@ function compareVersion(a, b) {
   return 0;
 }
 
-async function checkUpdate() {
+async function checkUpdate(): Promise<{
+  ok: boolean;
+  current: string;
+  latest: string;
+  hasUpdate: boolean;
+  url: string;
+  error?: string;
+}> {
   const current = app.getVersion();
   try {
     const rel = await fetchJson(RELEASES_API);
@@ -208,7 +224,7 @@ async function checkUpdate() {
       hasUpdate: compareVersion(latest, current) > 0,
       url: rel.html_url || RELEASES_PAGE,
     };
-  } catch (e) {
+  } catch (e: any) {
     return {
       ok: false,
       current,
@@ -223,9 +239,9 @@ async function checkUpdate() {
 
 /* ---------------- 状态持久化（窗口位置 / 偏好） ---------------- */
 
-const stateFile = () => path.join(app.getPath('userData'), 'widget-state.json');
+const stateFile = (): string => path.join(app.getPath('userData'), 'widget-state.json');
 
-function loadState() {
+function loadState(): any {
   try {
     return JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
   } catch {
@@ -233,7 +249,7 @@ function loadState() {
   }
 }
 
-function patchState(patch) {
+function patchState(patch: Record<string, any>): any {
   const next = { ...loadState(), ...patch };
   try {
     fs.mkdirSync(path.dirname(stateFile()), { recursive: true });
@@ -245,19 +261,19 @@ function patchState(patch) {
 }
 
 // 主题持久化：首次打开（无记录）默认深色，之后记住用户上次的选择
-function stateTheme(state = loadState()) {
+function stateTheme(state: any = loadState()): Theme {
   return state.theme === 'light' ? 'light' : 'dark';
 }
 
 /* ---------------- 窗口 ---------------- */
 
-function defaultPosition() {
+function defaultPosition(): { x: number; y: number } {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   return { x: width - WIN_SIZE.width - EDGE_GAP, y: Math.round((height - WIN_SIZE.height) / 2) };
 }
 
 // 当前是否已持久化过「用户调整的窗口大小」（供渲染层决定是否跳过首次自适应）
-function hasCustomSize() {
+function hasCustomSize(): boolean {
   const s = loadState();
   return Number.isFinite(s.width) && Number.isFinite(s.height) && s.width >= 300 && s.height >= 220;
 }
@@ -369,12 +385,12 @@ function toggleWindow() {
 
 /* ---------------- 设备数据源（登录后热重建） ---------------- */
 
-function forwardDevices(devices) {
+function forwardDevices(devices: any[]) {
   if (win && !win.isDestroyed()) win.webContents.send('widget:devices', devices);
 }
 
 // 当前选定的家庭 id（持久化于 widget-state.json；空串 = 展示全部家庭）
-function currentHomeId() {
+function currentHomeId(): string {
   const v = loadState().currentHomeId;
   return v ? String(v) : '';
 }
@@ -404,12 +420,12 @@ async function broadcastLoginState() {
 
 /* ---------------- 托盘 ---------------- */
 
-function buildTrayMenu() {
+function buildTrayMenu(): Electron.Menu {
   const visible = win && win.isVisible();
-  const icon = (key) => (menuIcons[key] ? { icon: menuIcons[key] } : {});
+  const icon = (key: string) => (menuIcons[key] ? { icon: menuIcons[key] } : {});
   const light = stateTheme() === 'light';
   // 项与顺序与渲染层右上角菜单 (#menu) 保持一致，避免两处菜单内容不一致
-  return Menu.buildFromTemplate([
+  const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: `窗口置顶${settings.alwaysOnTop ? ' ✓' : ''}`,
       ...icon('top'),
@@ -482,7 +498,8 @@ function buildTrayMenu() {
         app.quit();
       },
     },
-  ]);
+  ];
+  return Menu.buildFromTemplate(template);
 }
 
 function createTray() {
@@ -627,7 +644,7 @@ function registerIpc() {
   ipcMain.on('widget:fullscreen', (_e, { mode } = {}) => applyFullscreen(mode || null));
   // 深色 / 浅色主题：同步 Chromium 原生主题与窗口底色，避免浅色下缩放露出深色边
   ipcMain.on('widget:set-theme', (_e, { theme } = {}) => {
-    const t = theme === 'light' ? 'light' : 'dark';
+    const t: Theme = theme === 'light' ? 'light' : 'dark';
     patchState({ theme: t });   // 记住用户选择，下次启动沿用
     const light = t === 'light';
     nativeTheme.themeSource = light ? 'light' : 'dark';
@@ -635,7 +652,7 @@ function registerIpc() {
   });
   // 接收渲染层栅格化好的菜单图标：dataURL → nativeImage（缩放到 16×16，Windows 菜单标准尺寸），供托盘菜单使用
   ipcMain.on('widget:menu-icons', (_e, icons = {}) => {
-    const next = {};
+    const next: Record<string, Electron.NativeImage> = {};
     for (const [key, dataUrl] of Object.entries(icons)) {
       if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
         const img = nativeImage.createFromDataURL(dataUrl);
@@ -689,7 +706,7 @@ if (!app.requestSingleInstanceLock()) {
     providerReady = (async () => {
       try {
         if (login.hasDevices() && await login.ensurePwdSession()) await login.refreshDevices();
-      } catch (e) {
+      } catch (e: any) {
         console.error('[main] 启动刷新失败：', e && e.message);
       }
       return rebuildProvider();
@@ -700,9 +717,8 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
   });
 
-  app.on('window-all-closed', (e) => {
-    // 托盘常驻，不随窗口关闭退出
-    e.preventDefault();
+  app.on('window-all-closed', () => {
+    // 托盘常驻，不随窗口关闭退出（订阅后即接管退出控制；不再调用 app.quit()）
   });
 
   app.on('before-quit', () => {

@@ -1,9 +1,7 @@
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const querystring = require('querystring');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
+import * as querystring from 'querystring';
 const fetch = require('node-fetch');
 
 /**
@@ -39,8 +37,19 @@ const MI_OTP_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X
 const PWD_SESSION_TTL = 5 * 60 * 1000;   // 图形验证码会话有效期：5 分钟
 
 class MijiaLogin {
-  /** @param {string} dataDir 应用数据目录（如 userData/mijia） */
-  constructor(dataDir) {
+  dataDir: string;
+  devicesFile: string;
+  homesFile: string;
+  cloudDir: string;
+  sessionFile: string;
+  _mihome: any;
+  _apiMod: any;
+  _api: any;
+  _pwdSessions: Map<string, any>;
+  _pwdCountry: string;
+
+  /** @param dataDir 应用数据目录（如 userData/mijia） */
+  constructor(dataDir: string) {
     this.dataDir = dataDir;
     this.devicesFile = path.join(dataDir, 'devices.json');
     this.homesFile = path.join(dataDir, 'homes.json');
@@ -57,22 +66,22 @@ class MijiaLogin {
 
   // ---------- 懒加载依赖 ----------
 
-  get mihome() {
+  get mihome(): any {
     if (!this._mihome) this._mihome = require('node-mihome');
     return this._mihome;
   }
 
-  async _loadApiModule() {
+  async _loadApiModule(): Promise<any> {
     if (!this._apiMod) this._apiMod = await import('@zythum02/mijia-api');
     return this._apiMod;
   }
 
-  async _makeCache() {
+  async _makeCache(): Promise<any> {
     const mod = await import('@zythum02/mijia-api/cache/disk-cache');
     return new mod.DiskCache(this.cloudDir);
   }
 
-  async _getApi() {
+  async _getApi(): Promise<any> {
     if (!this._api) {
       const { MijiaAPI } = await this._loadApiModule();
       this._api = new MijiaAPI(await this._makeCache());
@@ -83,12 +92,12 @@ class MijiaLogin {
   // ---------- 状态 / 清单 ----------
 
   /** 是否已有设备清单（有即可用局域网直连） */
-  hasDevices() {
+  hasDevices(): boolean {
     return fs.existsSync(this.devicesFile);
   }
 
   /** 读取归一化设备清单 */
-  loadDevices() {
+  loadDevices(): any[] {
     try {
       const raw = fs.readFileSync(this.devicesFile, 'utf8');
       const arr = JSON.parse(raw);
@@ -98,7 +107,7 @@ class MijiaLogin {
     }
   }
 
-  saveDevices(devices) {
+  saveDevices(devices: any[]): any[] {
     fs.mkdirSync(this.dataDir, { recursive: true });
     fs.writeFileSync(this.devicesFile, JSON.stringify(devices, null, 2), 'utf8');
     return devices;
@@ -107,7 +116,7 @@ class MijiaLogin {
   /* ---------- 家庭（home）清单 ---------- */
 
   /** 读取缓存的家庭清单（[{id,name}]） */
-  loadHomes() {
+  loadHomes(): any[] {
     try {
       const arr = JSON.parse(fs.readFileSync(this.homesFile, 'utf8'));
       return Array.isArray(arr) ? arr : [];
@@ -116,15 +125,15 @@ class MijiaLogin {
     }
   }
 
-  saveHomes(homes) {
+  saveHomes(homes: any[]): any[] {
     fs.mkdirSync(this.dataDir, { recursive: true });
     fs.writeFileSync(this.homesFile, JSON.stringify(homes, null, 2), 'utf8');
     return homes;
   }
 
   /** 无云端会话时的兜底：从设备清单里推导家庭，仅知道 id，名称用「家庭 xxx」 */
-  _deriveHomes() {
-    const seen = new Map();
+  _deriveHomes(): any[] {
+    const seen = new Map<string, { id: string; name: string }>();
     for (const d of this.loadDevices()) {
       const id = String(d.homeId || '');
       if (!id || seen.has(id)) continue;
@@ -137,16 +146,15 @@ class MijiaLogin {
    * 获取家庭列表（id → 名称）。
    * 优先云端 getHomesList()（二维码会话），其次密码会话的 /v2/homeroom/gethome，
    * 失败/无会话时回退到缓存或从设备清单推导。
-   * @returns {Promise<{id:string,name:string}[]>}
    */
-  async getHomes() {
+  async getHomes(): Promise<{ id: string; name: string }[]> {
     if (await this.hasCloudAuth()) {
       try {
         const api = await this._getApi();
         const list = await api.getHomesList();
         const homes = (list || [])
-          .map((h) => ({ id: String(h.id ?? h.home_id ?? ''), name: String(h.name || h.id || '') }))
-          .filter((h) => h.id);
+          .map((h: any) => ({ id: String(h.id ?? h.home_id ?? ''), name: String(h.name || h.id || '') }))
+          .filter((h: { id: string }) => h.id);
         if (homes.length) return this.saveHomes(homes);
       } catch { /* 回退缓存 */ }
     }
@@ -158,7 +166,7 @@ class MijiaLogin {
   }
 
   /** 把 node-mihome 云端会话的返回语言设为中文，使设备默认名（未自定义）显示为中文 */
-  _useZhLocale() {
+  _useZhLocale(): void {
     try {
       const cloud = this._mihome && this._mihome.miCloudProtocol;
       if (cloud) cloud.locale = 'zh_cn';
@@ -169,30 +177,29 @@ class MijiaLogin {
    * 密码登录会话下获取「家庭 → 设备 did」归属。
    * 走 /v2/homeroom/gethome（POST，params 为空），返回 result.homelist；
    * 每个 home 顶层 dids 常为空，设备实际挂在 roomlist[].dids 里，故取并集。
-   * @returns {Promise<{id:string,name:string,dids:string[]}[]>}
    */
-  async _fetchPwdHomes() {
+  async _fetchPwdHomes(): Promise<{ id: string; name: string; dids: string[] }[]> {
     const cloud = this._mihome && this._mihome.miCloudProtocol;
     if (!cloud || !cloud.isLoggedIn) return [];
     try {
       const r = await cloud.request('/v2/homeroom/gethome', {}, this._pwdCountry || 'cn');
       const list = (r && r.result && r.result.homelist) || [];
-      return list.map((h) => ({
+      return list.map((h: any) => ({
         id: String(h.id || ''),
         name: String(h.name || h.id || ''),
         dids: [
           ...(Array.isArray(h.dids) ? h.dids : []),
-          ...((h.roomlist || []).flatMap((rm) => (Array.isArray(rm.dids) ? rm.dids : []))),
+          ...((h.roomlist || []).flatMap((rm: any) => (Array.isArray(rm.dids) ? rm.dids : []))),
         ].map(String),
-      })).filter((h) => h.id);
+      })).filter((h: { id: string }) => h.id);
     } catch {
       return [];
     }
   }
 
   /** 用家庭 did 归属反查，写入每台设备的 homeId（供家庭筛选使用） */
-  _applyHomeIds(devices, homes) {
-    const map = new Map();
+  _applyHomeIds(devices: any[], homes: any[]): any[] {
+    const map = new Map<string, string>();
     for (const h of homes || []) {
       for (const did of h.dids || []) map.set(String(did), h.id);
     }
@@ -205,7 +212,7 @@ class MijiaLogin {
   }
 
   /** 二维码云端会话是否有效（auth.json 齐全且在有效期） */
-  async hasCloudAuth() {
+  async hasCloudAuth(): Promise<boolean> {
     try {
       const api = await this._getApi();
       return api.available === true;
@@ -215,7 +222,13 @@ class MijiaLogin {
   }
 
   /** 汇总当前登录状态，供渲染层展示 */
-  async status() {
+  async status(): Promise<{
+    hasDevices: boolean;
+    deviceCount: number;
+    cloudAuth: boolean;
+    passwordSession: boolean;
+    homes: any[];
+  }> {
     return {
       hasDevices: this.hasDevices(),
       deviceCount: this.loadDevices().length,
@@ -236,10 +249,11 @@ class MijiaLogin {
    * 由渲染层继续输入，并用 loginPasswordCaptcha() 提交。
    * 无需额外步骤时直接完成登录并返回设备清单。
    */
-  async loginPassword({ username, password, country = 'cn' } = {}) {
+  async loginPassword(opts: { username?: string; password?: string; country?: string } = {}): Promise<any> {
+    const { username, password, country = 'cn' } = opts;
     if (!username || !password) throw new Error('请输入小米账号与密码');
     this._prunePwdSessions();
-    let sess;
+    let sess: any;
     try {
       sess = await this._pwdStart(username, password, country);
     } catch (e) {
@@ -258,8 +272,9 @@ class MijiaLogin {
    * 密码登录续步：提交图形验证码 / 二次验证码（按会话 stage 路由）。
    * 出错会重新返回「需要继续输入」的响应（needCaptcha / needCode），而非抛错。
    */
-  async loginPasswordCaptcha({ sessionId, code } = {}) {
-    const sess = this._pwdSessions.get(sessionId);
+  async loginPasswordCaptcha(opts: { sessionId?: string; code?: any } = {}): Promise<any> {
+    const { sessionId, code } = opts;
+    const sess = this._pwdSessions.get(sessionId as string);
     if (!sess) throw new Error('验证码会话已过期，请重新登录');
     const c = code == null ? '' : String(code).trim();
     if (!c) throw new Error(sess.stage === '2fa_code' ? '请输入验证码' : '请输入图形验证码');
@@ -280,14 +295,14 @@ class MijiaLogin {
     try {
       const stage = await this._pwdAuth(sess, c);
       if (stage === 'ok') {
-        this._pwdSessions.delete(sessionId);
+        this._pwdSessions.delete(sessionId as string);
         return this._pwdFinish(sess);
       }
       if (stage === '2fa') return this._2faBegin(sess);
       // stage === 'captcha'：验证码不正确，小米已返回新图
       return { ok: false, needCaptcha: true, sessionId, captcha: await this._fetchCaptcha(sess) };
     } catch (e) {
-      this._pwdSessions.delete(sessionId);
+      this._pwdSessions.delete(sessionId as string);
       // 验证码不正确：小米此时可能不再返回新验证码，用原账号密码重新取一张，方便用户直接重试
       try {
         const fresh = await this._pwdStart(sess.username, sess.password, sess.country);
@@ -308,8 +323,9 @@ class MijiaLogin {
    * 刷新验证码图片（用户点「点击刷新」）：按当前 stage 重新取一张。
    * 图形验证码用原账号密码重新发起；二次验证发送用的图形验证码则重新触发发送。
    */
-  async refreshPwdCaptcha({ sessionId } = {}) {
-    const sess = this._pwdSessions.get(sessionId);
+  async refreshPwdCaptcha(opts: { sessionId?: string } = {}): Promise<any> {
+    const { sessionId } = opts;
+    const sess = this._pwdSessions.get(sessionId as string);
     if (!sess) throw new Error('验证码会话已过期，请重新登录');
     if (sess.stage === '2fa_send_captcha') {
       const data = await this._2faSendTicket(sess);
@@ -326,8 +342,8 @@ class MijiaLogin {
   }
 
   /** 发起第一步登录：取 _sign → 提交账号密码（可能需要验证码） */
-  async _pwdStart(username, password, country) {
-    const jar = {
+  async _pwdStart(username: string, password: string, country: string): Promise<any> {
+    const jar: any = {
       sdkVersion: 'accountsdk-18.8.15',
       deviceId: crypto.randomBytes(8).toString('hex').toUpperCase(),
     };
@@ -336,7 +352,7 @@ class MijiaLogin {
     const d1 = parseXiaomiJson(await res1.text());
     if (!d1._sign) throw new Error('登录失败：未能获取登录签名，请检查网络后重试');
 
-    const sess = {
+    const sess: any = {
       id: crypto.randomBytes(8).toString('hex'),
       createdAt: Date.now(),
       jar,
@@ -360,11 +376,11 @@ class MijiaLogin {
 
   /**
    * 提交 serviceLoginAuth2（可带验证码 captCode）。
-   * @returns {Promise<'ok'|'captcha'|'2fa'>} 'ok'=已拿到会话；'captcha'=需图形验证码；'2fa'=需二次安全验证
+   * @returns 'ok'=已拿到会话；'captcha'=需图形验证码；'2fa'=需二次安全验证
    * 成功写回 ssecurity/userId/location；需图形验证码写回 captchaUrl；需二次验证写回 notificationUrl。
    */
-  async _pwdAuth(sess, captchaCode) {
-    const body = { ...sess.auth };
+  async _pwdAuth(sess: any, captchaCode?: string): Promise<'ok' | 'captcha' | '2fa'> {
+    const body: any = { ...sess.auth };
     if (captchaCode) {
       // 小米 serviceLoginAuth2 实际认可的验证码字段名是 captCode
       // （见 Xiaomi-cloud-tokens-extractor / MiUnlockTool 的实现）；
@@ -411,7 +427,7 @@ class MijiaLogin {
    * 若直接用响应头拼 dataURL，<img> 无法识别会导致验证码显示为破损图标，
    * 因此这里按文件头魔数判断真实图片类型。
    */
-  async _fetchCaptcha(sess) {
+  async _fetchCaptcha(sess: any): Promise<string | null> {
     try {
       const url = /^https?:\/\//i.test(sess.captchaUrl) ? sess.captchaUrl : `${MI_ACCOUNT_ORIGIN}${sess.captchaUrl}`;
       const res = await fetch(url, {
@@ -430,10 +446,10 @@ class MijiaLogin {
 
   /**
    * 登录成功后：换取 serviceToken → 复用 node-mihome 会话 → 抓设备清单落盘。
-   * @param {string} [serviceToken] 已拿到的 serviceToken（二次验证收尾链路里直接取到）；
+   * @param serviceToken 已拿到的 serviceToken（二次验证收尾链路里直接取到）；
    *   缺省时按常规流程把 sess.location 交给 node-mihome 的 _loginStep3 去换。
    */
-  async _pwdFinish(sess, serviceToken) {
+  async _pwdFinish(sess: any, serviceToken?: string): Promise<any> {
     const cloud = this.mihome.miCloudProtocol;
     if (cloud.isLoggedIn) cloud.logout();
     if (!serviceToken) ({ serviceToken } = await cloud._loginStep3(sess.location));
@@ -459,7 +475,7 @@ class MijiaLogin {
   }
 
   /** 清理过期的验证码会话 */
-  _prunePwdSessions() {
+  _prunePwdSessions(): void {
     const now = Date.now();
     for (const [id, s] of this._pwdSessions) {
       if (now - (s.createdAt || 0) > PWD_SESSION_TTL) this._pwdSessions.delete(id);
@@ -487,7 +503,7 @@ class MijiaLogin {
   //       共用同一个 deviceId（本实现复用 sess.jar，天然一致）。
 
   /** 触发二次验证：建立会话 → 取验证方式 → 发送验证码 → 返回需要输入验证码 */
-  async _2faBegin(sess) {
+  async _2faBegin(sess: any): Promise<any> {
     try {
       await this._2faInit(sess);
     } catch (e) {
@@ -498,7 +514,7 @@ class MijiaLogin {
   }
 
   /** 步骤 1-2：GET authStart 建立会话 → GET /identity/list 读取顶层 flag 判定验证方式 */
-  async _2faInit(sess) {
+  async _2faInit(sess: any): Promise<void> {
     const startUrl = ensureAbsoluteUrl(sess.notificationUrl);
     const r1 = await this._identityGet(sess, startUrl);
     const t1 = await r1.text();
@@ -520,7 +536,7 @@ class MijiaLogin {
    * 步骤 3-4：触发并发送二次验证码。
    * icode 为「发送所需图形验证码」（小米风控要求时，由用户填图片码后重发）。
    */
-  async _2faSendTicket(sess, icode) {
+  async _2faSendTicket(sess: any, icode?: string): Promise<any> {
     const method = sess.identityMethod === 'phone' ? 'Phone' : 'Email';
     const flag = sess.identityFlag || (sess.identityMethod === 'phone' ? 4 : 8);
 
@@ -543,7 +559,7 @@ class MijiaLogin {
   }
 
   /** POST 表单到小米 identity 端点并解析；打印请求/响应便于排查 */
-  async _postIdentity(sess, url, body, tag) {
+  async _postIdentity(sess: any, url: string, body: string, tag: string): Promise<any> {
     const res = await fetch(url, {
       method: 'POST',
       timeout: 8000,
@@ -557,7 +573,7 @@ class MijiaLogin {
   }
 
   /** 处理发送结果：成功 → needCode；需图形验证码 → needCaptcha(twoFactor) */
-  async _2faAfterSend(sess, data) {
+  async _2faAfterSend(sess: any, data: any): Promise<any> {
     const code = Number(data && data.code);
     if (code === 0) {
       sess.stage = '2fa_code';
@@ -577,11 +593,11 @@ class MijiaLogin {
   }
 
   /** 提交二次验证码（短信/邮箱）；验证码错误保留会话以便重试 */
-  async _2faSubmit(sess, ticket) {
+  async _2faSubmit(sess: any, ticket: string): Promise<any> {
     let data;
     try {
       data = await this._2faVerify(sess, ticket);
-    } catch (e) {
+    } catch (e: any) {
       if (e && e.retryCode) {
         const via = sess.identityMethod === 'phone' ? '短信' : '邮箱';
         return { ok: false, needCode: true, sessionId: sess.id, method: sess.identityMethod, hint: `${via}验证码不正确，请重新输入` };
@@ -596,7 +612,7 @@ class MijiaLogin {
   }
 
   /** 步骤 6：POST verifyX?_dc=<毫秒>，code:0 且返回 location 视为通过，70014 为验证码错误 */
-  async _2faVerify(sess, ticket) {
+  async _2faVerify(sess: any, ticket: string): Promise<any> {
     const method = sess.identityMethod === 'phone' ? 'Phone' : 'Email';
     const flag = sess.identityFlag || (sess.identityMethod === 'phone' ? 4 : 8);
     const url = `${MI_ACCOUNT_ORIGIN}/identity/auth/verify${method}?_dc=${Date.now()}`;
@@ -604,7 +620,7 @@ class MijiaLogin {
     const data = await this._postIdentity(sess, url, body, 'verify');
     const code = Number(data && data.code);
     if (code === 0 && data && data.location) return data;
-    const err = new Error(xiaomiErrText(data));
+    const err: Error & { retryCode?: boolean } = new Error(xiaomiErrText(data));
     if (code === 70014) err.retryCode = true;
     throw err;
   }
@@ -620,7 +636,7 @@ class MijiaLogin {
    *      Location 指向 STS 地址（https://sts.api.io.mi.com/sts）
    *   3. GET STS 地址（逐跳吸收 cookie）→ 拿到 serviceToken
    */
-  async _2faFinish(sess) {
+  async _2faFinish(sess: any): Promise<any> {
     const finishLoc = ensureAbsoluteUrl(sess.identityLocation);
     if (!finishLoc) throw new Error('二次验证已完成，但未能获取登录会话，请重试或改用二维码登录。');
 
@@ -676,7 +692,7 @@ class MijiaLogin {
    * node-fetch 默认只暴露最后一跳的 set-cookie，会漏掉 302 上携带的 serviceToken，
    * 因此这里显式逐跳跟随。返回最后一跳的响应（到上限则返回 null）。
    */
-  async _getFollowing(sess, url, userAgent, maxHops = 6) {
+  async _getFollowing(sess: any, url: string, userAgent: string, maxHops = 6): Promise<any> {
     let cur = ensureAbsoluteUrl(url);
     for (let i = 0; i < maxHops; i++) {
       const res = await fetch(cur, {
@@ -697,7 +713,7 @@ class MijiaLogin {
   }
 
   /** 带会话 Cookie 的 GET（identity 端点用 UA_OTP，自动吸收 set-cookie） */
-  async _identityGet(sess, url, redirect = 'follow') {
+  async _identityGet(sess: any, url: string, redirect = 'follow'): Promise<any> {
     const res = await fetch(url, {
       timeout: 8000,
       redirect,
@@ -708,7 +724,7 @@ class MijiaLogin {
   }
 
   /** GET identity 端点并解析 JSON（打印请求/响应便于排查） */
-  async _identityGetJson(sess, url, tag) {
+  async _identityGetJson(sess: any, url: string, tag: string): Promise<any> {
     const res = await this._identityGet(sess, url);
     const text = await res.text();
     console.log('[2fa] %s url=%s status=%s body=%s', tag, url, res.status, String(text).slice(0, 500));
@@ -717,19 +733,17 @@ class MijiaLogin {
 
   // ---------- 二维码登录 ----------
 
-  /**
-   * @param {(info:{qrImageUrl:string,loginUrl:string})=>void} onQR 二维码就绪回调
-   */
-  async loginQR(onQR) {
+  /** @param onQR 二维码就绪回调 */
+  async loginQR(onQR?: (info: { qrImageUrl: string; loginUrl: string }) => void): Promise<any> {
     const api = await this._getApi();
-    await api.QRlogin(onQR ? (info) => onQR(info) : undefined);
+    await api.QRlogin(onQR ? (info: any) => onQR(info) : undefined);
     const devices = await this._fetchCloudDevices(api);
     this.saveDevices(devices);
     return { ok: true, source: 'qr', count: devices.length, devices };
   }
 
   /** 重新拉取设备清单：优先复用进程内的云端会话（密码登录 / 二维码登录），否则回落到本地清单 */
-  async refreshDevices() {
+  async refreshDevices(): Promise<any[]> {
     await this.ensurePwdSession();
     const cloud = this._mihome && this._mihome.miCloudProtocol;
     // 密码登录：会话（已落盘并在重启后恢复）在进程内可用，直接用 serviceToken 重新拉取
@@ -759,7 +773,7 @@ class MijiaLogin {
    * 把密码登录拿到的云端会话落盘（ssecurity / userId / serviceToken），供重启后恢复。
    * serviceToken 有效期通常数月，过期后请求会失败，此时重新登录即可。
    */
-  _savePwdSession() {
+  _savePwdSession(): void {
     const cloud = this._mihome && this._mihome.miCloudProtocol;
     if (!cloud || !cloud.serviceToken || !cloud.ssecurity) return;
     try {
@@ -776,7 +790,7 @@ class MijiaLogin {
   }
 
   /** 进程内无云端会话时，尝试用落盘的密码登录会话恢复；返回是否可用 */
-  async ensurePwdSession() {
+  async ensurePwdSession(): Promise<boolean> {
     const cloud = this.mihome.miCloudProtocol;
     this._useZhLocale();   // 无论新建还是恢复会话，都确保返回中文默认名
     if (cloud.isLoggedIn) return true;
@@ -791,7 +805,7 @@ class MijiaLogin {
     return true;
   }
 
-  async _fetchCloudDevices(api) {
+  async _fetchCloudDevices(api: any): Promise<any[]> {
     const [own, shared] = await Promise.all([
       api.getDevicesList().catch(() => []),
       api.getSharedDevicesList().catch(() => []),
@@ -801,20 +815,20 @@ class MijiaLogin {
 
   // ---------- 云端属性读写（MiioProvider 的云回退用） ----------
 
-  async cloudGet(props) {
+  async cloudGet(props: unknown): Promise<unknown> {
     const api = await this._getApi();
     if (!api.available) throw new Error('云端会话不可用');
     return api.getDevicesProp(props);
   }
 
-  async cloudSet(prop) {
+  async cloudSet(prop: unknown): Promise<unknown> {
     const api = await this._getApi();
     if (!api.available) throw new Error('云端会话不可用');
     return api.setDevicesProp(prop);
   }
 
   /** 云动作调用（如风扇手动上下左右），param = {did, siid, aiid, value?} */
-  async cloudAction(param) {
+  async cloudAction(param: unknown): Promise<unknown> {
     const api = await this._getApi();
     if (!api.available) throw new Error('云端会话不可用');
     return api.runAction(param);
@@ -822,7 +836,7 @@ class MijiaLogin {
 
   // ---------- 登出 ----------
 
-  async logout() {
+  async logout(): Promise<{ ok: boolean }> {
     try {
       if (this._mihome && this._mihome.miCloudProtocol.isLoggedIn) {
         this._mihome.miCloudProtocol.logout();
@@ -844,7 +858,7 @@ class MijiaLogin {
  * 把抛出的错误翻译成用户能看懂的中文提示。
  * 新流程本身抛出的已是中文化、有意义的错误，这里只兜底网络类错误。
  */
-function friendlyLoginError(e) {
+function friendlyLoginError(e: any): string {
   const msg = (e && e.message) ? String(e.message) : String(e || '');
   if (/ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|timeout|network|fetch failed/i.test(msg)) {
     return '网络连接失败，请检查网络后重试。';
@@ -853,7 +867,7 @@ function friendlyLoginError(e) {
 }
 
 /** 剥离小米云响应体前缀 `&&&START&&&` 后解析 JSON（部分端点为 `&&&START&&&{...}`） */
-function parseXiaomiJson(text) {
+function parseXiaomiJson(text: any): any {
   if (!text) return {};
   let s = String(text).trim();
   const marker = '&&&START&&&';
@@ -867,7 +881,7 @@ function parseXiaomiJson(text) {
 }
 
 /** 补全小米账号相对地址为绝对地址 */
-function ensureAbsoluteUrl(url) {
+function ensureAbsoluteUrl(url: any): string {
   const s = String(url || '');
   if (!s) return s;
   if (/^https?:\/\//i.test(s)) return s;
@@ -875,7 +889,7 @@ function ensureAbsoluteUrl(url) {
 }
 
 /** authStart → /identity/list（带 sid/supportedMask/_locale/context），用于查询可用的二次验证方式 */
-function identityListUrl(notificationUrl) {
+function identityListUrl(notificationUrl: any): string {
   let sid = 'xiaomiio';
   let context = '';
   try {
@@ -887,7 +901,7 @@ function identityListUrl(notificationUrl) {
 }
 
 /** 组装请求 Cookie 头（跳过空值） */
-function cookieHeader(jar) {
+function cookieHeader(jar: any): string {
   return Object.entries(jar || {})
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => `${k}=${v}`)
@@ -895,7 +909,7 @@ function cookieHeader(jar) {
 }
 
 /** 按文件头魔数判断图片真实类型；无法识别返回 null */
-function sniffImageMime(buf) {
+function sniffImageMime(buf: any): string | null {
   if (!buf || buf.length < 4) return null;
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
   if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'image/png';
@@ -906,7 +920,7 @@ function sniffImageMime(buf) {
 }
 
 /** 吸收响应 set-cookie 里的 name=value 到 jar（小米账号风控依赖 deviceId 等 cookie） */
-function absorbSetCookie(jar, res) {
+function absorbSetCookie(jar: any, res: any): void {
   try {
     const raw = (res.headers.raw && res.headers.raw()['set-cookie']) || [];
     for (const line of raw) {
@@ -921,7 +935,7 @@ function absorbSetCookie(jar, res) {
 }
 
 /** 把小米账号接口返回的错误对象翻译成中文提示 */
-function xiaomiErrText(data) {
+function xiaomiErrText(data: any): string {
   const d = data || {};
   const desc = String(d.desc || d.description || '').trim();
   const code = Number(d.code);
@@ -943,9 +957,9 @@ function xiaomiErrText(data) {
  * 归一化设备：兼容 node-mihome(/home/device_list) 与
  * @zythum02(/home/home_device_list) 两种云端返回的字段差异。
  */
-function normalizeDevices(list) {
-  const out = [];
-  const seen = new Set();
+function normalizeDevices(list: any[]): any[] {
+  const out: any[] = [];
+  const seen = new Set<string>();
   for (const d of list || []) {
     if (!d) continue;
     const id = String(d.did ?? d.id ?? '').trim();
@@ -967,4 +981,4 @@ function normalizeDevices(list) {
   return out;
 }
 
-module.exports = { MijiaLogin, normalizeDevices };
+export { MijiaLogin, normalizeDevices };

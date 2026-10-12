@@ -1,9 +1,15 @@
-'use strict';
-
-const EventEmitter = require('events');
-const path = require('path');
-const os = require('os');
-const { getSpec, analyze } = require('./miot-spec');
+import { EventEmitter } from 'events';
+import * as path from 'path';
+import * as os from 'os';
+import { getSpec, analyze } from './miot-spec';
+import type {
+  Device,
+  DeviceAction,
+  DeviceProperty,
+  DeviceRecord,
+  DeviceType,
+} from '../shared/types';
+import type { MijiaLogin } from './mijia-login';
 
 /**
  * 设备数据源（可插拔）。
@@ -19,13 +25,41 @@ const { getSpec, analyze } = require('./miot-spec');
  *      「局域网 miIO 直连优先，云端回退」。
  *
  * 关于「所有设备都支持」：
- *   型号不写死。运行时按 model 去 miot-spec 拉规格（src/miot-spec.js），
+ *   型号不写死。运行时按 model 去 miot-spec 拉规格（src/miot-spec.ts），
  *   再按属性名（on / brightness / temperature ...）自动映射读写。
  *   现实边界：Wi-Fi 设备可局域网直连；ZigBee 子设备需经网关、BLE 设备
  *   不支持局域网，这两类会自动回退到云端。
  */
 
+/** 单台设备的绑定信息（id -> 绑定），MiioProvider 内部读写用 */
+interface Bind {
+  id: string;
+  did: string;
+  name: string;
+  model: string;
+  ip?: string;
+  token?: string;
+  parentId?: string;
+  type: DeviceType;
+  props: Record<string, DeviceProperty>;
+  reads: { siid: number; piid: number }[];
+  actions: Record<string, DeviceAction>;
+  /** Yeelight 系灯具标注的传统局域网协议；其余为 null */
+  lanProto: string | null;
+}
+
+/** createProvider / MiioProvider 的构造参数 */
+interface ProviderOptions {
+  dataDir: string;
+  login: MijiaLogin;
+  homeId?: string;
+}
+
 class MockProvider extends EventEmitter {
+  source: string;
+  devices: any[];
+  timer: ReturnType<typeof setInterval> | null;
+
   constructor() {
     super();
     this.source = 'mock';
@@ -177,7 +211,7 @@ class MockProvider extends EventEmitter {
   }
 
   stop() {
-    clearInterval(this.timer);
+    clearInterval(this.timer ?? undefined);
   }
 
   tick() {
@@ -200,7 +234,7 @@ class MockProvider extends EventEmitter {
     return this.devices.map((d) => ({ ...d }));
   }
 
-  setPower(id, on) {
+  setPower(id: string, on: boolean) {
     const d = this.devices.find((x) => x.id === id);
     if (!d || !['plug', 'light', 'fan', 'aircon', 'purifier'].includes(d.type)) return;
     d.on = !!on;
@@ -209,7 +243,7 @@ class MockProvider extends EventEmitter {
   }
 
   /** 通用字段写入（枚举/布尔/数值），用于空调/风扇/净饮机的多维调节 */
-  setField(id, field, value) {
+  setField(id: string, field: string, value: any) {
     const d = this.devices.find((x) => x.id === id);
     if (!d) return;
     d[field] = value;
@@ -225,7 +259,7 @@ class MockProvider extends EventEmitter {
     this.emit('update', this.snapshot());
   }
 
-  setBrightness(id, value) {
+  setBrightness(id: string, value: number) {
     const d = this.devices.find((x) => x.id === id);
     if (!d || d.type !== 'light') return;
     d.brightness = clamp(Math.round(value), 1, 100);
@@ -233,14 +267,14 @@ class MockProvider extends EventEmitter {
     this.emit('update', this.snapshot());
   }
 
-  setColorTemperature(id, value) {
+  setColorTemperature(id: string, value: number) {
     const d = this.devices.find((x) => x.id === id);
     if (!d || d.type !== 'light' || !d.colorTempRange) return;
     d.colorTemperature = clamp(Math.round(value), d.colorTempRange[0], d.colorTempRange[1]);
     this.emit('update', this.snapshot());
   }
 
-  setSpeed(id, value) {
+  setSpeed(id: string, value: number) {
     const d = this.devices.find((x) => x.id === id);
     if (!d || d.type !== 'fan') return;
     const [min, max] = d.speedRange || [0, 100];
@@ -250,7 +284,7 @@ class MockProvider extends EventEmitter {
   }
 
   /** 手动风向（动作）：mock 下只记录最近一次调节，便于界面反馈 */
-  callAction(id, key) {
+  callAction(id: string, key: string) {
     const d = this.devices.find((x) => x.id === id);
     if (!d) return;
     d.lastManualDir = key;
@@ -267,8 +301,20 @@ class MockProvider extends EventEmitter {
  *   - 「运行阶段」就是本类：直接读那份清单做局域网 miIO 直连，无需再次登录。
  */
 class MiioProvider extends EventEmitter {
-  /** @param {{dataDir:string, login:import('./mijia-login').MijiaLogin, homeId?:string}} opts */
-  constructor({ dataDir, login, homeId }) {
+  source: string;
+  dataDir: string;
+  login: MijiaLogin;
+  homeId: string;
+  specCacheDir: string;
+  devices: Device[];
+  binds: Map<string, Bind>;
+  timer: ReturnType<typeof setInterval> | null;
+  pollMs: number;
+  _polling: boolean;
+  _miioReady: boolean;
+  _localSubnets: Set<string>;
+
+  constructor({ dataDir, login, homeId }: ProviderOptions) {
     super();
     this.source = 'miio';
     this.dataDir = dataDir;
@@ -286,12 +332,12 @@ class MiioProvider extends EventEmitter {
     this._localSubnets = hostSubnets();
   }
 
-  get mihome() {
+  get mihome(): any {
     return require('node-mihome');
   }
 
   /** 读取清单 + 逐台解析规格，构建绑定。返回 this 以便链式调用。 */
-  async build() {
+  async build(): Promise<this> {
     // 无二维码会话时，尝试恢复密码登录的云端会话（落盘在 cloud/session.json），
     // 以便跨网段设备仍能走云端回退读取状态，而不是被误判为离线。
     try { await this.login.ensurePwdSession(); } catch { /* 无会话则仅靠局域网直连 */ }
@@ -300,21 +346,21 @@ class MiioProvider extends EventEmitter {
     // 注意：node-mihome 的 /home/device_list（密码登录）不返回 home_id，此时清单里所有设备的
     // homeId 都是空串，家庭筛选无从判断——若仍按 homeId 过滤会把设备全部滤掉、界面整片空白，
     // 因此当清单中没有任何设备带 homeId 时直接展示全部。
-    if (this.homeId && list.some((d) => String(d.homeId || '') !== '')) {
-      list = list.filter((d) => String(d.homeId || '') === this.homeId);
+    if (this.homeId && list.some((d: DeviceRecord) => String(d.homeId || '') !== '')) {
+      list = list.filter((d: DeviceRecord) => String(d.homeId || '') === this.homeId);
     }
     for (const d of list) {
       const info = await getSpec(d.model, this.specCacheDir);
       const { type, props, reads, actions } = analyze(info, d.model);
       // 从规格里取「取值区间」或「枚举项」，供渲染层滑杆使用
-      const rangeOf = (f) => {
+      const rangeOf = (f: string): [number, number] | null => {
         const p = props[f];
         if (!p) return null;
         if (p.range && p.range.length >= 2) return [p.range[0], p.range[1]];
         if (p.list && p.list.length) return [0, p.list.length - 1];
         return null;
       };
-      const listOf = (f) => (props[f] && props[f].list) || null;
+      const listOf = (f: string) => (props[f] && props[f].list) || null;
       this.devices.push({
         id: d.id,
         type,
@@ -418,25 +464,25 @@ class MiioProvider extends EventEmitter {
   }
 
   stop() {
-    clearInterval(this.timer);
+    clearInterval(this.timer ?? undefined);
     if (this._miioReady) {
       try { this.mihome.miioProtocol.destroy(); } catch { /* ignore */ }
     }
   }
 
-  snapshot() {
+  snapshot(): Device[] {
     return this.devices.map((d) => ({ ...d }));
   }
 
   /* ---------------- 控制 ---------------- */
 
-  setPower(id, on) {
+  setPower(id: string, on: boolean) {
     const b = this.binds.get(id);
     if (!b || !this._writable(b, 'on')) return;
     this._write(b, 'on', !!on);
   }
 
-  setBrightness(id, value) {
+  setBrightness(id: string, value: number) {
     const b = this.binds.get(id);
     if (!b || !this._writable(b, 'brightness')) return;
     const v = clamp(Math.round(value), 1, 100);
@@ -445,7 +491,7 @@ class MiioProvider extends EventEmitter {
     if (dev && v > 0) dev.on = true;
   }
 
-  setColorTemperature(id, value) {
+  setColorTemperature(id: string, value: number) {
     const b = this.binds.get(id);
     if (!b || !this._writable(b, 'colorTemperature')) return;
     const p = b.props.colorTemperature;
@@ -454,7 +500,7 @@ class MiioProvider extends EventEmitter {
     this._write(b, 'colorTemperature', v);
   }
 
-  setSpeed(id, value) {
+  setSpeed(id: string, value: number) {
     const b = this.binds.get(id);
     if (!b || !this._writable(b, 'speed')) return;
     const p = b.props.speed;
@@ -470,7 +516,7 @@ class MiioProvider extends EventEmitter {
    * 通用字段写入：空调模式/温度/摆风、风扇双向摆风与自然风、净饮机制冰开关等。
    * 布尔直接透传；带 range 的数值做区间裁剪；枚举按调用方给出的原始值透传。
    */
-  setField(id, field, value) {
+  setField(id: string, field: string, value: any) {
     const b = this.binds.get(id);
     if (!b || !this._writable(b, field)) return;
     const p = b.props[field];
@@ -488,15 +534,15 @@ class MiioProvider extends EventEmitter {
    * 动作调用（如风扇手动上下左右）：米家规格里方向调节是 action，需按 siid/aiid 调用。
    * node-mihome 未提供通用 action 协议，统一走云端 runAction。
    */
-  async callAction(id, key) {
+  async callAction(id: string, key: string) {
     const b = this.binds.get(id);
     const act = b && b.actions && b.actions[key];
     if (!act) return;
     const dev = this._dev(id);
     try {
-      await this._cloudAction(b, { did: b.did, siid: act.siid, aiid: act.aiid });
+      await this._cloudAction(b as Bind, { did: (b as Bind).did, siid: act.siid, aiid: act.aiid });
       if (dev) dev.online = true;
-    } catch (e) {
+    } catch (e: any) {
       // 与轮询一致：仅在云端「明确」判定离线时才置离线，避免动作偶发失败把在线设备误判为离线
       if (dev && e && e.deviceOffline) dev.online = false;
     }
@@ -516,7 +562,7 @@ class MiioProvider extends EventEmitter {
     }
   }
 
-  async _pollDevice(dev) {
+  async _pollDevice(dev: Device) {
     const b = this.binds.get(dev.id);
     if (!b || !b.reads.length) return;   // 无规格可读：保持云端清单给出的在线状态
     const params = b.reads.map((r) => ({ did: b.did, siid: r.siid, piid: r.piid }));
@@ -543,13 +589,13 @@ class MiioProvider extends EventEmitter {
 
     // 2) 云端回退（需有可用云端会话：密码登录会话或二维码会话），由云端给出权威判定
     const cloudUsable = this.mihome.miCloudProtocol.isLoggedIn
-      || (this.login.hasCloudAuth && await this.login.hasCloudAuth());
+      || await this.login.hasCloudAuth();
     if (cloudUsable) {
       try {
         const res = await this._cloudGet(b, params);
         this._applyResults(dev, b, res);
         dev.online = true;
-      } catch (e) {
+      } catch (e: any) {
         // 仅当云端「明确」判定设备离线时才置离线（如路由器 3040「已离线」、-2「device offline」）；
         // 应答超时 / BLE 不支持 RPC / 会话异常等一律保持原状态，避免把在线设备误判为离线。
         if (e && e.deviceOffline) dev.online = false;
@@ -559,7 +605,7 @@ class MiioProvider extends EventEmitter {
 
   /* ---------------- 读写底层 ---------------- */
 
-  async _write(b, field, value) {
+  async _write(b: Bind, field: string, value: any) {
     const p = b.props[field];
     if (!p) return;
     const dev = this._dev(b.id);
@@ -594,7 +640,7 @@ class MiioProvider extends EventEmitter {
     try {
       await this._cloudSet(b, { did: b.did, siid: p.siid, piid: p.piid, value });
       if (dev) { dev.online = true; this._setField(dev, field, value, b); }
-    } catch (e) {
+    } catch (e: any) {
       // 与轮询一致：仅在云端「明确」判定离线时才置离线，避免写入偶发失败把在线设备误判为离线
       if (dev && e && e.deviceOffline) dev.online = false;
     }
@@ -606,7 +652,7 @@ class MiioProvider extends EventEmitter {
    * 请求 ['power','bright','ct'] → ['off', '100', '3200']。
    * 仅灯类使用；非灯类实现由调用方保证不进入本方法。
    */
-  async _yeelightRead(b, dev) {
+  async _yeelightRead(b: Bind, dev: Device) {
     const res = await this.mihome.miioProtocol.send(
       b.ip, 'get_prop', ['power', 'bright', 'ct'], { retries: 0 },
     );
@@ -618,8 +664,8 @@ class MiioProvider extends EventEmitter {
   }
 
   /** Yeelight 传统局域网写：on → set_power / brightness → set_bright / colorTemperature → set_ct_abx */
-  async _yeelightWrite(b, field, value) {
-    const send = (method, params) =>
+  async _yeelightWrite(b: Bind, field: string, value: any) {
+    const send = (method: string, params: any[]) =>
       this.mihome.miioProtocol.send(b.ip, method, params, { retries: 0 });
     if (field === 'on') return send('set_power', [value ? 'on' : 'off', 'smooth', 500]);
     if (field === 'brightness') return send('set_bright', [Math.round(value), 'smooth', 500]);
@@ -636,11 +682,11 @@ class MiioProvider extends EventEmitter {
    * 文案含「离线/offline」）时才抛带 deviceOffline 的错误；应答超时、BLE 不支持 RPC、
    * 会话异常等情况抛普通错误，交由调用方保持原有在线状态，避免把在线设备误判为离线。
    */
-  async _cloudGet(b, params) {
+  async _cloudGet(b: Bind, params: { did: string; siid: number; piid: number }[]) {
     if (await this.login.hasCloudAuth()) {
       const res = await this.login.cloudGet(params);
       const arr = Array.isArray(res) ? res : [res];
-      if (!arr.some((r) => r && Number(r.code) === 0)) throw new Error('云端未返回有效属性');
+      if (!arr.some((r: any) => r && Number(r.code) === 0)) throw new Error('云端未返回有效属性');
       return arr;
     }
     const cloud = this.mihome.miCloudProtocol;
@@ -658,7 +704,7 @@ class MiioProvider extends EventEmitter {
     const msg = [data && (data.message || data.msg), data && data.error && data.error.message]
       .filter(Boolean).join(' ');
     if (code === 3040 || code === -2 || /离线|offline/i.test(msg)) {
-      const err = new Error('设备离线');
+      const err: Error & { deviceOffline?: boolean } = new Error('设备离线');
       err.deviceOffline = true;
       throw err;
     }
@@ -670,7 +716,7 @@ class MiioProvider extends EventEmitter {
    * 与 _cloudGet 同理：蓝牙（BLE，did 形如 blt.*）设备不支持 /home/rpc 的 RPC，
    * 需改用 MIoT-spec 云端点 /miotspec/prop/set；其余设备沿用 /home/rpc。
    */
-  async _cloudSet(b, param) {
+  async _cloudSet(b: Bind, param: { did: string; siid: number; piid: number; value: any }) {
     if (await this.login.hasCloudAuth()) {
       return this.login.cloudSet(param);
     }
@@ -688,7 +734,7 @@ class MiioProvider extends EventEmitter {
    * 否则走 node-mihome 密码会话的 MIoT 云端点 /miotspec/action。
    * 注意该端点的 params 必须是「对象」而非数组，数组会返回 -8「data type not valid」。
    */
-  async _cloudAction(b, param) {
+  async _cloudAction(b: Bind, param: { did: string; siid: number; aiid: number }) {
     if (await this.login.hasCloudAuth()) {
       return this.login.cloudAction(param);
     }
@@ -704,26 +750,26 @@ class MiioProvider extends EventEmitter {
 
   /* ---------------- 工具 ---------------- */
 
-  _dev(id) {
+  _dev(id: string): Device | undefined {
     return this.devices.find((x) => x.id === id);
   }
 
-  _lanUsable(b) {
+  _lanUsable(b: Bind) {
     return !!(b.ip && b.token);
   }
 
   /** 设备 IP 是否与本机网卡处于同一 /24 网段（IPv4） */
-  _sameSubnet(ip) {
+  _sameSubnet(ip?: string) {
     const p = ipv4Prefix(ip);
     return !!p && this._localSubnets.has(p);
   }
 
-  _writable(b, field) {
+  _writable(b: Bind, field: string) {
     const p = b.props[field];
     return !!p && String(p.rw || '').includes('w');
   }
 
-  _applyResults(dev, b, results) {
+  _applyResults(dev: Device, b: Bind, results: any) {
     for (const r of results || []) {
       if (!r || r.code !== 0) continue;
       for (const [field, p] of Object.entries(b.props)) {
@@ -735,14 +781,14 @@ class MiioProvider extends EventEmitter {
   }
 
   /** 从规格 value-list 里取某原始值的描述文案 */
-  _labelOf(b, field, value) {
+  _labelOf(b: Bind, field: string, value: any) {
     const p = b && b.props[field];
     if (!p || !p.list) return '';
     const hit = p.list.find((it) => String(it.value) === String(value));
     return hit ? hit.description : '';
   }
 
-  _setField(dev, field, value, b) {
+  _setField(dev: Device, field: string, value: any, b: Bind) {
     switch (field) {
       case 'on': dev.on = !!value; break;
       case 'brightness': dev.brightness = clamp(Math.round(Number(value) || 0), 0, 100); break;
@@ -788,32 +834,31 @@ class MiioProvider extends EventEmitter {
 /**
  * 按是否存在已登录的设备清单选择实现。
  * 有清单（登录过）→ MiioProvider 局域网直连；否则 → MockProvider 演示数据。
- * @param {{dataDir?:string, login?:object, homeId?:string}} [opts]
  */
-async function createProvider(opts = {}) {
+async function createProvider(opts: Partial<ProviderOptions> = {}): Promise<MockProvider | MiioProvider> {
   const { dataDir, login, homeId } = opts;
   if (login && login.hasDevices() && login.loadDevices().length) {
-    const p = new MiioProvider({ dataDir, login, homeId });
+    const p = new MiioProvider({ dataDir: dataDir as string, login, homeId });
     await p.build();
     return p;
   }
   return new MockProvider();
 }
 
-const rnd = (min, max) => Math.random() * (max - min) + min;
-const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
-const round1 = (v) => Math.round(v * 10) / 10;
-const round2 = (v) => Math.round(v * 100) / 100;
+const rnd = (min: number, max: number) => Math.random() * (max - min) + min;
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+const round1 = (v: number) => Math.round(v * 10) / 10;
+const round2 = (v: number) => Math.round(v * 100) / 100;
 
 /** 取 IPv4 的 /24 前缀（如 "192.168.0.5" → "192.168.0"）；非 IPv4 返回 '' */
-function ipv4Prefix(ip) {
+function ipv4Prefix(ip?: string): string {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(String(ip || '').trim());
   return m ? `${m[1]}.${m[2]}.${m[3]}` : '';
 }
 
 /** 本机所有非回环 IPv4 网卡的 /24 前缀集合 */
-function hostSubnets() {
-  const set = new Set();
+function hostSubnets(): Set<string> {
+  const set = new Set<string>();
   const nics = os.networkInterfaces();
   for (const list of Object.values(nics)) {
     for (const ni of list || []) {
@@ -826,4 +871,4 @@ function hostSubnets() {
   return set;
 }
 
-module.exports = { createProvider, MockProvider, MiioProvider };
+export { createProvider, MockProvider, MiioProvider };

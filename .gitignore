@@ -1,7 +1,9 @@
 node_modules/
+build/
 dist/
 release/
 *.log
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
 .env
