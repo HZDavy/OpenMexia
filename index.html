@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenMijia · 开源米家，多平台一致体验</title>
-<meta name="description" content="OpenMijia：开源米家客户端，多平台一致的米家设备体验。米家 App 扫码登录，灯、风扇、空调、传感器实时状态卡片化展示与控制。Windows 已发布，macOS、iOS、Android、Linux、鸿蒙规划中。免费开源。">
+<meta name="description" content="OpenMijia：开源米家客户端，多平台一致的米家设备体验。米家 App 扫码登录，灯、风扇、空调、传感器实时状态卡片化展示与控制。Windows 已发布，macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 规划中。免费开源。">
 <link rel="icon" href="docs/favicon.svg" type="image/svg+xml">
 <style>
 :root{
@@ -130,10 +130,10 @@ section{padding:96px 0}
 .tile-big .tile-copy{position:static;padding:30px 34px 0;max-width:440px}
 .tile h3{font-size:23px;font-weight:700;letter-spacing:-.015em;margin-bottom:10px}
 .tile .d{font-size:14px;color:var(--ink-2);line-height:1.65}
-.tile-big .imgwrap{position:static;flex:1;display:flex;align-items:flex-end;margin:18px 20px 20px;min-height:0}
+.tile-big .imgwrap{position:static;flex:1;display:flex;align-items:flex-start;margin:22px 20px 20px;min-height:0;overflow:hidden}
 .tile-big .imgwrap .win{width:100%;zoom:.93}
 .tile-tall .tile-copy{padding:40px 38px 0}
-.tile-tall .imgwrap{position:absolute;left:0;right:0;bottom:0;height:74%;display:flex;align-items:flex-start;justify-content:center;overflow:hidden}
+.tile-tall .imgwrap{position:absolute;left:0;right:0;bottom:0;height:70%;display:flex;align-items:flex-start;justify-content:center;overflow:hidden}
 .tile-tall .imgwrap .win-narrow{zoom:.78}
 .tile-sm .ic{width:46px;height:46px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--green-deep);margin-bottom:auto}
 .tile-sm .ic svg{width:23px;height:23px}
@@ -219,7 +219,14 @@ section{padding:96px 0}
 .devs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);overflow:hidden}
 .dev{background:var(--dark);padding:40px 34px;display:flex;flex-direction:column;gap:14px;transition:background .2s}
 .dev:hover{background:#161a18}
-.dev .ic{width:42px;height:42px;border-radius:11px;background:rgba(26,200,134,.13);color:var(--green);display:flex;align-items:center;justify-content:center}
+.dev .ic{width:42px;height:42px;border-radius:11px;background:var(--cs,rgba(255,255,255,.09));color:var(--c,#9a9a9a);display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s}
+.dev.d-light{--c:#ffc24b;--cs:rgba(255,194,75,.16)}
+.dev.d-fan{--c:#19cd90;--cs:rgba(25,205,144,.16)}
+.dev.d-aircon{--c:#7aa2ff;--cs:rgba(122,162,255,.16)}
+.dev.d-sensor{--c:#38bdf8;--cs:rgba(56,189,248,.16)}
+.dev.d-purifier{--c:#43c9e6;--cs:rgba(67,201,230,.16)}
+.dev.d-plug{--c:#ff7a3d;--cs:rgba(255,122,61,.16)}
+.dev.d-other,.dev.d-gateway{--c:#9a9a9a;--cs:rgba(255,255,255,.09)}
 .dev .ic svg{width:21px;height:21px}
 .dev h3{font-size:16.5px;font-weight:600}
 .dev p{font-size:13px;color:rgba(255,255,255,.45);line-height:1.6}
@@ -339,8 +346,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="hidden-en">Your Mi Home,<br>consistent everywhere</span>
       </h1>
       <p class="sub">
-        <span class="hidden-zh">OpenMijia 是开源的米家客户端。米家 App 扫码登录后，灯、风扇、空调与传感器在任何设备上都是同一套卡片、同一份实时状态。Windows 版现已可用，macOS、iOS、Android、Linux、鸿蒙即将到来。</span>
-        <span class="hidden-en">OpenMijia is an open-source Mi Home client. After one QR sign-in, lights, fans, ACs and sensors appear as the same live cards on every device. Windows is available now — macOS, iOS, Android, Linux and HarmonyOS are on the way.</span>
+        <span class="hidden-zh">OpenMijia 是开源的米家客户端。米家 App 扫码登录后，灯、风扇、空调与传感器在任何设备上都是同一套卡片、同一份实时状态。Windows 版现已可用，macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 即将到来。</span>
+        <span class="hidden-en">OpenMijia is an open-source Mi Home client. After one QR sign-in, lights, fans, ACs and sensors appear as the same live cards on every device. Windows is available now — macOS, iOS, Android, watchOS, Wear OS, Linux and HarmonyOS are on the way.</span>
       </p>
       <div class="hero-acts">
         <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMijia/releases/latest" target="_blank" rel="noopener">
@@ -351,8 +358,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         </a>
       </div>
       <div class="hero-meta">
-        <span class="hidden-zh"><b>Windows</b> 已发布 · macOS / iOS / Android / Linux / 鸿蒙 规划中</span>
-        <span class="hidden-en"><b>Windows</b> out now · macOS, iOS, Android, Linux &amp; HarmonyOS planned</span>
+        <span class="hidden-zh"><b>Windows</b> 已发布 · macOS / iOS / Android / watchOS / Wear OS / Linux / HarmonyOS 规划中</span>
+        <span class="hidden-en"><b>Windows</b> out now · macOS, iOS, Android, watchOS, Wear OS, Linux &amp; HarmonyOS planned</span>
         <span class="hidden-zh">免费开源 · AGPL-3.0</span><span class="hidden-en">Free &amp; open source · AGPL-3.0</span>
       </div>
     </div>
@@ -426,13 +433,23 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <p><span class="hidden-zh">手机与平板，复用同一设备核心</span><span class="hidden-en">Phones &amp; tablets, sharing one device core</span></p>
       </div>
       <div class="plat">
+        <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M16.498 5.03q0 .072-.005.143A3 3 0 0 1 18.5 8.005v1h1v4h-1v3a3 3 0 0 1-2.005 2.83q.005.085.005.17a3 3 0 0 1-3 3h-4a3 3 0 0 1-2.995-3.17a3 3 0 0 1-2.005-2.83v-8a3 3 0 0 1 2.003-2.83a3 3 0 0 1 3.01-3.18l4 .02a3 3 0 0 1 2.984 3.015m-8-.025h6a1 1 0 0 0-.995-.99l-4-.02a1 1 0 0 0-1.005.995zm7.207 2.021l-4.22-.021H7.5a1 1 0 0 0-1 1v8a1 1 0 0 0 .999 1H15.5a1 1 0 0 0 .999-1v-8a1 1 0 0 0-.795-.979M8.5 19.005a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1z"/></svg></div>
+        <h3>watchOS <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
+        <p><span class="hidden-zh">Apple Watch 腕上控制，抬眼即达</span><span class="hidden-en">Wrist-side control on Apple Watch</span></p>
+      </div>
+      <div class="plat">
+        <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.416 21.135a2.53 2.53 0 0 1-2.313-1.502L.219 6.42a2.53 2.53 0 0 1 4.623-2.06l5.883 13.213a2.53 2.53 0 0 1-1.282 3.341a2.5 2.5 0 0 1-1.027.22m7.195.036a2.33 2.33 0 0 1-2.127-1.381L7.39 6.102a2.327 2.327 0 0 1 4.251-1.894l6.094 13.69a2.327 2.327 0 0 1-1.178 3.072a2.3 2.3 0 0 1-.946.201M24 5.195a2.327 2.327 0 0 1-2.327 2.327a2.327 2.327 0 0 1-2.327-2.327a2.327 2.327 0 0 1 2.327-2.327A2.327 2.327 0 0 1 24 5.195m-2.612 5.116a2.49 2.49 0 0 1-2.49 2.49a2.49 2.49 0 0 1-2.488-2.49a2.49 2.49 0 0 1 2.489-2.49a2.49 2.49 0 0 1 2.49 2.49"/></svg></div>
+        <h3>Wear OS <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
+        <p><span class="hidden-zh">Android 手表腕上控制，同一套设备核心</span><span class="hidden-en">Wrist-side control on Wear OS, same device core</span></p>
+      </div>
+      <div class="plat">
         <div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c-1.9 0-3.1 1.5-3.1 3.4 0 1.1.2 1.9.2 2.6 0 1.4-2.7 3.1-3.6 5.2-.8 1.8-.3 3.4.6 4.2"/><path d="M12 3.2c1.9 0 3.1 1.5 3.1 3.4 0 1.1-.2 1.9-.2 2.6 0 1.4 2.7 3.1 3.6 5.2.8 1.8.3 3.4-.6 4.2"/><path d="M9.3 20.7c1.7.7 3.7.7 5.4 0"/><circle cx="10.6" cy="6.7" r=".55" fill="currentColor" stroke="none"/><circle cx="13.4" cy="6.7" r=".55" fill="currentColor" stroke="none"/><path d="M11.3 8.5h1.4l-.7 1z" fill="currentColor" stroke="none"/></svg></div>
         <h3>Linux <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
         <p><span class="hidden-zh">桌面端同样基于 Electron，与 Windows 共用一套代码</span><span class="hidden-en">Also Electron-based, sharing one codebase with Windows</span></p>
       </div>
       <div class="plat">
-        <div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 4.6 7.3v9.4L12 20.8l7.4-4.1V7.3z"/><path d="M12 12v8.8"/><path d="M12 12 4.6 7.3"/><path d="M12 12l7.4-4.7"/></svg></div>
-        <h3><span class="hidden-zh">鸿蒙</span><span class="hidden-en">HarmonyOS</span> <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
+        <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.861 0H3.59v3.548h3.861V0H9.19v8.883H7.458V5.136H3.59v3.746H1.858Zm11.993 0h1.706l2.809 4.7h.1L21.278 0h1.719v8.883h-1.719v-4.38l.1-1.489h-.1l-2.334 3.983h-1.039l-2.347-3.983h-.1l.1 1.489v4.38h-1.706Zm4.702 21.648a4 4 0 0 1-1.154-.161a3.4 3.4 0 0 1-1.01-.484a3.5 3.5 0 0 1-.8-.782a3.8 3.8 0 0 1-.538-1.092l1.666-.62a2.4 2.4 0 0 0 .643 1.116a1.68 1.68 0 0 0 1.207.434a2.2 2.2 0 0 0 .524-.062a1.8 1.8 0 0 0 .459-.2a1 1 0 0 0 .328-.335a.9.9 0 0 0 .118-.459a1.05 1.05 0 0 0-.092-.447a1 1 0 0 0-.315-.373a2.5 2.5 0 0 0-.564-.335a8 8 0 0 0-.852-.335l-.577-.2a5 5 0 0 1-.774-.335a3.4 3.4 0 0 1-.7-.509a2.7 2.7 0 0 1-.525-.695a2.1 2.1 0 0 1-.2-.918a2.25 2.25 0 0 1 .21-.968a2.4 2.4 0 0 1 .616-.794a2.9 2.9 0 0 1 .957-.533a3.7 3.7 0 0 1 1.246-.2a3.6 3.6 0 0 1 1.22.186a2.8 2.8 0 0 1 .879.459a2.5 2.5 0 0 1 .59.608a3 3 0 0 1 .328.633l-1.56.62a1.55 1.55 0 0 0-.485-.67a1.4 1.4 0 0 0-.944-.3a1.66 1.66 0 0 0-.957.261a.75.75 0 0 0-.38.658a.84.84 0 0 0 .367.682a4.2 4.2 0 0 0 1.167.534l.59.186a6.3 6.3 0 0 1 1.023.434a3 3 0 0 1 .8.57a2.2 2.2 0 0 1 .511.769a2.4 2.4 0 0 1 .183.98a2.3 2.3 0 0 1-.3 1.2a2.6 2.6 0 0 1-.747.819a3.4 3.4 0 0 1-1.036.484a4.2 4.2 0 0 1-1.128.161Zm-13.028 0a4.44 4.44 0 0 1-3.23-1.34a4.8 4.8 0 0 1-.956-1.476a4.9 4.9 0 0 1-.339-1.824a4.8 4.8 0 0 1 .339-1.811a4.6 4.6 0 0 1 .956-1.477a4.4 4.4 0 0 1 1.427-.992a4.5 4.5 0 0 1 1.8-.36a4.4 4.4 0 0 1 1.79.36a4.3 4.3 0 0 1 1.44.992a4.4 4.4 0 0 1 .944 1.477a4.7 4.7 0 0 1 .351 1.811a4.8 4.8 0 0 1-.351 1.824a4.6 4.6 0 0 1-.944 1.476a4.5 4.5 0 0 1-3.23 1.34Zm0-1.588a2.8 2.8 0 0 0 1.125-.223a2.8 2.8 0 0 0 .92-.621a2.7 2.7 0 0 0 .617-.955a3.3 3.3 0 0 0 .23-1.253a3.2 3.2 0 0 0-.23-1.24a2.7 2.7 0 0 0-.617-.968a2.8 2.8 0 0 0-.92-.62a2.8 2.8 0 0 0-1.125-.223a2.86 2.86 0 0 0-2.057.844a3 3 0 0 0-.617.968a3.4 3.4 0 0 0-.218 1.24a3.5 3.5 0 0 0 .218 1.253a3 3 0 0 0 .617.955a2.86 2.86 0 0 0 2.057.843m-3.297 2.428h6.5V24h-6.5Z"/></svg></div>
+        <h3>HarmonyOS <span class="tag"><span class="hidden-zh">规划中</span><span class="hidden-en">Planned</span></span></h3>
         <p><span class="hidden-zh">面向鸿蒙手机与平板，纳入长期规划</span><span class="hidden-en">HarmonyOS phones &amp; tablets — a longer-term goal</span></p>
       </div>
     </div>
@@ -493,42 +510,42 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <p><span class="hidden-zh">按设备 MIoT 规格自动生成控制项，无需逐个适配</span><span class="hidden-en">Controls are generated from each device's MIoT spec automatically</span></p>
     </div>
     <div class="devs">
-      <div class="dev">
+      <div class="dev d-light">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 3z"/></svg></div>
         <h3><span class="hidden-zh">灯光照明</span><span class="hidden-en">Lights</span></h3>
         <p><span class="hidden-zh">开关、亮度、色温调节</span><span class="hidden-en">Power, brightness, color temperature</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-fan">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.2"/><path d="M12 9.8V4M12 20v-5.8M9.8 12H4M20 12h-5.8M10.4 10.4 6.2 6.2M17.8 17.8l-4.2-4.2M13.6 10.4l4.2-4.2M6.2 17.8l4.2-4.2"/></svg></div>
         <h3><span class="hidden-zh">风扇循环扇</span><span class="hidden-en">Fans</span></h3>
         <p><span class="hidden-zh">风速、模式、上下左右扫风</span><span class="hidden-en">Speed, mode, 4-way oscillation</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-aircon">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h13a3 3 0 0 1 0 6H8M3 8v8M3 12h4"/><path d="M19 9h1.5a1.5 1.5 0 0 1 0 3H19"/></svg></div>
         <h3><span class="hidden-zh">空调温控</span><span class="hidden-en">Air conditioners</span></h3>
         <p><span class="hidden-zh">目标温度与运行状态</span><span class="hidden-en">Target temperature and run state</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-sensor">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 17v2"/></svg></div>
         <h3><span class="hidden-zh">温湿度传感</span><span class="hidden-en">Temp &amp; humidity</span></h3>
         <p><span class="hidden-zh">实时温湿度与电量状态</span><span class="hidden-en">Live readings and battery level</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-purifier">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 5.5 6 10.5a6 6 0 0 1-12 0C6 8.5 12 3 12 3z"/><path d="M9 14a3 3 0 0 0 3 3"/></svg></div>
         <h3><span class="hidden-zh">净饮水设备</span><span class="hidden-en">Water purifiers</span></h3>
         <p><span class="hidden-zh">水温、滤芯寿命与 TDS</span><span class="hidden-en">Water temp, filter life, TDS</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-other">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5 2 8h10c0-3 2-5 2-8a7 7 0 0 0-7-7z"/><path d="M9 21h6M10 17.5V21M14 17.5V21"/></svg></div>
         <h3><span class="hidden-zh">厨房与小家电</span><span class="hidden-en">Kitchen &amp; appliances</span></h3>
         <p><span class="hidden-zh">计时器等 MIoT 设备</span><span class="hidden-en">Timers and other MIoT devices</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-plug">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12l-1 12H7L6 8z"/><path d="M10 13h4"/></svg></div>
         <h3><span class="hidden-zh">插座开关</span><span class="hidden-en">Plugs &amp; switches</span></h3>
         <p><span class="hidden-zh">远程开关与实时功率</span><span class="hidden-en">Remote switching and live wattage</span></p>
       </div>
-      <div class="dev">
+      <div class="dev d-gateway">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><circle cx="7.5" cy="10" r="1.2"/><path d="M11 9h6M11 12h4"/></svg></div>
         <h3><span class="hidden-zh">网关中枢</span><span class="hidden-en">Gateways &amp; hubs</span></h3>
         <p><span class="hidden-zh">在线状态与功率信息</span><span class="hidden-en">Online status and power info</span></p>
@@ -592,8 +609,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <div class="faq-body"><span class="hidden-zh">项目依赖 GPL-3.0-or-later 的开源组件 <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>，作为衍生作品须以 GPL 兼容协议分发，因此本项目采用 AGPL-3.0-or-later，详见仓库 LICENSE。</span><span class="hidden-en">It builds on the GPL-3.0-or-later component <a href="https://github.com/zythum/mijia-api" target="_blank" rel="noopener">@zythum02/mijia-api</a>, so this derivative work ships under the compatible AGPL-3.0-or-later license. See LICENSE.</span></div>
       </details>
       <details>
-        <summary><span class="hidden-zh">会支持 macOS、iOS、Android、Linux、鸿蒙 吗？</span><span class="hidden-en">Will it support macOS, iOS, Android, Linux and HarmonyOS?</span></summary>
-        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMijia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。Linux、鸿蒙（HarmonyOS）同样在规划之中。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. Linux and HarmonyOS are also planned. Follow the progress on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
+        <summary><span class="hidden-zh">会支持 macOS、iOS、Android、watchOS、Wear OS、Linux、HarmonyOS 吗？</span><span class="hidden-en">Will it support macOS, iOS, Android, watchOS, Wear OS, Linux and HarmonyOS?</span></summary>
+        <div class="faq-body"><span class="hidden-zh">会，多平台一致体验是 OpenMijia 的核心方向。Windows 版（基于 Electron）已经发布，macOS 是下一个目标；iOS、Android 也在路线图上，计划复用同一套设备核心，让卡片与交互在各平台保持一致。此外，面向 Apple Watch 的 watchOS、面向 Android 手表的 Wear OS，以及 Linux、HarmonyOS 同样在规划之中。进展与时间点请关注 <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span><span class="hidden-en">Yes — one consistent experience across platforms is the core direction. The Windows build (Electron-based) is out now, macOS is next, and iOS &amp; Android are on the roadmap, sharing one device core so the cards and interactions stay consistent. watchOS for Apple Watch, Wear OS for Android watches, plus Linux and HarmonyOS, are also planned. Follow the progress on <a href="https://github.com/HZDavy/OpenMijia/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span></div>
       </details>
     </div>
   </div>
@@ -610,7 +627,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <span class="hidden-zh">下载 OpenMijia v0.1.0</span><span class="hidden-en">Download OpenMijia v0.1.0</span>
       </a>
       <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 109 MB</div>
-      <div class="dl-meta" style="margin-top:8px"><span class="hidden-zh">macOS / iOS / Android / Linux / 鸿蒙 版本规划中，欢迎在 GitHub 关注进展</span><span class="hidden-en">macOS / iOS / Android / Linux &amp; HarmonyOS on the roadmap — follow the progress on GitHub</span></div>
+      <div class="dl-meta" style="margin-top:8px"><span class="hidden-zh">macOS / iOS / Android / watchOS / Wear OS / Linux / HarmonyOS 版本规划中，欢迎在 GitHub 关注进展</span><span class="hidden-en">macOS / iOS / Android / watchOS / Wear OS / Linux &amp; HarmonyOS on the roadmap — follow the progress on GitHub</span></div>
       <div class="dl-warn"><span class="hidden-zh">未购买代码签名证书，首次运行如出现 SmartScreen 提示，选择「更多信息」→「仍要运行」。</span><span class="hidden-en">The installer is unsigned. If SmartScreen appears, choose “More info” → “Run anyway”.</span></div>
     </div>
   </div>
@@ -623,7 +640,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="foot-brand">
         <img src="docs/favicon.svg" alt="">
         <div class="nm"><span class="hidden-zh">OpenMijia</span><span class="hidden-en">OpenMijia</span></div>
-        <p><span class="hidden-zh">开源米家客户端，多平台一致体验。Windows 已发布，macOS / iOS / Android / Linux / 鸿蒙 规划中。</span><span class="hidden-en">The open-source Mi Home client with one consistent experience. Windows available; macOS, iOS, Android, Linux &amp; HarmonyOS planned.</span></p>
+        <p><span class="hidden-zh">开源米家客户端，多平台一致体验。Windows 已发布，macOS / iOS / Android / watchOS / Wear OS / Linux / HarmonyOS 规划中。</span><span class="hidden-en">The open-source Mi Home client with one consistent experience. Windows available; macOS, iOS, Android, watchOS, Wear OS, Linux &amp; HarmonyOS planned.</span></p>
       </div>
       <div class="foot-col">
         <h4><span class="hidden-zh">产品</span><span class="hidden-en">Product</span></h4>
