@@ -18,6 +18,7 @@
   "build": {
     "appId": "com.hzdavy.mijia-widget",
     "productName": "OpenMijia",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
     "copyright": "Copyright © 2026 HZDavy",
     "directories": {
       "output": "release"
