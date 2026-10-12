@@ -44,6 +44,7 @@ body.lang-en h1.hidden-en,body.lang-en h2.hidden-en,body.lang-en h3.hidden-en,
 body.lang-en p.hidden-en,body.lang-en div.hidden-en,body.lang-en li.hidden-en,
 body.lang-en label.hidden-en,summary.hidden-en{display:block !important}
 
+html{scroll-padding-top:72px}
 /* ---------- nav（毛玻璃：半透明底 + 高斯模糊，滚动内容透出但不全透） ---------- */
 header.nav{
   position:sticky;top:0;z-index:50;
@@ -61,8 +62,11 @@ header.nav{
 .logo img{width:30px;height:30px}
 .logo>span{white-space:nowrap}
 .nav-menu{display:flex;gap:30px;margin-left:10px;font-size:14.5px;color:var(--ink-2)}
-.nav-menu a{padding:4px 0;transition:color .15s}
+.nav-menu a{position:relative;padding:4px 0;transition:color .15s}
 .nav-menu a:hover{color:var(--green-deep)}
+.nav-menu a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--green-deep);transform:scaleX(0);transform-origin:left center;transition:transform .22s ease}
+.nav-menu a.on{color:var(--green-deep)}
+.nav-menu a.on::after{transform:scaleX(1)}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:20px}
 .lang{font-size:13px;color:var(--ink-3);display:flex;gap:8px;user-select:none}
 .lang button{background:none;border:0;padding:0;font:inherit;color:var(--ink-3);cursor:pointer}
@@ -338,8 +342,8 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <span class="hidden-zh">OpenMexia</span><span class="hidden-en">OpenMexia</span>
     </a>
     <nav class="nav-menu">
-      <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
       <a href="#platforms"><span class="hidden-zh">多平台</span><span class="hidden-en">Platforms</span></a>
+      <a href="#features"><span class="hidden-zh">功能特性</span><span class="hidden-en">Features</span></a>
       <a href="#devices"><span class="hidden-zh">设备支持</span><span class="hidden-en">Devices</span></a>
       <a href="#start"><span class="hidden-zh">快速上手</span><span class="hidden-en">Get started</span></a>
       <a href="#faq"><span class="hidden-zh">常见问题</span><span class="hidden-en">FAQ</span></a>
@@ -875,6 +879,32 @@ switchLang(localStorage.getItem('mijia-widget-lang') || 'zh');
       });
     });
   });
+})();
+
+// 导航高亮：滚动到对应板块时，导航项下方显示细绿色下划线
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-menu a'));
+  if(!links.length) return;
+  var items = links.map(function(a){
+    var href = a.getAttribute('href') || '';
+    return {a:a, sec: href.charAt(0)==='#' ? document.querySelector(href) : null};
+  }).filter(function(it){ return it.sec; });
+  var nav = document.querySelector('header.nav');
+  function update(){
+    var offset = (nav ? nav.offsetHeight : 64) + 12;
+    var current = null;
+    items.forEach(function(it){
+      if(it.sec.getBoundingClientRect().top <= offset) current = it;
+    });
+    if((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 2)){
+      current = items[items.length - 1];
+    }
+    items.forEach(function(it){ it.a.classList.toggle('on', it === current); });
+  }
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update);
+  window.addEventListener('load', update);
+  update();
 })();
 </script>
 </body>
