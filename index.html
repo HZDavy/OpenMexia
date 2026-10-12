@@ -121,15 +121,16 @@ section{padding:96px 0}
 .sec-head h2{font-size:clamp(30px,3.2vw,42px);font-weight:700;letter-spacing:-.025em;margin-bottom:14px}
 .sec-head p{font-size:16px;color:var(--ink-2)}
 
-/* ---------- naming meaning ---------- */
-.name-sec{background:var(--bg-soft);border-bottom:1px solid var(--line)}
-.name-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-.name-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 28px;display:flex;flex-direction:column;gap:12px}
-.name-card .lt{font-size:38px;font-weight:700;letter-spacing:-.03em;color:var(--green-deep);line-height:1}
-.name-card .lt small{font-size:13px;font-weight:600;color:var(--ink-3);letter-spacing:0;margin-left:8px}
-.name-card h3{font-size:15.5px;font-weight:600;line-height:1.45}
-.name-card p{font-size:13px;color:var(--ink-2);line-height:1.65}
-.name-note{max-width:820px;margin:34px auto 0;text-align:center;font-size:13.5px;color:var(--ink-3);line-height:1.7}
+/* ---------- naming meaning（白底窄条） ---------- */
+.name-sec{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0}
+.name-strip{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px 24px;padding:24px 0}
+.name-strip .ns-title{font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--green-deep);white-space:nowrap}
+.name-parts{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;font-size:13.5px;color:var(--ink-2)}
+.name-parts>span{white-space:nowrap}
+.name-parts b{font-weight:700;color:var(--ink);margin-right:6px}
+.name-parts i{width:1px;height:12px;background:var(--line)}
+.name-pron{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-3);white-space:nowrap}
+.name-pron .slot{display:inline-block;width:66px;height:18px;border-bottom:1px dashed var(--ink-3)}
 
 /* ---------- bento ---------- */
 .bento{display:grid;gap:20px}
@@ -302,7 +303,6 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .tile-tall .imgwrap{position:static;height:400px;margin-top:24px}
   .devs{grid-template-columns:1fr 1fr}
   .plats{grid-template-columns:1fr 1fr}
-  .name-grid{grid-template-columns:1fr 1fr}
   .steps{grid-template-columns:1fr;gap:40px}
   .foot-grid{grid-template-columns:1fr 1fr}
 }
@@ -318,7 +318,6 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
   .hero-acts .btn-lg{padding:12px 26px;font-size:15px}
   section{padding:64px 0}
   .sec-head{margin-bottom:36px}
-  .name-grid{grid-template-columns:1fr}
   .win-grid{grid-template-columns:1fr !important}
   .hero-shot .win-grid{max-height:420px;overflow:hidden}
 }
@@ -361,12 +360,12 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
     <div>
       <div class="eyebrow"><span class="hidden-zh">开源 · 全平台 · 多协议 · 多厂商</span><span class="hidden-en">OPEN · CROSS-PLATFORM · MULTI-PROTOCOL</span></div>
       <h1>
-        <span class="hidden-zh">一个平台<br>管住所有智能设备</span>
-        <span class="hidden-en">One hub for<br>all your smart devices</span>
+        <span class="hidden-zh">你的全屋<br>处处一致</span>
+        <span class="hidden-en">Your whole home,<br>in sync everywhere</span>
       </h1>
       <p class="sub">
-        <span class="hidden-zh">OpenMexia 是开源、全平台、多协议的智能家居控制中枢。它不绑定任何一家品牌——目标是支持所有智能协议，力图把一切能以开源方式支持的协议都纳入其中，任何品牌、不只是小米，目前已支持米家。它把家里的灯、风扇、空调与传感器汇聚成同一套卡片、同一份实时状态，凭据只留在本机。Windows 版现已可用，macOS、iOS、Android 等平台即将到来。</span>
-        <span class="hidden-en">OpenMexia is an open-source, cross-platform, multi-protocol smart home hub. It is not tied to any single brand — the goal is to support every smart-home protocol, aiming to cover whatever open source allows, any brand, not just Xiaomi; Mi Home is supported today. It gathers your lights, fans, ACs and sensors into one set of cards with one live state, with credentials kept local. Windows is available now; macOS, iOS, Android and more are on the way.</span>
+        <span class="hidden-zh">OpenMexia 是开源、全平台、多协议的智能家居控制中枢：目标是支持所有智能协议，任何品牌，不只是小米——目前已支持米家。凭据只存本机，Windows 版现已可用。</span>
+        <span class="hidden-en">OpenMexia is an open-source, cross-platform smart home hub: aiming to support every protocol and any brand, not just Xiaomi — Mi Home works today. Credentials stay local, and Windows is available now.</span>
       </p>
       <div class="hero-acts">
         <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMexia/releases/latest" target="_blank" rel="noopener">
@@ -425,34 +424,16 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <!-- ================= 命名寓意 ================= -->
 <section class="name-sec" id="name">
   <div class="w">
-    <div class="sec-head">
-      <div class="eyebrow">WHY “OPENMEXIA”</div>
-      <h2><span class="hidden-zh">名字里的四个心思</span><span class="hidden-en">The meaning behind the name</span></h2>
-      <p><span class="hidden-zh">Open · Me · X · ia —— 从致敬起点，到跨界融合，再到构建生态。</span><span class="hidden-en">Open · Me · X · ia — from an homage to its origin, to cross-ecosystem fusion, to a whole ecosystem.</span></p>
+    <div class="name-strip">
+      <span class="ns-title">WHY “OPENMEXIA”</span>
+      <span class="name-parts">
+        <span><b>Open</b><span class="hidden-zh">开源无界</span><span class="hidden-en">Open &amp; unbounded</span></span><i></i>
+        <span><b>Me</b><span class="hidden-zh">本地掌控</span><span class="hidden-en">Locally yours</span></span><i></i>
+        <span><b>X</b><span class="hidden-zh">跨界互联</span><span class="hidden-en">Cross-protocol</span></span><i></i>
+        <span><b>ia</b><span class="hidden-zh">生态疆域</span><span class="hidden-en">A whole realm</span></span>
+      </span>
+      <span class="name-pron"><span class="hidden-zh">发音</span><span class="hidden-en">Say it</span>［<span class="slot"></span>］</span>
     </div>
-    <div class="name-grid">
-      <div class="name-card">
-        <div class="lt">Open<small><span class="hidden-zh">开放</span><span class="hidden-en">Open</span></small></div>
-        <h3><span class="hidden-zh">开源精神与无界底座</span><span class="hidden-en">Open source &amp; an unbounded base</span></h3>
-        <p><span class="hidden-zh">宣告项目的开源属性与开放基因，打破单一品牌（如小米）的生态壁垒，致力于构建一个能接入所有开放 API、乃至 Matter 等全协议设备的无界控制底座。</span><span class="hidden-en">Declares the project's open-source nature and genes, breaks down single-brand ecosystem walls, and aims to be an unbounded hub that connects every open API — and every protocol, Matter included.</span></p>
-      </div>
-      <div class="name-card">
-        <div class="lt">Me<small><span class="hidden-zh">米 · 我</span><span class="hidden-en">Mi · me</span></small></div>
-        <h3><span class="hidden-zh">听觉传承与私有属性</span><span class="hidden-en">A familiar sound, a private hub</span></h3>
-        <p><span class="hidden-zh">发音上完美承接「米 (Mi)」的听觉记忆，暗示从「米家设备接入」起步的开发渊源；同时 Me 代表「我」，强调这是一个由用户本地掌控、不受大厂云端限制的私人智能中枢。</span><span class="hidden-en">Its sound carries the memory of “Mi”, hinting at its origin in Mi Home device support. “Me” also stands for the self — a personal hub you control locally, free from any vendor's cloud.</span></p>
-      </div>
-      <div class="name-card">
-        <div class="lt">X<small><span class="hidden-zh">跨界 · 无限</span><span class="hidden-en">Cross · infinite</span></small></div>
-        <h3><span class="hidden-zh">跨界互联与无限扩展</span><span class="hidden-en">Cross-connect &amp; endless growth</span></h3>
-        <p><span class="hidden-zh">X 是 Cross（跨平台 / 跨协议）的核心符号，象征 Wi-Fi、蓝牙、Zigbee、Matter 等原本互不相通的设备与协议在此交叉互联；作为数学中的无限变量，X 也寓意接入万物的无限潜力。</span><span class="hidden-en">X is the symbol of Cross — cross-platform, cross-protocol — where Wi-Fi, Bluetooth, Zigbee and Matter devices interweave. As the variable of the infinite, X also stands for boundless potential.</span></p>
-      </div>
-      <div class="name-card">
-        <div class="lt">ia<small><span class="hidden-zh">生态疆域</span><span class="hidden-en">A realm</span></small></div>
-        <h3><span class="hidden-zh">生态疆域与系统级平台</span><span class="hidden-en">A realm, a system-level platform</span></h3>
-        <p><span class="hidden-zh">-ia 后缀在拉丁语词根与科技命名体系中常指「广阔的领域或生态系统」（如 Wikipedia）。它赋予项目更高的格局：OpenMexia 不只是一个控制脚本，而是一个包容海量硬件节点的完整数字家园。</span><span class="hidden-en">The -ia suffix (as in Wikipedia) points to “a vast realm or ecosystem”, giving the project a bigger scope: OpenMexia is not a mere control script, but a whole digital home for countless hardware nodes.</span></p>
-      </div>
-    </div>
-    <p class="name-note"><span class="hidden-zh">发音 /miːˈzi.ə/ 或「米夏」，与「米家 (Mijia)」口型相近，却指向一个更开放、由你掌控的全平台智能中枢。</span><span class="hidden-en">Pronounced /miːˈzi.ə/ — close in sound to “Mijia”, yet pointing to a more open, personal, cross-platform hub of your own.</span></p>
   </div>
 </section>
 
