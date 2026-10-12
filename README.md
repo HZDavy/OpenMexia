@@ -1,7 +1,7 @@
 [![🌐 访问官网](https://img.shields.io/badge/%E2%9C%82%E8%AE%BF%E9%97%AE%E5%AE%98%E7%BD%91-%E7%82%B9%E5%87%BB%E6%89%93%E5%BC%80-2dd47a?style=for-the-badge&logo=internet-explorer&logoColor=white)](https://hzdavy.github.io/OpenMexia/)
 # <img src="https://hzdavy.github.io/OpenMexia/docs/favicon.svg" width="30" height="30" alt="logo"> OpenMexia
 [![Release](https://img.shields.io/github/v/release/HZDavy/OpenMexia?color=%232dd47a&label=Release&logo=github)](https://github.com/HZDavy/OpenMexia/releases) [![License](https://img.shields.io/github/license/HZDavy/OpenMexia?color=blue&label=License)](LICENSE) [![Downloads](https://img.shields.io/github/downloads/HZDavy/OpenMexia/latest/total?color=blueviolet&label=Downloads)](https://github.com/HZDavy/OpenMexia/releases/latest) [![Last-Release](https://img.shields.io/github/release-date/HZDavy/OpenMexia?color=green&label=Last-Release)](https://github.com/HZDavy/OpenMexia/releases/latest) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-0078D6) ![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white) ![Node](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white) [![Website](https://img.shields.io/website?up_color=2dd47a&up_message=online&label=%E5%AE%98%E7%BD%91&url=https%3A%2F%2Fhzdavy.github.io%2FOpenMexia%2F)](https://hzdavy.github.io/OpenMexia/)
-> 支持所有智能协议、任何品牌，不只是小米。目前支持米家。
+> 目标是支持所有智能协议。目前支持米家。
 
 OpenMexia 是一个开源、跨平台的智能家居控制中枢。把不同厂商、不同协议（Wi-Fi、蓝牙、Zigbee、Matter 等）的设备，收进一个由你本地掌控的客户端。
 
@@ -33,7 +33,7 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 
 ### 生态与协议接入
 
-当前版本仅支持米家。目标是支持所有智能协议——任何品牌，不只是小米。其余生态按「开放接口成熟度 + 接入稳定性」逐步评估接入。
+当前版本仅支持米家。目标是支持所有智能协议。其余生态按「开放接口成熟度 + 接入稳定性」逐步评估接入。
 
 | 生态 / 协议 | 状态 | 说明 |
 |---|---|---|
