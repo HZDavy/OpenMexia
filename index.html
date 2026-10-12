@@ -61,10 +61,10 @@ header.nav{
 .logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;letter-spacing:-.01em;flex-shrink:0}
 .logo img{width:30px;height:30px}
 .logo>span{white-space:nowrap}
-.nav-menu{display:flex;gap:30px;margin-left:10px;font-size:14.5px;color:var(--ink-2)}
-.nav-menu a{position:relative;padding:4px 0;transition:color .15s}
+.nav-menu{display:flex;align-self:stretch;align-items:stretch;gap:30px;margin-left:10px;font-size:14.5px;color:var(--ink-2)}
+.nav-menu a{position:relative;display:flex;align-items:center;transition:color .15s}
 .nav-menu a:hover{color:var(--green-deep)}
-.nav-menu a::after{content:"";position:absolute;left:0;right:0;bottom:5px;height:2px;border-radius:2px;background:var(--green-deep);transform:scaleX(0);transform-origin:left center;transition:transform .22s ease}
+.nav-menu a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--green-deep);transform:scaleX(0);transform-origin:left center;transition:transform .22s ease}
 .nav-menu a.on{color:var(--green-deep)}
 .nav-menu a.on::after{transform:scaleX(1)}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:20px}
