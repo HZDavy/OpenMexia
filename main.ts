@@ -25,8 +25,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // 初始尺寸；首次加载由渲染层测量内容后微调一次高度，之后窗口可自由缩放
-const WIN_SIZE = { width: 364, height: 480 };
-const EDGE_GAP = 20; // 默认位置距屏幕边缘的留白
+// 高度取 640：足够完整显示登录弹窗，避免首次打开时内容被截断
+const WIN_SIZE = { width: 364, height: 640 };
+const EDGE_GAP = 20; // 窗口贴边留白（拖拽/移动时的边界钳制）
 
 let win: BrowserWindow;
 let tray: Tray | null = null;
@@ -298,9 +299,13 @@ function toggleWindowMode() {
 
 /* ---------------- 窗口 ---------------- */
 
-function defaultPosition(): { x: number; y: number } {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  return { x: width - WIN_SIZE.width - EDGE_GAP, y: Math.round((height - WIN_SIZE.height) / 2) };
+// 主屏工作区内居中的坐标（按窗口的实际宽高计算，避免记住的自定义尺寸下算出屏外坐标）
+function centeredPosition(width: number, height: number): { x: number; y: number } {
+  const { width: aw, height: ah } = screen.getPrimaryDisplay().workAreaSize;
+  return {
+    x: Math.round((aw - width) / 2),
+    y: Math.round((ah - height) / 2),
+  };
 }
 
 // 当前是否已持久化过「用户调整的窗口大小」（供渲染层决定是否跳过首次自适应）
@@ -311,14 +316,15 @@ function hasCustomSize(): boolean {
 
 function createWindow() {
   const state = loadState();
-  const fallback = defaultPosition();
-  let x = Number.isFinite(state.x) ? state.x : fallback.x;
-  let y = Number.isFinite(state.y) ? state.y : fallback.y;
   // 记忆用户上次调整过的窗口大小；未调整过则用默认尺寸（首次由渲染层按内容自适应一次）
   const hasCustomSize = Number.isFinite(state.width) && Number.isFinite(state.height)
     && state.width >= 300 && state.height >= 220;
   const width = hasCustomSize ? state.width : WIN_SIZE.width;
   const height = hasCustomSize ? state.height : WIN_SIZE.height;
+  // 首次打开（无记录坐标）默认在主屏居中
+  const fallback = centeredPosition(width, height);
+  let x = Number.isFinite(state.x) ? state.x : fallback.x;
+  let y = Number.isFinite(state.y) ? state.y : fallback.y;
   // 记忆的坐标所在显示器可能已被拔掉/改了分辨率：窗口与最近屏工作区几乎不重叠时回退默认位置，防丢窗口
   const nearest = screen.getDisplayMatching({ x, y, width, height }).workArea;
   const overlapX = Math.min(x + width, nearest.x + nearest.width) - Math.max(x, nearest.x);
@@ -682,7 +688,7 @@ function registerIpc() {
   ipcMain.on('widget:resize', (_e, { height } = {}) => {
     if (!win || !Number.isFinite(height)) return;
     const { height: maxH } = screen.getPrimaryDisplay().workAreaSize;
-    const h = Math.min(Math.max(Math.round(height), 120), maxH);
+    const h = Math.min(Math.max(Math.round(height), 320), maxH);
     const [currentW, currentH] = win.getSize();
     if (currentH !== h) {
       sizingProgrammatically = true;

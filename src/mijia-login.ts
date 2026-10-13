@@ -279,6 +279,42 @@ class MijiaLogin {
     }
   }
 
+  /**
+   * 二维码会话：用 getHomesList() 的家庭/房间 did 归属补写设备 homeId，并返回家庭清单。
+   * 云端设备通常已带 home_id，但字段偶发缺失或落在 homeId 上；这里按 did 反查补全，
+   * 只填空值、不覆盖已有非空归属，使「扫码登录」与「密码登录」的家庭归属落盘保持一致，
+   * 避免扫码登录后按家庭筛选退化成「展示全部设备」。
+   */
+  async _applyCloudHomeIds(api: any, devices: any[]): Promise<{ id: string; name: string }[]> {
+    try {
+      const list = await api.getHomesList();
+      const homes = (list || [])
+        .map((h: any) => ({
+          id: String(h.id ?? h.home_id ?? ''),
+          name: String(h.name || h.id || ''),
+          dids: [
+            ...(Array.isArray(h.dids) ? h.dids : []),
+            ...(Array.isArray(h.roomlist) ? h.roomlist : []).flatMap((rm: any) =>
+              Array.isArray(rm.dids) ? rm.dids : [],
+            ),
+          ].map(String),
+        }))
+        .filter((h: { id: string }) => h.id);
+      if (!homes.length) return [];
+      const map = new Map<string, string>();
+      for (const h of homes) for (const did of h.dids) map.set(String(did), h.id);
+      for (const d of devices || []) {
+        if (String(d.homeId || '') === '') {
+          const hid = map.get(String(d.id));
+          if (hid) d.homeId = hid;
+        }
+      }
+      return homes.map((h: { id: string; name: string }) => ({ id: h.id, name: h.name }));
+    } catch {
+      return [];
+    }
+  }
+
   /** 二维码云端会话是否有效（auth.json 齐全且在有效期） */
   async hasCloudAuth(): Promise<boolean> {
     try {
@@ -807,6 +843,10 @@ class MijiaLogin {
     const api = await this._getApi();
     await api.QRlogin(onQR ? (info: any) => onQR(info) : undefined);
     const devices = await this._fetchCloudDevices(api);
+    // 与密码登录路径对齐：补写/落盘家庭归属与家庭清单，避免扫码登录后家庭筛选失效
+    const homes = await this._applyCloudHomeIds(api, devices);
+    if (homes.length) this.saveHomes(homes);
+    await this._applyCloudRooms(api, devices);
     this.saveDevices(devices);
     return { ok: true, source: 'qr', count: devices.length, devices };
   }
@@ -832,6 +872,8 @@ class MijiaLogin {
     if (await this.hasCloudAuth()) {
       const api = await this._getApi();
       const devices = await this._fetchCloudDevices(api);
+      const homes = await this._applyCloudHomeIds(api, devices);
+      if (homes.length) this.saveHomes(homes);
       await this._applyCloudRooms(api, devices);
       return this.saveDevices(devices);
     }

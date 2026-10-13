@@ -1755,10 +1755,12 @@ function fitWindow() {
   // 瀑布流各列高低不一，不能再按「行」累加；取最低一张卡片（或房间头）的底边作为列表内容高度。
   const listRect = listEl.getBoundingClientRect();
   let maxB = 0;
-  for (const el of listEl.querySelectorAll('.card, .room-head, .empty')) {
+  for (const el of listEl.querySelectorAll('.card, .room-head')) {
     const r = el.getBoundingClientRect();
     maxB = Math.max(maxB, r.bottom - listRect.top + listEl.scrollTop);
   }
+  // 无真实设备卡（欢迎 / 登录 / 空态）：不按内容压缩窗口，保留默认尺寸，保证登录弹窗完整可见
+  if (maxB === 0) { sized = true; return; }
   const cardsH = maxB + padBottom; // maxB 已含上内边距
   const contentH =
     titlebar.getBoundingClientRect().height +

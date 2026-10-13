@@ -689,6 +689,13 @@ class MiioProvider extends EventEmitter {
     if (await this.login.hasCloudAuth()) {
       const res = await this.login.cloudGet(params);
       const arr = Array.isArray(res) ? res : [res];
+      // 二维码会话走 /miotspec/prop/get：离线设备会在批量结果里返回错误码 -704042011「设备离线」，
+      // 且常与若干 code=0 的缓存值并存。必须优先判定离线，否则会因「存在 code=0」而把离线设备误判为在线。
+      if (arr.some((r: any) => isDeviceOfflineCode(Number(r && r.code)))) {
+        const err: Error & { deviceOffline?: boolean } = new Error('设备离线');
+        err.deviceOffline = true;
+        throw err;
+      }
       if (!arr.some((r: any) => r && Number(r.code) === 0)) throw new Error('云端未返回有效属性');
       return arr;
     }
@@ -852,6 +859,11 @@ const rnd = (min: number, max: number) => Math.random() * (max - min) + min;
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const round2 = (v: number) => Math.round(v * 100) / 100;
+
+/** 小米 IoT 云端错误码：设备离线。二维码会话的 /miotspec/prop/get 批量结果里会以该码返回。 */
+function isDeviceOfflineCode(code: number): boolean {
+  return code === -704042011;
+}
 
 /** 取 IPv4 的 /24 前缀（如 "192.168.0.5" → "192.168.0"）；非 IPv4 返回 '' */
 function ipv4Prefix(ip?: string): string {
