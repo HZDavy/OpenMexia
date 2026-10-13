@@ -8,6 +8,11 @@ OpenMexia 是一个开源、跨平台的智能家居控制中枢。把不同厂�
 Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图上。各平台共用一套账号与卡片，只做原生适配，不重做体验。
 
 ---
+## 界面预览
+
+![OpenMexia 界面预览](assets/screenshot.png)
+
+---
 ## 命名寓意
 
 **OpenMexia** 由 **Open**、**Me**、**X**、**ia** 四个词素构成——开源无界、本地掌控、跨界互联、生态疆域。发音 /miːˈzi.ə/。
