@@ -102,6 +102,8 @@ export interface Device {
   faultLabel: string;
   noWater: boolean;
   filterLife: number | null;
+  /** 第二支滤芯寿命（部分净饮机有两支滤芯，如米家台式净饮机） */
+  filterLife2: number | null;
   tdsIn: number | null;
   tdsOut: number | null;
 

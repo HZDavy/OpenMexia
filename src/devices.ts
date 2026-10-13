@@ -198,6 +198,7 @@ class MockProvider extends EventEmitter {
         targetTempRange: [0, 95],
         temperature: 25,
         filterLife: 88,
+        filterLife2: 92,
         tdsIn: 120,
         tdsOut: 15,
       },
@@ -413,6 +414,7 @@ class MiioProvider extends EventEmitter {
         faultLabel: '',
         noWater: false,
         filterLife: null,
+        filterLife2: null,
         tdsIn: null,
         tdsOut: null,
         // 路由器 / 网关（只读指标）
@@ -830,6 +832,7 @@ class MiioProvider extends EventEmitter {
         break;
       }
       case 'filterLife': dev.filterLife = clamp(Math.round(Number(value) || 0), 0, 100); break;
+      case 'filterLife2': dev.filterLife2 = clamp(Math.round(Number(value) || 0), 0, 100); break;
       case 'tdsIn': dev.tdsIn = Math.round(Number(value) || 0); break;
       case 'tdsOut': dev.tdsOut = Math.round(Number(value) || 0); break;
       // 路由器 / 网关（只读指标）

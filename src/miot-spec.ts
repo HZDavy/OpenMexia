@@ -107,6 +107,8 @@ const FIELD_ALIASES: Record<string, string[]> = {
   status: ['status'],
   fault: ['fault'],
   filterLife: ['filter-life-level'],
+  // 第二支滤芯：miot-spec 对同名服务去重后会加服务名前缀，故第二支滤芯属性名为 filter-filter-life-level
+  filterLife2: ['filter-filter-life-level'],
   tdsIn: ['tds-in'],
   tdsOut: ['tds-out'],
   // 路由器 / 网关（只读指标，用于展示网络状态）

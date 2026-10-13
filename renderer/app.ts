@@ -868,7 +868,11 @@ function updateCard(entry, d) {
     if (r.syncTargetMin) r.syncTargetMin();
     syncSlider(r.targetSlider, d.targetTemperature, d.online);
 
-    r.filter.querySelector('b').textContent = isNum(d.filterLife) ? d.filterLife + '%' : '--';
+    // 滤芯寿命：部分净饮机有两支滤芯，两支并排展示（如 88% / 92%）
+    const lives = [d.filterLife, d.filterLife2].filter((v) => isNum(v));
+    r.filter.querySelector('b').textContent = lives.length
+      ? lives.map((v) => v + '%').join(' / ')
+      : '--';
     r.tds.querySelector('b').textContent = (isNum(d.tdsIn) || isNum(d.tdsOut))
       ? `${isNum(d.tdsIn) ? d.tdsIn : '--'} / ${isNum(d.tdsOut) ? d.tdsOut : '--'}`
       : '--';
