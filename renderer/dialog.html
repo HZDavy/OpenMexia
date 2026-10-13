@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>OpenMexia Dialog</title>
+  <!-- 复用主窗口同一套样式，保证登录 / 关于弹窗与原来视觉完全一致 -->
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* 独立弹窗窗口的外壳：透明背景 + 卡片四周留白。
+       留白（--dpad）须与主进程的 DIALOG_PAD 保持一致：
+       窗口尺寸 = 卡片内容 + 2×--dpad，卡片固定贴在窗口中心。
+       留白的作用是给卡片的圆角与投影让出空间，避免被窗口边缘裁切。
+       黑色半透明遮罩已移到主窗口（#modal-backdrop），这里不再画背景。 */
+    :root { --dpad: 18px; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      color-scheme: dark;
+    }
+    html.light { color-scheme: light; }
+
+    /* 用 style.css 里 .pin-modal / .pin-card 的现有样式：
+       去掉遮罩背景与入场动画（尺寸由窗口决定），卡片尺寸不再受窗口高度挤压 */
+    body > .pin-modal {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 1;
+      padding: var(--dpad) !important;
+      background: transparent !important;
+      animation: none !important;
+    }
+    body > .pin-modal > .pin-card {
+      max-height: none !important;
+      overflow: visible !important;
+      /* 去掉 style.css 的 pin-in（带 translateY+scale，hidden 显隐切换会重放造成「弹一下→缩一下」）；
+         入场改为「窗口真正显示后」由 body.revealed 单次触发的纯透明度淡入——
+         与菜单窗口同一套机制，避免窗口显示时动画已跑完/跑到一半造成的闪烁。 */
+      animation: none !important;
+      opacity: 0;
+      transition: opacity 0.16s ease;
+      /* 卡片整体作为拖动区（窗口 movable:true）：按住标题 / 空白处即可拖动弹窗。
+         弹出位置默认在主窗口中心，拖动后停在用户摆放处。 */
+      -webkit-app-region: drag;
+    }
+    body.revealed > .pin-modal > .pin-card { opacity: 1; }
+    /* 收起前清空：瞬时全透明（不参与 transition），保证窗口保留的最后一帧是「空画面」，
+       下次打开复用同一窗口时首帧不闪旧卡片 */
+    body.clearing > .pin-modal > .pin-card {
+      opacity: 0 !important;
+      transition: none !important;
+    }
+    /* 可交互元素保持可点击（不被卡片拖动区吞掉鼠标事件） */
+    body > .pin-modal > .pin-card button,
+    body > .pin-modal > .pin-card input,
+    body > .pin-modal > .pin-card select,
+    body > .pin-modal > .pin-card a,
+    body > .pin-modal > .pin-card .login-tabs,
+    body > .pin-modal > .pin-card .about-badge {
+      -webkit-app-region: no-drag;
+    }
+  </style>
+</head>
+<body>
+  <!-- 登录米家 -->
+  <div id="login-modal" class="pin-modal" hidden>
+    <div class="pin-card login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div class="pin-head">
+        <h2 id="login-title">登录米家</h2>
+        <button id="login-close" class="icon-btn" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="login-state" id="login-state">正在读取登录状态…</p>
+
+      <div class="login-tabs" role="tablist">
+        <button class="login-tab active" id="tab-pwd" data-tab="pwd" role="tab">密码登录</button>
+        <button class="login-tab" id="tab-qr" data-tab="qr" role="tab">二维码登录</button>
+      </div>
+
+      <div class="login-pane" id="pane-pwd">
+        <label class="login-field">
+          <span>小米账号</span>
+          <input id="login-user" type="text" autocomplete="username" placeholder="手机号 / 邮箱 / 小米 ID" />
+        </label>
+        <label class="login-field">
+          <span>密码</span>
+          <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码" />
+        </label>
+        <label class="login-field">
+          <span>服务器</span>
+          <select id="login-country">
+            <option value="cn">中国大陆</option>
+            <option value="de">欧洲</option>
+            <option value="us">美国</option>
+            <option value="sg">新加坡</option>
+            <option value="ru">俄罗斯</option>
+            <option value="tw">台湾</option>
+          </select>
+        </label>
+        <div class="login-field" id="login-captcha-field" hidden>
+          <span id="login-captcha-label">图形验证码</span>
+          <div class="captcha-row">
+            <input id="login-captcha" type="text" autocomplete="off" placeholder="输入图中字符" />
+            <button type="button" id="login-captcha-img" class="captcha-img" title="点击刷新验证码">点击刷新</button>
+          </div>
+        </div>
+        <button id="login-pwd-btn" class="pin-btn">登录</button>
+      </div>
+
+      <div class="login-pane" id="pane-qr" hidden>
+        <div class="qr-box">
+          <div class="qr-placeholder" id="qr-placeholder">点击下方「生成二维码」<br />再用米家 App 扫一扫</div>
+          <img id="qr-img" class="qr-img" alt="登录二维码" hidden />
+        </div>
+        <p class="login-tip">在米家 App 里扫一扫上方二维码，或点按钮重新生成。</p>
+        <button id="login-qr-btn" class="pin-btn">生成二维码</button>
+      </div>
+
+      <p class="login-msg" id="login-msg" hidden></p>
+
+      <div class="login-foot">
+        <button id="login-refresh" class="pin-btn ghost">刷新设备</button>
+        <button id="login-logout" class="pin-btn danger">退出登录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关于 -->
+  <div id="about-modal" class="pin-modal" hidden>
+    <div class="pin-card about-card" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <div class="pin-head">
+        <h2 id="about-title">关于</h2>
+        <button id="about-close" class="icon-btn" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- 3D 徽章 logo：正面绿底白米字、背面银色自由女神像（硬币厚度，悬停倾斜跟随、拖动翻转，高光随旋转移动） -->
+      <div class="about-badge">
+        <div class="about-badge-3d" id="about-badge-3d">
+          <div class="badge-face badge-front">
+            <svg class="badge-mark" viewBox="0 0 44 44" aria-hidden="true">
+              <g stroke="#ffffff" stroke-width="3.8" stroke-linecap="round">
+                <line x1="11" y1="22" x2="33" y2="22" />
+                <line x1="22" y1="11" x2="22" y2="33" />
+                <line x1="13.5" y1="13.5" x2="30.5" y2="30.5" />
+                <line x1="30.5" y1="13.5" x2="13.5" y2="30.5" />
+              </g>
+            </svg>
+            <span class="badge-sheen" aria-hidden="true"></span>
+          </div>
+          <div class="badge-face badge-back">
+            <!-- 自由女神像版画（用户提供位图，灰墨半透明 + CSS 凹刻滤镜） -->
+            <img class="badge-mark badge-liberty" src="../assets/liberty.png" alt="" draggable="false" />
+            <span class="badge-sheen badge-sheen-back" aria-hidden="true"></span>
+          </div>
+          <!-- 硬币侧壁（多层银色薄片，由脚本生成，旋转到侧面时呈现金属厚度） -->
+          <div class="badge-rim" id="badge-rim" aria-hidden="true"></div>
+        </div>
+      </div>
+      <p class="about-hint">点击或拖动可翻转徽章</p>
+
+      <div class="about-name">
+        <span class="about-app">OpenMexia</span>
+        <span class="about-ver" id="about-ver"></span>
+      </div>
+      <p class="about-desc">开源、全平台的智能家居控制中枢。<br />以统一的本地协议层完成接入，无需改造现有网络。</p>
+      <p class="about-author">
+        作者 <a id="about-author-link" class="about-link" href="https://github.com/HZDavy">HZDavy</a>
+      </p>
+
+      <div class="about-actions">
+        <button id="about-site" class="pin-btn">访问官网</button>
+        <button id="about-update" class="pin-btn ghost">检查更新</button>
+      </div>
+      <p class="about-msg" id="about-msg" hidden></p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const api = window.mijia;
+      let currentId = 0;
+      let shownKind = null;     // 'login' | 'about' | null
+      let lastW = 0;
+      let lastH = 0;
+
+      const loginModal = document.getElementById('login-modal');
+      const aboutModal = document.getElementById('about-modal');
+      const loginCard = loginModal.querySelector('.pin-card');
+      const aboutCard = aboutModal.querySelector('.pin-card');
+
+      /* ---------------- 尺寸回报 ---------------- */
+
+      // 量当前卡片尺寸并回传主进程（主进程据此决定弹窗窗口大小并按主窗口居中）
+      function reportSize() {
+        const card = shownKind === 'about' ? aboutCard : loginCard;
+        if (!card) return;
+        const w = Math.ceil(card.offsetWidth);
+        const h = Math.ceil(card.offsetHeight);
+        if (!w || !h) return;
+        if (w === lastW && h === lastH) return;   // 尺寸未变 → 不重复打扰主进程
+        lastW = w;
+        lastH = h;
+        api.dialogSize(w, h, currentId);
+      }
+
+      // 内容高度会随标签切换 / 验证码出现而变 → 观察卡片尺寸变化后重新回报
+      if (typeof ResizeObserver === 'function') {
+        const ro = new ResizeObserver(() => reportSize());
+        ro.observe(loginCard);
+        ro.observe(aboutCard);
+      }
+
+      /* ---------------- 登录米家 ---------------- */
+
+      const loginStateEl = document.getElementById('login-state');
+      const loginMsgEl = document.getElementById('login-msg');
+      const qrImg = document.getElementById('qr-img');
+      const qrPlaceholder = document.getElementById('qr-placeholder');
+      const loginTabs = { pwd: document.getElementById('tab-pwd'), qr: document.getElementById('tab-qr') };
+      const loginPanes = { pwd: document.getElementById('pane-pwd'), qr: document.getElementById('pane-qr') };
+
+      function switchTab(tab) {
+        for (const k of Object.keys(loginTabs)) {
+          loginTabs[k].classList.toggle('active', k === tab);
+          loginPanes[k].hidden = k !== tab;
+        }
+        if (tab !== 'pwd') hideCaptcha();
+      }
+
+      function showLoginMsg(text, kind) {
+        loginMsgEl.hidden = !text;
+        loginMsgEl.textContent = text || '';
+        loginMsgEl.className = 'login-msg' + (kind ? ' ' + kind : '');
+      }
+
+      function renderLoginState(s) {
+        if (!s) return;
+        const authed = !!s.hasDevices;
+        loginStateEl.textContent = authed
+          ? `已登录 · ${s.deviceCount} 台设备${s.cloudAuth ? ' · 云端会话有效' : ''}`
+          : '未登录 · 登录后可同步真实设备';
+        loginStateEl.classList.toggle('ok', authed);
+      }
+
+      function openLoginModal() {
+        hideCaptcha();
+        showLoginMsg('');
+        window.mijia.loginStatus().then(renderLoginState).catch(() => {});
+      }
+
+      // 出错信息去掉 Electron 的 invoke 前缀，只留可读部分
+      function readableError(e) {
+        const msg = e && e.message ? e.message : String(e);
+        return msg
+          .replace(/^Error invoking remote method '[^']*':\s*/, '')
+          .replace(/^(Error|TypeError):\s*/, '');
+      }
+
+      // 密码登录（多步式：账号密码 → 图形验证码 / 二次安全验证码）
+      const captchaField = document.getElementById('login-captcha-field');
+      const captchaLabel = document.getElementById('login-captcha-label');
+      const captchaInput = document.getElementById('login-captcha');
+      const captchaBox = document.getElementById('login-captcha-img');
+      let pwdSessionId = null;   // 待继续输入的登录会话
+      let pwdStage = null;       // 'captcha' | 'send-captcha' | 'code'
+      let pwdMethod = '';        // 二次验证方式：'email' | 'phone'
+
+      // 验证码图片：拿到有效图片才显示，否则显示「点击刷新」占位文字（避免出现破损图标）
+      function setCaptchaImage(dataUrl) {
+        const ok = typeof dataUrl === 'string' && dataUrl.startsWith('data:image/');
+        if (ok) {
+          captchaBox.style.backgroundImage = `url("${dataUrl}")`;
+          captchaBox.textContent = '';
+          captchaBox.classList.remove('empty');
+        } else {
+          captchaBox.style.backgroundImage = 'none';
+          captchaBox.textContent = '点击刷新';
+          captchaBox.classList.add('empty');
+        }
+      }
+
+      // 显示图形验证码输入（stage='captcha' 或 'send-captcha' 复用同一输入框）
+      function showCaptcha(dataUrl) {
+        captchaField.hidden = false;
+        captchaLabel.textContent = '图形验证码';
+        captchaBox.hidden = false;
+        captchaInput.placeholder = '输入图中字符';
+        setCaptchaImage(dataUrl);
+        captchaInput.value = '';
+        captchaInput.focus();
+      }
+
+      // 显示二次验证码输入（邮箱 / 短信验证码）：复用同一输入框，隐藏图片按钮
+      function showCodeField(method) {
+        pwdMethod = method || 'email';
+        captchaField.hidden = false;
+        captchaLabel.textContent = pwdMethod === 'phone' ? '短信验证码' : '邮箱验证码';
+        captchaBox.hidden = true;
+        captchaBox.style.backgroundImage = 'none';
+        captchaInput.placeholder = '输入收到的验证码';
+        captchaInput.value = '';
+        captchaInput.focus();
+      }
+
+      function hideCaptcha() {
+        pwdSessionId = null;
+        pwdStage = null;
+        pwdMethod = '';
+        captchaField.hidden = true;
+        captchaLabel.textContent = '图形验证码';
+        captchaBox.hidden = false;
+        captchaBox.style.backgroundImage = 'none';
+        captchaBox.textContent = '点击刷新';
+        captchaBox.classList.remove('empty');
+        captchaInput.placeholder = '输入图中字符';
+        captchaInput.value = '';
+      }
+
+      // 处理「需要继续输入」类响应（图形验证码 / 二次验证码）；返回 true 表示已接管、无需再走成功分支
+      function handleContinue(res) {
+        if (!res || res.ok) return false;
+        if (res.needCode) {
+          pwdSessionId = res.sessionId || pwdSessionId;
+          pwdStage = 'code';
+          showCodeField(res.method);
+          showLoginMsg(res.hint || '请输入验证码');
+          return true;
+        }
+        if (res.needCaptcha) {
+          pwdSessionId = res.sessionId || pwdSessionId;
+          pwdStage = res.twoFactor ? 'send-captcha' : 'captcha';
+          showCaptcha(res.captcha);
+          if (!res.captcha) showLoginMsg('验证码加载失败，请点击刷新', 'error');
+          else if (res.twoFactor) showLoginMsg('为安全起见，请先输入图形验证码以发送验证码');
+          else showLoginMsg('需要图形验证码，请输入图中字符');
+          return true;
+        }
+        return false;
+      }
+
+      // 登录成功统一收尾
+      function finishLoginSuccess(res) {
+        hideCaptcha();
+        document.getElementById('login-pass').value = '';
+        showLoginMsg(`登录成功，已获取 ${res.count} 台设备`, 'ok');
+        renderLoginState({ hasDevices: true, deviceCount: res.count, cloudAuth: false });
+      }
+
+      // 点「点击刷新」：按当前 stage 重新取一张验证码（图形验证码 / 二次验证发送用的图形验证码）
+      async function refreshCaptcha() {
+        if (pwdSessionId) {
+          try {
+            const res = await window.mijia.loginRefreshCaptcha({ sessionId: pwdSessionId });
+            if (handleContinue(res)) return;
+            finishLoginSuccess(res);
+          } catch (e) {
+            showLoginMsg(readableError(e), 'error');
+          }
+          return;
+        }
+        const username = document.getElementById('login-user').value.trim();
+        const password = document.getElementById('login-pass').value;
+        const country = document.getElementById('login-country').value;
+        if (!username || !password) { showLoginMsg('请填写小米账号与密码', 'error'); return; }
+        try {
+          const res = await window.mijia.loginPassword({ username, password, country });
+          if (handleContinue(res)) return;
+          finishLoginSuccess(res);
+        } catch (e) {
+          showLoginMsg(readableError(e), 'error');
+        }
+      }
+      captchaBox.addEventListener('click', refreshCaptcha);
+
+      document.getElementById('login-pwd-btn').addEventListener('click', async () => {
+        const username = document.getElementById('login-user').value.trim();
+        const password = document.getElementById('login-pass').value;
+        const country = document.getElementById('login-country').value;
+        const btn = document.getElementById('login-pwd-btn');
+
+        // 已进入需要继续输入的阶段（图形验证码 / 二次验证码）：本次点击提交验证码
+        if (pwdSessionId) {
+          const code = captchaInput.value.trim();
+          if (!code) { showLoginMsg(pwdStage === 'code' ? '请输入验证码' : '请输入图形验证码', 'error'); return; }
+          btn.disabled = true;
+          showLoginMsg(pwdStage === 'code' ? '正在验证…' : '正在提交…');
+          try {
+            const res = await window.mijia.loginCaptcha({ sessionId: pwdSessionId, code });
+            if (res.needCode) {
+              pwdSessionId = res.sessionId;
+              pwdStage = 'code';
+              showCodeField(res.method);
+              showLoginMsg(res.hint || '验证码不正确，请重新输入', 'error');
+              return;
+            }
+            if (res.needCaptcha) {
+              pwdSessionId = res.sessionId;
+              pwdStage = res.twoFactor ? 'send-captcha' : 'captcha';
+              showCaptcha(res.captcha);
+              if (!res.captcha) showLoginMsg('验证码加载失败，请点击刷新', 'error');
+              else showLoginMsg(res.twoFactor ? '请重新输入图形验证码' : '验证码不正确，请重试', 'error');
+              return;
+            }
+            finishLoginSuccess(res);
+          } catch (e) {
+            hideCaptcha();
+            showLoginMsg(readableError(e), 'error');
+          } finally {
+            btn.disabled = false;
+          }
+          return;
+        }
+
+        if (!username || !password) { showLoginMsg('请填写小米账号与密码', 'error'); return; }
+        btn.disabled = true;
+        showLoginMsg('正在登录…');
+        try {
+          const res = await window.mijia.loginPassword({ username, password, country });
+          if (handleContinue(res)) return;
+          finishLoginSuccess(res);
+        } catch (e) {
+          showLoginMsg(readableError(e), 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // 二维码登录（生成二维码 → 等待 App 扫码，完成后返回）
+      let qrBusy = false;
+      async function startQR() {
+        if (qrBusy) return;
+        qrBusy = true;
+        const btn = document.getElementById('login-qr-btn');
+        btn.disabled = true;
+        showLoginMsg('正在生成二维码…');
+        qrImg.hidden = true;
+        qrPlaceholder.hidden = false;
+        qrPlaceholder.textContent = '正在生成二维码…';
+        try {
+          const res = await window.mijia.loginQR();
+          showLoginMsg(`登录成功，已获取 ${res.count} 台设备`, 'ok');
+          renderLoginState({ hasDevices: true, deviceCount: res.count, cloudAuth: true });
+        } catch (e) {
+          showLoginMsg(readableError(e), 'error');
+          qrPlaceholder.hidden = false;
+          qrPlaceholder.textContent = '二维码已失效，请重新生成';
+        } finally {
+          qrBusy = false;
+          btn.disabled = false;
+        }
+      }
+      document.getElementById('login-qr-btn').addEventListener('click', startQR);
+      loginTabs.qr.addEventListener('click', () => {
+        switchTab('qr');
+        if (!qrBusy && qrImg.hidden && !qrImg.src) startQR();
+      });
+      loginTabs.pwd.addEventListener('click', () => switchTab('pwd'));
+
+      // 主进程推来的二维码
+      window.mijia.onQR((info) => {
+        const src = (info && (info.dataUrl || info.qrImageUrl)) || '';
+        if (src) {
+          qrImg.src = src;
+          qrImg.hidden = false;
+          qrPlaceholder.hidden = true;
+          showLoginMsg('请用米家 App 扫描二维码', '');
+        } else {
+          qrImg.hidden = true;
+          qrPlaceholder.hidden = false;
+          qrPlaceholder.textContent = '二维码获取失败，请重试';
+        }
+      });
+
+      // 刷新设备清单
+      document.getElementById('login-refresh').addEventListener('click', async () => {
+        const btn = document.getElementById('login-refresh');
+        btn.disabled = true;
+        showLoginMsg('正在刷新设备清单…');
+        try {
+          const res = await window.mijia.refreshDevices();
+          showLoginMsg(`已刷新，共 ${res.count} 台设备`, 'ok');
+          window.mijia.loginStatus().then(renderLoginState).catch(() => {});
+        } catch (e) {
+          showLoginMsg(readableError(e), 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // 退出登录
+      document.getElementById('login-logout').addEventListener('click', async () => {
+        const btn = document.getElementById('login-logout');
+        btn.disabled = true;
+        showLoginMsg('正在退出登录…');
+        try {
+          await window.mijia.logout();
+          showLoginMsg('已退出登录', 'ok');
+          renderLoginState({ hasDevices: false, deviceCount: 0, cloudAuth: false });
+        } catch (e) {
+          showLoginMsg(readableError(e), 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      window.mijia.onLoginState((s) => renderLoginState(s));
+      document.getElementById('login-close').addEventListener('click', () => api.dialogClose());
+
+      /* ---------------- 关于 ---------------- */
+
+      // 本软件官网 / 作者主页
+      const SITE_URL = 'https://hzdavy.github.io/OpenMexia/';
+      const AUTHOR_URL = 'https://github.com/HZDavy';
+
+      const aboutMsgEl = document.getElementById('about-msg');
+      const badge3d = document.getElementById('about-badge-3d');
+
+      // 硬币厚度：在 3D 空间里沿 Z 轴堆叠多层银色薄片，旋转到侧面时呈现金属侧壁
+      (function buildBadgeRim() {
+        const rim = document.getElementById('badge-rim');
+        if (!rim) return;
+        const SLICES = 25;   // 薄片数量（0.5px 一步，侧视时不露缝）
+        const HALF = 6;      // 单侧厚度，总厚 = 2 * HALF = 12px
+        for (let i = 0; i < SLICES; i++) {
+          const t = i / (SLICES - 1);            // 0..1
+          const layer = document.createElement('div');
+          layer.className = 'badge-rim-slice';
+          layer.style.transform = `translateZ(${(-HALF + t * HALF * 2).toFixed(2)}px)`;
+          // 外缘中部更亮、向两面渐暗 → 圆柱侧面的反光带
+          layer.style.filter = `brightness(${(0.62 + 0.5 * Math.sin(t * Math.PI)).toFixed(3)})`;
+          rim.appendChild(layer);
+        }
+      })();
+
+      function setAboutMsg(text, kind) {
+        if (!text) {
+          aboutMsgEl.hidden = true;
+          aboutMsgEl.textContent = '';
+          aboutMsgEl.className = 'about-msg';
+          return;
+        }
+        aboutMsgEl.hidden = false;
+        aboutMsgEl.textContent = text;
+        aboutMsgEl.className = 'about-msg' + (kind ? ' ' + kind : '');
+      }
+
+      document.getElementById('about-close').addEventListener('click', () => api.dialogClose());
+
+      // 访问官网 / 点作者名跳转作者主页（交给主进程用系统浏览器打开）
+      document.getElementById('about-site').addEventListener('click', () => window.mijia.openExternal(SITE_URL));
+      document.getElementById('about-author-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.mijia.openExternal(AUTHOR_URL);
+      });
+
+      // 检查更新
+      let checkingUpdate = false;
+      document.getElementById('about-update').addEventListener('click', async () => {
+        if (checkingUpdate) return;
+        checkingUpdate = true;
+        setAboutMsg('正在检查更新…');
+        try {
+          const r = await window.mijia.checkUpdate();
+          if (!r || !r.ok) {
+            setAboutMsg('检查更新失败，请稍后重试', 'error');
+          } else if (r.hasUpdate) {
+            setAboutMsg(`发现新版本 v${r.latest}（当前 v${r.current}），已打开下载页`, 'ok');
+            window.mijia.openExternal(r.url || SITE_URL);
+          } else {
+            setAboutMsg(`已是最新版本 v${r.current}`, 'ok');
+          }
+        } catch {
+          setAboutMsg('检查更新失败，请稍后重试', 'error');
+        } finally {
+          checkingUpdate = false;
+        }
+      });
+
+      // 3D 徽章：鼠标拖动翻转（X/Y 轴），单击也翻转半圈；悬停时随鼠标轻微倾斜跟随。
+      // 悬停倾斜叠加在拖动旋转之上（最终角度 = badgeRot + badgeTilt），高光随合成角度移动。
+      const badgeRot = { x: 0, y: 0 };
+      const badgeTilt = { x: 0, y: 0 };
+      const BADGE_TILT_MAX = 10;  // 悬停倾斜最大角度（保持轻微）
+      let badgeDrag = null;      // 拖动起点
+      let badgePointerId = null;
+      let badgeMoved = false;
+
+      function applyBadge() {
+        const rx = badgeRot.x + badgeTilt.x;
+        const ry = badgeRot.y + badgeTilt.y;
+        badge3d.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+        // 高光位置随旋转反向偏移，模拟固定光源在徽章表面的反射
+        const nx = Math.max(-1, Math.min(1, ry / 120));
+        const ny = Math.max(-1, Math.min(1, -rx / 120));
+        badge3d.style.setProperty('--lx', (50 - nx * 38).toFixed(1) + '%');
+        badge3d.style.setProperty('--ly', (50 - ny * 38).toFixed(1) + '%');
+      }
+
+      badge3d.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        badgePointerId = e.pointerId;
+        badgeMoved = false;
+        // 把悬停倾斜并入拖动基准（变换总值不变、无跳变），拖动期间不再叠加倾斜
+        badgeDrag = { x: e.clientX, y: e.clientY, rx: badgeRot.x + badgeTilt.x, ry: badgeRot.y + badgeTilt.y };
+        badgeTilt.x = 0;
+        badgeTilt.y = 0;
+        badge3d.classList.remove('hovering');
+        badge3d.classList.add('dragging');
+        badge3d.setPointerCapture(e.pointerId);
+      });
+
+      badge3d.addEventListener('pointermove', (e) => {
+        // 未拖动：鼠标悬停随指针位置轻微倾斜（.hovering 的短过渡做平滑跟随；触摸不做悬停）
+        if (!badgeDrag) {
+          if (e.pointerType !== 'mouse') return;
+          const r = badge3d.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) return;
+          const nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
+          const ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
+          badgeTilt.x = -ny * BADGE_TILT_MAX;
+          badgeTilt.y = nx * BADGE_TILT_MAX;
+          badge3d.classList.add('hovering');
+          applyBadge();
+          return;
+        }
+        if (e.pointerId !== badgePointerId) return;
+        const dx = e.clientX - badgeDrag.x;
+        const dy = e.clientY - badgeDrag.y;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) badgeMoved = true;
+        badgeRot.y = badgeDrag.ry + dx * 0.6;
+        badgeRot.x = Math.max(-75, Math.min(75, badgeDrag.rx - dy * 0.6));
+        applyBadge();
+      });
+
+      // 指针离开：倾斜归零（移除 .hovering 后回到默认 0.55s 缓动，柔和回正）
+      badge3d.addEventListener('pointerleave', () => {
+        if (badgeDrag) return;
+        badgeTilt.x = 0;
+        badgeTilt.y = 0;
+        badge3d.classList.remove('hovering');
+        applyBadge();
+      });
+
+      function endBadgeDrag(e) {
+        if (!badgeDrag || (e && e.pointerId !== badgePointerId)) return;
+        badge3d.classList.remove('dragging');
+        badgeDrag = null;
+        badgePointerId = null;
+        if (!badgeMoved) {
+          // 单击（未拖动）→ 翻转到另一面
+          badgeRot.y += 180;
+          applyBadge();
+        }
+      }
+      badge3d.addEventListener('pointerup', endBadgeDrag);
+      badge3d.addEventListener('pointercancel', endBadgeDrag);
+
+      applyBadge();
+
+      /* ---------------- 弹窗调度（由主进程下发要显示哪一种） ---------------- */
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') api.dialogClose();
+      });
+
+      api.onDialogData(function (data) {
+        currentId = data.id;
+        lastW = 0;
+        lastH = 0;
+        shownKind = data.kind;
+        // 窗口此刻仍隐藏：先回到「未显示」态（卡片透明），等主进程把窗口显示出来后再淡入
+        document.body.classList.remove('revealed', 'clearing');
+        document.documentElement.classList.toggle('light', data.theme === 'light');
+
+        if (data.kind === 'login') {
+          aboutModal.hidden = true;
+          loginModal.hidden = false;
+          switchTab('pwd');
+          openLoginModal();
+        } else {
+          loginModal.hidden = true;
+          aboutModal.hidden = false;
+          document.getElementById('about-ver').textContent = 'v' + data.version;
+          setAboutMsg('');
+        }
+        // 同步量一次并回传（窗口此刻仍隐藏，主进程据此决定窗口尺寸后再显示）
+        reportSize();
+      });
+
+      // 主进程已把窗口真正显示出来 → 触发单次入场淡入（同菜单窗口）
+      api.onDialogShown(function () {
+        document.body.classList.add('revealed');
+      });
+
+      // 主进程即将收起弹窗：先把内容清空、回到透明态。
+      // 此刻窗口仍然可见（主进程会在本帧绘制完成后再隐藏），所以这次清空会被真实绘制；
+      // 下次打开复用同一窗口时，呈现的首帧就是这张「空帧」，不会闪出上一次的卡片。
+      api.onDialogReset(function () {
+        document.body.classList.add('clearing');
+        document.body.classList.remove('revealed');
+        loginModal.hidden = true;
+        aboutModal.hidden = true;
+        shownKind = null;
+        currentId = 0;
+        lastW = 0;
+        lastH = 0;
+      });
+    })();
+  </script>
+</body>
+</html>

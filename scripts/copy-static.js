@@ -11,7 +11,7 @@ const out = path.join(root, 'build');
 // 阶段 4 起它由 renderer/app.ts 经 esbuild 打包为 IIFE（见 package.json 的 build:renderer），
 // 单独产出到 build/renderer/app.js，避免被 tsc 当作 CJS 注入 exports。
 fs.mkdirSync(path.join(out, 'renderer'), { recursive: true });
-for (const f of ['index.html', 'style.css']) {
+for (const f of ['index.html', 'style.css', 'menu.html', 'dialog.html']) {
   fs.copyFileSync(path.join(root, 'renderer', f), path.join(out, 'renderer', f));
 }
 

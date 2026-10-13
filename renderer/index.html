@@ -35,9 +35,6 @@
       <span class="mock-tag">演示数据</span>
     </footer>
 
-    <!-- 菜单遮罩：菜单展开时覆盖整窗（含标题栏拖拽区），点击任意位置即可收起 -->
-    <div id="menu-backdrop" class="menu-backdrop" hidden></div>
-
     <!-- 设备右键操作菜单（内容由 app.js 动态填充） -->
     <div id="ctx-menu" class="ctx-menu" role="menu" hidden></div>
 
@@ -258,72 +255,6 @@
       </div>
     </div>
 
-    <div id="login-modal" class="pin-modal" hidden>
-      <div class="pin-card login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
-        <div class="pin-head">
-          <h2 id="login-title">登录米家</h2>
-          <button id="login-close" class="icon-btn" title="关闭" aria-label="关闭">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
-
-        <p class="login-state" id="login-state">正在读取登录状态…</p>
-
-        <div class="login-tabs" role="tablist">
-          <button class="login-tab active" id="tab-pwd" data-tab="pwd" role="tab">密码登录</button>
-          <button class="login-tab" id="tab-qr" data-tab="qr" role="tab">二维码登录</button>
-        </div>
-
-        <div class="login-pane" id="pane-pwd">
-          <label class="login-field">
-            <span>小米账号</span>
-            <input id="login-user" type="text" autocomplete="username" placeholder="手机号 / 邮箱 / 小米 ID" />
-          </label>
-          <label class="login-field">
-            <span>密码</span>
-            <input id="login-pass" type="password" autocomplete="current-password" placeholder="密码" />
-          </label>
-          <label class="login-field">
-            <span>服务器</span>
-            <select id="login-country">
-              <option value="cn">中国大陆</option>
-              <option value="de">欧洲</option>
-              <option value="us">美国</option>
-              <option value="sg">新加坡</option>
-              <option value="ru">俄罗斯</option>
-              <option value="tw">台湾</option>
-            </select>
-          </label>
-          <div class="login-field" id="login-captcha-field" hidden>
-            <span id="login-captcha-label">图形验证码</span>
-            <div class="captcha-row">
-              <input id="login-captcha" type="text" autocomplete="off" placeholder="输入图中字符" />
-              <button type="button" id="login-captcha-img" class="captcha-img" title="点击刷新验证码">点击刷新</button>
-            </div>
-          </div>
-          <button id="login-pwd-btn" class="pin-btn">登录</button>
-        </div>
-
-        <div class="login-pane" id="pane-qr" hidden>
-          <div class="qr-box">
-            <div class="qr-placeholder" id="qr-placeholder">点击下方「生成二维码」<br />再用米家 App 扫一扫</div>
-            <img id="qr-img" class="qr-img" alt="登录二维码" hidden />
-          </div>
-          <p class="login-tip">在米家 App 里扫一扫上方二维码，或点按钮重新生成。</p>
-          <button id="login-qr-btn" class="pin-btn">生成二维码</button>
-        </div>
-
-        <p class="login-msg" id="login-msg" hidden></p>
-
-        <div class="login-foot">
-          <button id="login-refresh" class="pin-btn ghost">刷新设备</button>
-          <button id="login-logout" class="pin-btn danger">退出登录</button>
-        </div>
-      </div>
-    </div>
-
     <div id="home-modal" class="pin-modal" hidden>
       <div class="pin-card" role="dialog" aria-modal="true" aria-labelledby="home-title">
         <div class="pin-head">
@@ -383,58 +314,8 @@
       </div>
     </div>
 
-    <div id="about-modal" class="pin-modal" hidden>
-      <div class="pin-card about-card" role="dialog" aria-modal="true" aria-labelledby="about-title">
-        <div class="pin-head">
-          <h2 id="about-title">关于</h2>
-          <button id="about-close" class="icon-btn" title="关闭" aria-label="关闭">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- 3D 徽章 logo：正面绿底白米字、背面银色自由女神像（硬币厚度，悬停倾斜跟随、拖动翻转，高光随旋转移动） -->
-        <div class="about-badge">
-          <div class="about-badge-3d" id="about-badge-3d">
-            <div class="badge-face badge-front">
-              <svg class="badge-mark" viewBox="0 0 44 44" aria-hidden="true">
-                <g stroke="#ffffff" stroke-width="3.8" stroke-linecap="round">
-                  <line x1="11" y1="22" x2="33" y2="22" />
-                  <line x1="22" y1="11" x2="22" y2="33" />
-                  <line x1="13.5" y1="13.5" x2="30.5" y2="30.5" />
-                  <line x1="30.5" y1="13.5" x2="13.5" y2="30.5" />
-                </g>
-              </svg>
-              <span class="badge-sheen" aria-hidden="true"></span>
-            </div>
-            <div class="badge-face badge-back">
-              <!-- 自由女神像版画（用户提供位图，灰墨半透明 + CSS 凹刻滤镜） -->
-              <img class="badge-mark badge-liberty" src="../assets/liberty.png" alt="" draggable="false" />
-              <span class="badge-sheen badge-sheen-back" aria-hidden="true"></span>
-            </div>
-            <!-- 硬币侧壁（多层银色薄片，由 app.js 生成，旋转到侧面时呈现金属厚度） -->
-            <div class="badge-rim" id="badge-rim" aria-hidden="true"></div>
-          </div>
-        </div>
-        <p class="about-hint">点击或拖动可翻转徽章</p>
-
-        <div class="about-name">
-          <span class="about-app">OpenMexia</span>
-          <span class="about-ver" id="about-ver"></span>
-        </div>
-        <p class="about-desc">开源、全平台的智能家居控制中枢。<br />以统一的本地协议层完成接入，无需改造现有网络。</p>
-        <p class="about-author">
-          作者 <a id="about-author-link" class="about-link" href="https://github.com/HZDavy">HZDavy</a>
-        </p>
-
-        <div class="about-actions">
-          <button id="about-site" class="pin-btn">访问官网</button>
-          <button id="about-update" class="pin-btn ghost">检查更新</button>
-        </div>
-        <p class="about-msg" id="about-msg" hidden></p>
-      </div>
-    </div>
+    <!-- 独立弹窗（登录 / 关于）打开时显示黑色半透明遮罩；弹窗本体在独立窗口里 -->
+    <div id="modal-backdrop" class="modal-backdrop" hidden></div>
   </div>
 
   <script src="app.js"></script>

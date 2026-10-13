@@ -6,6 +6,7 @@ import { createProvider } from './src/devices';
 import { MijiaLogin } from './src/mijia-login';
 import * as QRCode from 'qrcode';
 import type { FullscreenMode, Settings, Theme, WindowMode } from './shared/types';
+import type { MenuPlace, OpenMenuPayload, PopupMenuData, DialogKind, DialogData } from './shared/ipc';
 
 // Electron 未内置「退出标记」这个应用私有属性，这里给 App 补上类型
 declare global {
@@ -23,6 +24,11 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   console.error('[main] unhandledRejection:', reason);
 });
+
+// Windows 上 Chromium 的「原生窗口遮挡计算」会把盖在主窗口之上的置顶弹出窗口（菜单 / 登录 / 关于）
+// 误判为「被遮挡」，从而暂停/延迟它们的绘制：表现为弹出时先空一帧再出内容（闪一下）。
+// 关掉该特性后，这些弹窗始终即时绘制，消除弹出闪烁。必须在 app ready 之前设置。
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
 // 初始尺寸；首次加载由渲染层测量内容后微调一次高度，之后窗口可自由缩放
 // 高度取 640：足够完整显示登录弹窗，避免首次打开时内容被截断
@@ -297,6 +303,328 @@ function toggleWindowMode() {
   applyWindowMode(windowMode() === 'widget' ? 'window' : 'widget');
 }
 
+/* ---------------- 应用内弹出菜单（独立透明窗口，不受主窗口边界裁剪） ---------------- */
+
+// 菜单内容四周留出的透明边距（须与 renderer/menu.html 里的 --mpad 一致）：
+// 弹出窗口尺寸 = 菜单内容尺寸 + 2×MENU_PAD，菜单内容固定在窗口左上角 (MENU_PAD, MENU_PAD)。
+// 之所以要留透明边距：菜单带圆角与阴影，若窗口与内容严丝合缝，圆角外的阴影会被窗口边缘切掉。
+const MENU_PAD = 22;
+
+// 弹出菜单窗口不复用：每次弹出都用「一个全新的、已预热好的窗口」，收起即销毁。
+// 为什么不用复用：隐藏的 Electron 窗口不会重绘，会保留上一帧合成结果；复用窗口时
+// 要么在「收起时先清空再隐藏」把清空过程画在可见窗口上（收起瞬间闪），
+// 要么在「重新显示时」闪出上一次的内容。反复开合时这两种时序都会偶发漏一帧 → 非常精微的闪。
+// 改为不复用后，任何窗口都只被 show() 一次、且首次显示前内容尚未上屏，从根上杜绝残帧。
+// 为抵消「每次新建窗口」的加载延迟，常备一个隐藏的「备用窗口」预热好，弹出时直接取用。
+let menuWin: BrowserWindow | null = null;       // 当前正在使用的菜单窗口（收起即销毁）
+let menuSpare: BrowserWindow | null = null;     // 预热的备用窗口（隐藏、已加载完成）
+let menuSpareReady = false;                     // 备用窗口是否已加载完成（可直接接收 menu:data）
+let menuSeq = 0;                                // 每次弹出递增的会话 id，用于丢弃过期消息
+let menuPending: PopupMenuData | null = null;   // 当前窗口尚未就绪时暂存的菜单数据
+let menuAnchor: { x: number; y: number; place: MenuPlace } | null = null;   // 本次弹出的锚点
+let menuShownAt = 0;                            // 窗口真正显示的时刻（配合菜单窗口 blur 去抖）
+
+// 新建一个菜单窗口（无边框、透明、置顶、可获得焦点 focusable:true）。
+// 可获焦是关键——「点击任意位置收起」依赖菜单窗口自身的 blur 事件：
+// 用户点主窗口 / 其它应用 / 桌面时焦点离开菜单窗口 → blur → 收起，稳定可靠。
+function buildMenuWindow(): BrowserWindow {
+  const w = new BrowserWindow({
+    width: 10,
+    height: 10,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: true,
+    hasShadow: false,
+    roundedCorners: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      // 菜单窗口在「隐藏态」完成内容注入与测量，显示后立即绘制；
+      // 关闭后台节流，避免渲染被推迟导致显示瞬间先空一帧再出内容（闪一下）。
+      backgroundThrottling: false,
+    },
+  });
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // 失焦即收起：只对「当前正在使用的窗口」生效（备用 / 已废弃窗口的失焦一律忽略）。
+  // 「刚显示瞬间」的焦点抖动（show/focus 与窗口真正进入前台的时间差）用 menuShownAt 去抖忽略。
+  w.on('blur', () => {
+    if (w !== menuWin || w.isDestroyed()) return;
+    if (Date.now() - menuShownAt < 150) return;
+    if (menuAnchor === null) return;             // 已收起，忽略
+    closeMenuWindow(true, 'menu-blur');
+  });
+  w.loadFile(path.join(__dirname, 'renderer', 'menu.html'));
+  return w;
+}
+
+// 页面加载完成后回调（若已加载完则立即执行）。did-finish-load 是可靠的「可接收 IPC」信号。
+function onceMenuReady(w: BrowserWindow, cb: () => void) {
+  if (w.isDestroyed()) return;
+  if (!w.webContents.isLoading()) cb();
+  else w.webContents.once('did-finish-load', () => { if (!w.isDestroyed()) cb(); });
+}
+
+// 预热一个隐藏的备用窗口，供下一次弹出直接取用（避免弹出时现建窗口导致延迟/首帧空白）。
+function prepareMenuSpare() {
+  if (menuSpare && !menuSpare.isDestroyed()) return;
+  const w = buildMenuWindow();
+  menuSpare = w;
+  menuSpareReady = false;
+  onceMenuReady(w, () => { if (menuSpare === w) menuSpareReady = true; });
+  w.on('closed', () => { if (menuSpare === w) { menuSpare = null; menuSpareReady = false; } });
+}
+
+// 渲染层请求弹出菜单：取一个「全新」窗口（优先用预热好的备用窗口），把菜单 HTML 交给它，
+// 等它量好内容尺寸回传 menu:size 后再定位显示（两阶段，保证定位准确）。
+function openMenuWindow(payload: OpenMenuPayload) {
+  const data: PopupMenuData = { ...payload, id: ++menuSeq };
+  menuAnchor = { x: Math.round(payload.anchor.x), y: Math.round(payload.anchor.y), place: payload.place };
+  // 取用备用窗口；备用尚未就绪（极少见的连续快开）时退化为现建，数据挂到 menuPending。
+  let w: BrowserWindow;
+  let ready: boolean;
+  if (menuSpare && !menuSpare.isDestroyed()) {
+    w = menuSpare;
+    ready = menuSpareReady;
+    menuSpare = null;
+    menuSpareReady = false;
+  } else {
+    w = buildMenuWindow();
+    ready = false;
+  }
+  menuWin = w;
+  w.hide();
+  if (ready) {
+    w.webContents.send('menu:data', data);
+  } else {
+    menuPending = data;
+    onceMenuReady(w, () => {
+      if (w !== menuWin || !menuPending) return;   // 期间窗口已被换掉 / 数据已被消费
+      w.webContents.send('menu:data', menuPending);
+      menuPending = null;
+    });
+  }
+  // 立刻为「下一次」弹出预热新备用窗口，让下次弹出零等待。
+  prepareMenuSpare();
+}
+
+// 弹出窗口量好内容尺寸后回调：按锚点计算位置，仅按「鼠标所在显示器」的工作区钳制
+// （不参考主窗口边界，所以菜单可以伸出主窗口甚至整屏之外由工作区兜底）。
+function placeMenuWindow(id: number, cw: number, ch: number) {
+  if (!menuWin || menuWin.isDestroyed() || !menuAnchor) return;
+  if (id !== menuSeq) return;                   // 过期会话丢弃
+  const cww = Math.max(1, Math.round(cw));
+  const chh = Math.max(1, Math.round(ch));
+  const w = cww + MENU_PAD * 2;
+  const h = chh + MENU_PAD * 2;
+  // 菜单内容左上角的目标屏幕坐标
+  const cx = menuAnchor.place === 'below-right' ? menuAnchor.x - cww : menuAnchor.x;
+  const cy = menuAnchor.y;
+  const area = screen.getDisplayNearestPoint({ x: menuAnchor.x, y: menuAnchor.y }).workArea;
+  const x = Math.min(Math.max(cx - MENU_PAD, area.x), area.x + area.width - w);
+  const y = Math.min(Math.max(cy - MENU_PAD, area.y), area.y + area.height - h);
+  // 尺寸 + 位置一次性设定（原子操作）：分两步 setSize / setPosition 会产生
+  // 「先按新尺寸、旧位置」或「旧尺寸、新位置」的中间帧，菜单出现瞬间会轻微跳一下（微小抖动）。
+  menuWin.setBounds({ x: Math.round(x), y: Math.round(y), width: w, height: h });
+  // Windows 上 setAlwaysOnTop 各档位都等价于 HWND_TOPMOST，真正的 z 序由「创建/激活顺序」决定。
+  // 主窗口若也是置顶，可能比菜单窗口更晚进入 TOPMOST 组而压住菜单，需显式抬到 TOPMOST 组最前。
+  // 关键：抬升必须在「显示之前」完成——显示后再 moveTop 会触发一次合成重排，
+  // 直观表现为菜单/弹窗出现瞬间的微小抖动；而 show() 本身也会把窗口激活到最前，z 序不受影响。
+  menuWin.moveTop();
+  // 可获焦显示：菜单窗口拿到焦点后，用户点击主窗口 / 其它应用 / 桌面 → 菜单窗口失焦 → 自动收起，
+  // 从底层保证「点击任意位置收起菜单」（不再依赖主窗口渲染层是否收到 pointerdown）。
+  // 注意：show() 本身就会激活/聚焦窗口，无需再单独 focus()——多一次 focus 会让窗口在已经显示后
+  // 再被激活一次，触发合成重排，表现为菜单出现瞬间的微小抖动。
+  menuWin.show();
+  menuShownAt = Date.now();
+  // 窗口已真正显示出来（位置/尺寸就绪）→ 通知菜单页开始单次入场淡入，
+  // 避免把动画放在 DOM 替换时触发（那时窗口还没显示，会出现「弹-缩-弹」的重放闪烁）。
+  menuWin.webContents.send('menu:shown', { id });
+}
+
+// 收起弹出菜单窗口（幂等）；notify=true 且菜单「确实处于展开态」时，通知主窗口渲染层同步收起态。
+// 关键：只有真的展开过才通知。空调用（菜单本就收起）若也发 widget:menu-closed，会把渲染层的
+// menuOpen 误置为 false 造成状态失步——失步后「点击任意位置收起」会因为渲染层以为已收起而失效。
+function closeMenuWindow(notify = true, reason = '?') {
+  const wasOpen = menuAnchor !== null;
+  // 收起前菜单窗口是否还持有焦点：点菜单项 / 按 Esc 属于「焦点仍在菜单上」，收起后需把焦点还给主窗口；
+  // 而因失焦收起（menu-blur）时焦点已在别处，不能再抢回来。必须在销毁前取。
+  const hadFocus = !!(menuWin && !menuWin.isDestroyed() && menuWin.isVisible() && menuWin.isFocused());
+  menuAnchor = null;
+  menuPending = null;
+  const w = menuWin;
+  // 先断开 menuWin 引用再销毁：销毁会触发窗口的 blur/closed 事件，此时菜单已不属于「当前窗口」，
+  // 事件处理器会因 w !== menuWin 而直接忽略，避免重入收起。
+  menuWin = null;
+  // 不复用：直接销毁当前窗口。相比「先清空再隐藏」，销毁不产生任何可见的过渡帧
+  // （透明窗口上清空/淡出的每一帧都是一次合成重排，反复开合时偶发漏帧就会看到精微的一闪）。
+  if (w && !w.isDestroyed()) w.destroy();
+  if (hadFocus && reason !== 'menu-blur' && win && !win.isDestroyed()) win.focus();
+  if (notify && wasOpen && win && !win.isDestroyed()) win.webContents.send('widget:menu-closed');
+  // 保持常备一个预热好的备用窗口，供下一次弹出零等待取用。
+  prepareMenuSpare();
+}
+
+/* ---------------- 独立弹窗（登录 / 关于，与主窗口脱钩、不受主窗口尺寸约束） ---------------- */
+
+// 弹窗窗口四周留白（须与 renderer/dialog.html 的 --dpad 一致），作用同 MENU_PAD：给圆角与投影让位
+const DIALOG_PAD = 18;
+
+let dialogWin: BrowserWindow | null = null;
+let dialogWinReady = false;
+let dialogSeq = 0;
+let dialogPending: DialogData | null = null;
+let dialogKind: DialogKind | null = null;                        // 当前弹窗种类（null = 未打开）
+let dialogBounds = { width: 0, height: 0 };                      // 最近一次弹窗窗口尺寸（主窗口移动时重新居中用）
+let dialogUserMoved = false;                                     // 用户是否手动拖动过弹窗（拖动后不再自动回中）
+
+// 懒创建弹窗窗口：透明无边框、置顶、可聚焦（登录表单需要键盘输入），且可拖动（movable:true）。
+// 与菜单窗口最大的区别是 focusable:true —— 因此弹窗获得焦点时主窗口会 blur（只收起菜单，不影响弹窗）。
+function ensureDialogWin(): BrowserWindow {
+  if (dialogWin && !dialogWin.isDestroyed()) return dialogWin;
+  dialogWin = new BrowserWindow({
+    width: 360,
+    height: 460,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    movable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: true,
+    hasShadow: false,
+    roundedCorners: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      // 同菜单窗口：隐藏态完成注入与测量，关闭后台节流让显示后立即绘制，避免闪一下。
+      backgroundThrottling: false,
+    },
+  });
+  dialogWin.setAlwaysOnTop(true, 'screen-saver');
+  dialogWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // 用户拖动弹窗（渲染层 .pin-card 的 -webkit-app-region: drag 区域）→ 标记为「已手动移动」，
+  // 之后主窗口移动 / 卡片尺寸变化都只保持用户摆放的位置，不再自动回中。
+  dialogWin.on('moved', () => {
+    if (!dialogWin || dialogWin.isDestroyed()) return;
+    if (!dialogKind) return;                     // 未打开时的移动忽略
+    dialogUserMoved = true;
+  });
+  dialogWinReady = false;
+  dialogWin.webContents.on('did-finish-load', () => {
+    dialogWinReady = true;
+    if (dialogPending && dialogWin && !dialogWin.isDestroyed()) {
+      dialogWin.webContents.send('dialog:data', dialogPending);
+      dialogPending = null;
+    }
+  });
+  dialogWin.on('closed', () => { dialogWin = null; dialogWinReady = false; dialogKind = null; });
+  dialogWin.loadFile(path.join(__dirname, 'renderer', 'dialog.html'));
+  return dialogWin;
+}
+
+// 打开弹窗：先隐藏（避免旧卡片闪现），把种类/主题/版本交给弹窗窗口渲染，
+// 同时通知主窗口显示黑色遮罩。等弹窗量好卡片尺寸回传 dialog:size 后再定位显示。
+function openDialogWindow(kind: DialogKind) {
+  dialogKind = kind;
+  dialogUserMoved = false;                        // 每次打开都从「居中」开始（用户本次拖动后再保持其位置）
+  const data: DialogData = { id: ++dialogSeq, kind, theme: stateTheme(), version: app.getVersion() };
+  const w = ensureDialogWin();
+  w.hide();
+  if (dialogWinReady) w.webContents.send('dialog:data', data);
+  else dialogPending = data;
+  if (win && !win.isDestroyed()) win.webContents.send('widget:dialog-open', kind);
+}
+
+// 弹窗量好卡片尺寸 → 以主窗口中心为中心定位，仅按显示器工作区钳制
+function placeDialogWindow(id: number, cw: number, ch: number) {
+  if (!dialogWin || dialogWin.isDestroyed()) return;
+  if (id !== dialogSeq) return;                   // 过期会话丢弃
+  const w = Math.max(1, Math.round(cw)) + DIALOG_PAD * 2;
+  const h = Math.max(1, Math.round(ch)) + DIALOG_PAD * 2;
+  // 已显示且尺寸未变 → 什么都不用做。避免紧随首次上报到来的第二次尺寸上报
+  // 对「可见窗口」再 setSize/setPosition，导致淡入过程中窗口二次跳动（有时会看到闪一下）。
+  if (dialogWin.isVisible() && w === dialogBounds.width && h === dialogBounds.height) return;
+  dialogBounds = { width: w, height: h };
+  // 首次打开（或以编程方式打开后尺寸变化）：以主窗口中心定位。
+  // 用户手动拖动过之后：只保持其左上角随尺寸变化，不再自动回中（否则一改尺寸就跳回中心）。
+  const wasVisible = dialogWin.isVisible();
+  const keepUserPos = dialogUserMoved && wasVisible;
+  const prev = keepUserPos ? dialogWin.getPosition() : null;
+  // 尺寸 + 位置一次性设定（原子操作，避免分步 setSize / setPosition 的中间帧造成跳动）
+  if (prev) {
+    const area = screen.getDisplayNearestPoint({ x: prev[0], y: prev[1] }).workArea;
+    const px = Math.min(Math.max(prev[0], area.x), area.x + area.width - w);
+    const py = Math.min(Math.max(prev[1], area.y), area.y + area.height - h);
+    dialogWin.setBounds({ x: px, y: py, width: w, height: h });
+  } else {
+    const { x, y } = centeredOnMain(w, h);
+    dialogWin.setBounds({ x, y, width: w, height: h });
+  }
+  // 抬升放在「显示之前」：显示后再 moveTop 会触发合成重排，表现为弹窗出现瞬间的微小抖动；
+  // show() 本身会把窗口激活到最前，z 序不受影响。（窗口底色已在创建时设为全透明）
+  dialogWin.moveTop();                            // 确保盖在（可能置顶的）主窗口之上
+  dialogWin.show();
+  dialogWin.focus();
+  // 窗口已真正显示出来 → 通知弹窗页开始单次入场淡入（同菜单窗口的处理）。
+  if (!wasVisible) dialogWin.webContents.send('dialog:shown', { id });
+}
+
+// 主窗口中心为基准 + 工作区钳制的弹窗坐标
+function centeredOnMain(w: number, h: number): { x: number; y: number } {
+  const hasWin = win && !win.isDestroyed();
+  const [wx, wy] = hasWin ? win.getPosition() : [0, 0];
+  const [ww, wh] = hasWin ? win.getSize() : [0, 0];
+  const area = screen.getDisplayMatching({ x: wx, y: wy, width: ww, height: wh }).workArea;
+  const x = Math.min(Math.max(Math.round(wx + ww / 2 - w / 2), area.x), area.x + area.width - w);
+  const y = Math.min(Math.max(Math.round(wy + wh / 2 - h / 2), area.y), area.y + area.height - h);
+  return { x, y };
+}
+
+// 主窗口移动 / 缩放时，让弹窗重新居中（弹窗自身不随窗口变化尺寸）。
+// 用户已手动拖动过 → 尊重用户摆放，不再自动回中。
+function repositionDialogWindow() {
+  if (!dialogWin || dialogWin.isDestroyed() || !dialogWin.isVisible() || !dialogBounds.width) return;
+  if (dialogUserMoved) return;
+  const { x, y } = centeredOnMain(dialogBounds.width, dialogBounds.height);
+  dialogWin.setPosition(x, y);
+}
+
+// 收起弹窗（幂等）；notify=true 且确实开着时通知主窗口隐藏黑色遮罩
+function closeDialogWindow(notify = true) {
+  const wasOpen = dialogKind !== null;
+  if (dialogWin && !dialogWin.isDestroyed() && dialogWin.isVisible()) {
+    // 关键：先让弹窗清空内容、回到透明态，等这一帧真实画完后（窗口此刻仍可见）再隐藏。
+    // 隐藏窗口不会重绘，会保留上一次「卡片可见」的画面；下次打开复用同一窗口时，
+    // 首帧就是这张旧画面 → 表现为打开瞬间闪一下旧内容。趁可见时先画一张空帧即可根除。
+    dialogWin.webContents.send('dialog:reset');
+    setTimeout(() => {
+      if (dialogKind !== null) return;            // 期间又被重新打开 → 不要隐藏
+      if (dialogWin && !dialogWin.isDestroyed() && dialogWin.isVisible()) dialogWin.hide();
+    }, 40);
+  }
+  dialogKind = null;
+  if (notify && wasOpen && win && !win.isDestroyed()) win.webContents.send('widget:dialog-closed');
+}
+
 /* ---------------- 窗口 ---------------- */
 
 // 主屏工作区内居中的坐标（按窗口的实际宽高计算，避免记住的自定义尺寸下算出屏外坐标）
@@ -398,6 +726,35 @@ function createWindow() {
   win.on('maximize', syncFullscreenFromWindow);
   win.on('unmaximize', syncFullscreenFromWindow);
 
+  // 主窗口移动 / 缩放 / 隐藏 / 最小化 → 收起弹出菜单。
+  // （弹出菜单锚定在屏幕坐标上，主窗口一旦变动就会与之脱节，直接收起最自然）
+  win.on('move', () => { closeMenuWindow(true, 'main-move'); repositionDialogWindow(); });
+  win.on('resize', () => { closeMenuWindow(true, 'main-resize'); repositionDialogWindow(); });
+  win.on('hide', () => { closeMenuWindow(true, 'main-hide'); closeDialogWindow(true); });
+  win.on('minimize', () => { closeMenuWindow(true, 'main-minimize'); closeDialogWindow(true); });
+  // 注意：主窗口失焦不再负责收起菜单——菜单窗口现在是可获焦的（focusable:true），
+  // 「点击任意位置收起」由菜单窗口自身的 blur 处理（见 buildMenuWindow）。
+  // 若在这里也监听主窗口 blur，会与菜单「抢焦点」互相触发，反而造成抖动。
+  // 主窗口与菜单窗口都是置顶(topmost)，z 序由「激活顺序」决定。
+  win.on('focus', () => {
+    if (Date.now() - menuShownAt <= 200) {
+      // 菜单刚显示的一瞬间：主窗口若抢先获得前台、进入 TOPMOST 组把刚弹出的菜单压住，
+      // 把菜单窗口抬到最前。仅当菜单「尚未显示」时才抬升——对已经可见的透明窗口做 moveTop
+      // 会触发一次合成重排，观感就是菜单出现瞬间微闪；show() 本身已足够把它激活到最前。
+      if (menuAnchor !== null && menuWin && !menuWin.isDestroyed() && !menuWin.isVisible()) menuWin.moveTop();
+      return;
+    }
+    // 过了弹出瞬间后主窗口再获得焦点，只可能是「用户点了主窗口 / 桌面来收起菜单」。
+    // 这里就立即收起，比等菜单窗口自身的 blur 更早一步：blur 到达时主窗口已经抢到前台，
+    // 会短暂把菜单压住，观感就是收起瞬间抖一下；提前收起可避开这段重叠。
+    if (menuAnchor !== null) closeMenuWindow(true, 'main-focus');
+  });
+  win.on('closed', () => {
+    if (menuWin && !menuWin.isDestroyed()) menuWin.destroy();
+    if (menuSpare && !menuSpare.isDestroyed()) menuSpare.destroy();
+    if (dialogWin && !dialogWin.isDestroyed()) dialogWin.destroy();
+  });
+
   // 标题栏右键：无边框窗口里 -webkit-app-region: drag 的区域被当作非客户区（标题栏），
   // 右键会触发本事件。preventDefault() 阻止 Windows 系统菜单，再把鼠标屏幕坐标交给渲染层，
   // 让应用内菜单跟随鼠标位置弹出（原生拖动 / 双击最大化等行为不受影响）。
@@ -451,14 +808,14 @@ async function rebuildProvider() {
 }
 
 async function broadcastLoginState() {
-  if (!login || !win || win.isDestroyed()) return;
+  if (!login) return;
   try {
     const st = await login.status();
     // isMock 与 createProvider 的选源逻辑保持一致：有设备清单才用真实源
-    win.webContents.send('widget:login-state', {
-      ...st,
-      isMock: !(st.hasDevices && st.deviceCount > 0),
-    });
+    const payload = { ...st, isMock: !(st.hasDevices && st.deviceCount > 0) };
+    if (win && !win.isDestroyed()) win.webContents.send('widget:login-state', payload);
+    // 登录面板已迁到独立弹窗，登录态也要同步给弹窗窗口
+    if (dialogWin && !dialogWin.isDestroyed()) dialogWin.webContents.send('widget:login-state', payload);
   } catch { /* ignore */ }
 }
 
@@ -631,11 +988,13 @@ function registerIpc() {
   // 二维码登录：主进程把二维码信息推给渲染层展示，登录完成后再拉设备清单
   ipcMain.handle('widget:login-qr', async () => {
     const res = await login.loginQR(async (info) => {
-      if (!win || win.isDestroyed()) return;
       // 云端返回的 qrImageUrl 不保证能直接 <img>，这里用 loginUrl 本地生成 dataURL 兜底
       let dataUrl = '';
       try { if (info && info.loginUrl) dataUrl = await QRCode.toDataURL(info.loginUrl, { margin: 1, width: 220 }); } catch { /* keep empty */ }
-      if (!win.isDestroyed()) win.webContents.send('widget:qr', { ...info, dataUrl });
+      const payload = { ...info, dataUrl };
+      if (win && !win.isDestroyed()) win.webContents.send('widget:qr', payload);
+      // 登录面板已迁到独立弹窗，二维码也要推给弹窗窗口
+      if (dialogWin && !dialogWin.isDestroyed()) dialogWin.webContents.send('widget:qr', payload);
     });
     await broadcastLoginState();
     await rebuildProvider();
@@ -743,6 +1102,34 @@ function registerIpc() {
       showRoomName: (s as any).showRoomName !== false,
     };
   });
+  // ---- 应用内弹出菜单（独立窗口） ----
+  // 渲染层请求弹出 / 收起
+  ipcMain.on('widget:open-menu', (_e, payload: OpenMenuPayload = {} as any) => {
+    if (payload && typeof payload.html === 'string' && payload.anchor) openMenuWindow(payload);
+  });
+  ipcMain.on('widget:close-menu', () => closeMenuWindow());
+  // 弹出窗口量好内容尺寸 → 定位并显示
+  ipcMain.on('menu:size', (_e, { width, height, id } = {} as any) => {
+    if (Number.isFinite(width) && Number.isFinite(height)) placeMenuWindow(id, width, height);
+  });
+  // 弹出窗口里点了某项（key 非空）或点了透明留白（key 为空）→ 先收起，再把 key 转交主窗口渲染层执行
+  ipcMain.on('menu:action', (_e, { key, id } = {} as any) => {
+    if (id !== menuSeq) return;                 // 过期会话丢弃
+    closeMenuWindow();
+    if (key && win && !win.isDestroyed()) win.webContents.send('widget:menu-action', key);
+  });
+  // ---- 独立弹窗（登录 / 关于） ----
+  // 主窗口渲染层请求打开 / 关闭
+  ipcMain.on('widget:open-dialog', (_e, { kind } = {} as any) => {
+    if (kind === 'login' || kind === 'about') openDialogWindow(kind);
+  });
+  ipcMain.on('widget:close-dialog', () => closeDialogWindow());
+  // 弹窗量好卡片尺寸 → 定位并显示
+  ipcMain.on('dialog:size', (_e, { width, height, id } = {} as any) => {
+    if (Number.isFinite(width) && Number.isFinite(height)) placeDialogWindow(id, width, height);
+  });
+  // 弹窗自身请求关闭（关闭按钮 / Esc）→ 收起并通知主窗口隐藏遮罩
+  ipcMain.on('dialog:close', () => closeDialogWindow());
   // 打开外部链接（关于窗口的官网 / 作者主页）：仅允许 http(s)，交给系统默认浏览器
   ipcMain.on('widget:open-external', (_e, url) => {
     if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
@@ -786,6 +1173,7 @@ if (!app.requestSingleInstanceLock()) {
       console.error('[main] rebuildProvider failed:', err);
     });
     createWindow();
+    prepareMenuSpare();   // 预热弹出菜单窗口，首次弹出即零等待
     // 托盘只在小组件模式存在；窗口模式无托盘、窗口常驻任务栏
     if (windowMode() === 'widget') createTray();
   });
@@ -799,5 +1187,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     app.isQuitting = true;
     if (provider) provider.stop();
+    if (menuWin && !menuWin.isDestroyed()) menuWin.destroy();
+    if (menuSpare && !menuSpare.isDestroyed()) menuSpare.destroy();
   });
 }

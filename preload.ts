@@ -44,6 +44,32 @@ contextBridge.exposeInMainWorld('mijia', {
   onToggleTheme: (cb) => ipcRenderer.on('widget:toggle-theme', () => cb()),
   // 标题栏右键：主进程拦截了 Windows 系统菜单，把鼠标屏幕坐标传回渲染层弹应用内菜单
   onTitlebarMenu: (cb) => ipcRenderer.on('widget:titlebar-menu', (_e, pt) => cb(pt)),
+  // ---- 应用内弹出菜单（独立窗口，不受主窗口边界裁剪） ----
+  // 主窗口渲染层：请求弹出 / 收起菜单，接收菜单项回传与「已收起」通知
+  openMenu: (payload) => ipcRenderer.send('widget:open-menu', payload),
+  closeMenu: () => ipcRenderer.send('widget:close-menu'),
+  onMenuAction: (cb) => ipcRenderer.on('widget:menu-action', (_e, key) => cb(key)),
+  onMenuClosed: (cb) => ipcRenderer.on('widget:menu-closed', () => cb()),
+  // 弹出菜单窗口：接收菜单数据、回传内容尺寸、回传被点击项的 key
+  onMenuData: (cb) => ipcRenderer.on('menu:data', (_e, data) => cb(data)),
+  menuSize: (width, height, id) => ipcRenderer.send('menu:size', { width, height, id }),
+  menuAction: (key, id) => ipcRenderer.send('menu:action', { key, id }),
+  // 弹出菜单窗口：主进程已把窗口显示出来 → 开始单次入场淡入
+  onMenuShown: (cb) => ipcRenderer.on('menu:shown', () => cb()),
+  // ---- 独立弹窗（登录 / 关于，与主窗口脱钩、不受主窗口尺寸约束） ----
+  // 主窗口渲染层：请求打开 / 关闭弹窗，接收弹窗开/关通知（用于控制黑色遮罩）
+  openDialog: (kind) => ipcRenderer.send('widget:open-dialog', { kind }),
+  closeDialog: () => ipcRenderer.send('widget:close-dialog'),
+  onDialogOpen: (cb) => ipcRenderer.on('widget:dialog-open', (_e, kind) => cb(kind)),
+  onDialogClosed: (cb) => ipcRenderer.on('widget:dialog-closed', () => cb()),
+  // 独立弹窗窗口：接收渲染数据、回传卡片尺寸、请求关闭
+  onDialogData: (cb) => ipcRenderer.on('dialog:data', (_e, data) => cb(data)),
+  dialogSize: (width, height, id) => ipcRenderer.send('dialog:size', { width, height, id }),
+  dialogClose: () => ipcRenderer.send('dialog:close'),
+  // 独立弹窗窗口：主进程已把窗口显示出来 → 开始单次入场淡入
+  onDialogShown: (cb) => ipcRenderer.on('dialog:shown', () => cb()),
+  // 独立弹窗窗口：收起前清空内容回到透明态（趁窗口仍可见时真实绘制，避免复用旧帧造成闪烁）
+  onDialogReset: (cb) => ipcRenderer.on('dialog:reset', () => cb()),
   // 关于窗口：打开外部链接（官网 / 作者主页）与检查更新
   openExternal: (url) => ipcRenderer.send('widget:open-external', url),
   checkUpdate: () => ipcRenderer.invoke('widget:check-update'),

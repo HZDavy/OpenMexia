@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>OpenMexia Menu</title>
+  <!-- 复用主窗口同一套样式，保证弹出菜单与原来视觉完全一致（圆角 / 底色 / 阴影 / 动画） -->
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* 弹出菜单窗口的外壳：透明背景 + 内容四周留白。
+       留白（--mpad）须与主进程的 MENU_PAD 保持一致：
+       窗口尺寸 = 菜单内容 + 2×--mpad，菜单内容固定贴在窗口左上角 (--mpad, --mpad)。
+       留白的作用是给菜单的圆角与投影让出空间，避免被窗口边缘裁切。 */
+    :root { --mpad: 22px; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      color-scheme: dark;
+    }
+    html.light { color-scheme: light; }
+
+    /* 用 style.css 里 .menu / .ctx-menu 的现有样式，只把定位改为固定贴到留白处，
+       并去掉外层窗口背景带来的边角问题 */
+    body > .menu,
+    body > .ctx-menu {
+      position: fixed !important;
+      top: var(--mpad) !important;
+      left: var(--mpad) !important;
+      right: auto !important;
+      z-index: 1;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55) !important;
+    }
+    html.light body > .menu,
+    html.light body > .ctx-menu {
+      box-shadow: 0 12px 30px rgba(18, 22, 30, 0.18) !important;
+    }
+
+    /* 入场动画改由 body.revealed 单次驱动，且只淡入透明度（不做位移/缩放）：
+       style.css 里的 menu-in keyframes 带 translateY+scale，会在「替换 innerHTML / 隐藏→显示」时反复重放，
+       表现为「弹一下→缩一下→再弹一下」的闪烁；位移/缩放本身也容易被看成抖动。
+       改为：注入内容后先处于透明态，等主进程把窗口真正显示出来并广播 menu:shown 后，再加 revealed 触发一次纯淡入。 */
+    body > .menu,
+    body > .ctx-menu {
+      animation: none !important;
+      opacity: 0;
+      transition: opacity 0.12s ease;
+    }
+    body.revealed > .menu,
+    body.revealed > .ctx-menu {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    (function () {
+      const api = window.mijia;
+      let currentId = 0;
+      let lastPointer = 0;
+
+      // 收到菜单数据：套用主题、注入菜单 HTML，量好尺寸后回传主进程定位显示
+      api.onMenuData(function (data) {
+        currentId = data.id;
+        document.body.classList.remove('revealed');   // 回到透明态，等窗口显示后再淡入
+        document.documentElement.classList.toggle('light', data.theme === 'light');
+        document.body.innerHTML = data.html;
+        const root = document.body.firstElementChild;
+        if (!root) return;
+        // 直接同步测量：读取 offsetWidth/offsetHeight 会强制立即完成布局，结果可靠。
+        // 不能用 requestAnimationFrame —— 弹出窗口此刻仍是隐藏状态，隐藏窗口不会触发 rAF，
+        // 会导致尺寸永远量不到、菜单无法显示。
+        api.menuSize(Math.ceil(root.offsetWidth), Math.ceil(root.offsetHeight), currentId);
+      });
+
+      // 主进程已把窗口真正显示出来 → 触发单次入场淡入
+      api.onMenuShown(function () {
+        document.body.classList.add('revealed');
+      });
+
+      // Esc 收起菜单：菜单窗口现在可获焦（focusable:true），键盘事件在本窗口内处理
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); api.closeMenu(); }
+      });
+
+      // 点击菜单项：回传该项的 key，由主窗口渲染层复用原有监听执行
+      document.addEventListener('click', function (e) {
+        const item = e.target.closest('[data-menu-key]');
+        if (!item) return;
+        e.preventDefault();
+        api.menuAction(item.getAttribute('data-menu-key') || '', currentId);
+      }, true);
+
+      // 点击菜单外的透明留白：回传空 key（主进程据此收起菜单）。
+      // 用 pointerdown 记录位置，click 时若仍落在留白上才收起，避免菜单内部按下、拖出后松开误判。
+      document.addEventListener('pointerdown', function (e) {
+        lastPointer = e.target.closest('.menu, .ctx-menu') ? 1 : 0;
+      }, true);
+      document.addEventListener('click', function (e) {
+        if (lastPointer) return;
+        if (e.target.closest('.menu, .ctx-menu')) return;
+        api.menuAction('', currentId);
+      }, true);
+    })();
+  </script>
+</body>
+</html>

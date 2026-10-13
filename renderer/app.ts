@@ -1867,7 +1867,7 @@ function renderWelcome() {
       '<h2 class="welcome-title">欢迎使用 OpenMexia</h2>' +
       '<p class="welcome-desc">登录米家账号，把灯、风扇、空调与传感器汇聚到同一个控制台</p>' +
       '<button class="pin-btn welcome-btn" type="button">登录米家</button>';
-    wrap.querySelector('.welcome-btn').addEventListener('click', () => openLoginModal(true));
+    wrap.querySelector('.welcome-btn').addEventListener('click', () => window.mijia.openDialog('login'));
     listEl.append(wrap);
   }
   subtitleEl.textContent = '尚未登录';
@@ -2252,11 +2252,13 @@ function render(devices) {
   fitWindow();
 }
 
-/* ---------------- 右上角汉堡菜单 ---------------- */
+/* ---------------- 应用内弹出菜单（独立窗口，不受主窗口边界裁剪） ---------------- */
 
 const btnMenu = document.getElementById('btn-menu');
 const menuEl = document.getElementById('menu');
-const menuBackdrop = document.getElementById('menu-backdrop');
+// 应用内菜单与设备右键菜单共用一个弹出窗口，因此共用一个「已展开」状态
+let menuOpen = false;
+
 const miTop = document.getElementById('mi-top');
 const miPin = document.getElementById('mi-pin');
 const miLogin = document.getElementById('mi-login');
@@ -2265,58 +2267,62 @@ const miFs = document.getElementById('mi-fs');
 const miFsCover = document.getElementById('mi-fs-cover');
 const miHide = document.getElementById('mi-hide');
 
+// 当前主题（弹出窗口据此渲染同款浅/深色菜单）
+function currentMenuTheme() {
+  return document.documentElement.classList.contains('light') ? 'light' : 'dark';
+}
+
 // 同步两个全屏项的勾选状态（mode: 'normal' | 'cover' | null）
 function applyFullscreenState(mode) {
   miFs.setAttribute('aria-checked', String(mode === 'normal'));
   miFsCover.setAttribute('aria-checked', String(mode === 'cover'));
 }
 
-function openMenu(open, at) {
-  if (!open) {
-    menuEl.hidden = true;
-    menuBackdrop.hidden = true;
-    btnMenu.classList.toggle('active', false);
-    btnMenu.setAttribute('aria-expanded', 'false');
-    // 复位为默认（右上角汉堡按钮下方）定位
-    menuEl.style.left = '';
-    menuEl.style.top = '';
-    menuEl.style.right = '';
-    menuEl.style.transformOrigin = '';
-    return;
-  }
+// 序列化 #menu：克隆后去掉 id / hidden，并给每个菜单项打上 data-menu-key（= 原 id）。
+// 弹出窗口点击时按 key 回传，主窗口用 getElementById(key).click() 复用原有监听，无需重新绑定。
+function serializeAppMenu() {
+  const clone = menuEl.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.removeAttribute('hidden');
+  clone.querySelectorAll('.menu-item').forEach((el) => {
+    if (el.id) el.setAttribute('data-menu-key', el.id);
+    el.removeAttribute('id');
+  });
+  return clone.outerHTML;
+}
 
-  menuEl.hidden = false;
-  menuBackdrop.hidden = false;
-  // 只有从汉堡按钮打开时才高亮它；标题栏右键跟随鼠标弹出时不要激活汉堡按钮
-  const viaButton = !(at && Number.isFinite(at.x) && Number.isFinite(at.y));
+// 收起弹出菜单（幂等）：请主进程隐藏弹出窗口，并复位汉堡按钮态。
+// 不做 menuOpen 提前返回——请求本身幂等，主进程以自身状态为准；
+// 若渲染层状态万一失步，提前返回会让「点击任意位置收起」失效。
+function closeMenu() {
+  menuOpen = false;
+  window.mijia.closeMenu();
+  btnMenu.classList.toggle('active', false);
+  btnMenu.setAttribute('aria-expanded', 'false');
+}
+
+// 弹出应用内菜单。anchor 为屏幕坐标；place='below-right' 以锚点为菜单右上角（汉堡按钮），
+// 'at' 以锚点为左上角（跟随鼠标 / 标题栏右键）。菜单由独立窗口渲染，不受主窗口边界裁剪。
+function showAppMenu(anchor, place) {
+  menuOpen = true;
+  const viaButton = place === 'below-right';
   btnMenu.classList.toggle('active', viaButton);
   btnMenu.setAttribute('aria-expanded', viaButton ? 'true' : 'false');
-
-  if (at && Number.isFinite(at.x) && Number.isFinite(at.y)) {
-    // 跟随鼠标弹出（标题栏右键）：先显示再量尺寸，然后做窗口边界钳制
-    menuEl.style.right = 'auto';
-    menuEl.style.transformOrigin = 'top left';
-    const pad = 6;
-    const w = menuEl.offsetWidth;
-    const hgt = menuEl.offsetHeight;
-    const vw = document.documentElement.clientWidth;
-    const vh = document.documentElement.clientHeight;
-    const left = Math.max(pad, Math.min(at.x, vw - w - pad));
-    const top = Math.max(pad, Math.min(at.y, vh - hgt - pad));
-    menuEl.style.left = left + 'px';
-    menuEl.style.top = top + 'px';
-  } else {
-    // 汉堡按钮：用 CSS 默认的右上角定位
-    menuEl.style.left = '';
-    menuEl.style.top = '';
-    menuEl.style.right = '';
-    menuEl.style.transformOrigin = '';
-  }
+  window.mijia.openMenu({
+    kind: 'app',
+    html: serializeAppMenu(),
+    anchor,
+    place,
+    theme: currentMenuTheme(),
+  });
 }
 
 btnMenu.addEventListener('click', (e) => {
   e.stopPropagation();
-  openMenu(menuEl.hidden);
+  if (menuOpen) { closeMenu(); return; }
+  // 以汉堡按钮右下角为锚点（屏幕坐标）：与旧版 CSS 的 top:44px / right:10px 对齐
+  const w = document.documentElement.clientWidth;
+  showAppMenu({ x: window.screenX + w - 10, y: window.screenY + 44 }, 'below-right');
 });
 
 miTop.addEventListener('click', () => window.mijia.toggleOnTop());
@@ -2417,12 +2423,12 @@ applyRoomGroupState();
 applyRoomNameState();
 reportRoomState();
 
-// 托盘菜单 → 打开对应面板（与应用内菜单共用同一套面板）
+// 托盘菜单 → 打开对应面板（登录 / 关于 走独立弹窗；家庭 / 隐藏设备仍在主窗口内）
 window.mijia.onOpenPanel((name) => {
-  if (name === 'login') openLoginModal(true);
+  if (name === 'login') window.mijia.openDialog('login');
   else if (name === 'home') openHomeModal(true);
   else if (name === 'hidden') openHiddenModal(true);
-  else if (name === 'about') openAboutModal(true);
+  else if (name === 'about') window.mijia.openDialog('about');
 });
 
 // 托盘菜单 → 切换深色 / 浅色主题（复用应用内菜单项的点击逻辑）
@@ -2434,42 +2440,62 @@ window.mijia.onToggleRoom((which) => {
   else if (which === 'name') miRoomName.click();
 });
 
-// 点击菜单项后收起
-menuEl.addEventListener('click', () => openMenu(false));
+// 弹出窗口里点了菜单项（key 非空）/ 点了透明留白（key 为空）→ 主进程回传 key，
+// 这里复用原有菜单项监听执行动作（ctx- 前缀为设备右键菜单项，其余为应用内菜单项 id）。
+window.mijia.onMenuAction((key) => {
+  if (!key) return;
+  if (key.indexOf('ctx-') === 0) {
+    const item = ctxMenu.querySelector('[data-menu-key="' + key + '"]');
+    if (item) item.click();
+  } else {
+    const el = document.getElementById(key);
+    if (el) el.click();
+  }
+});
 
-// 点击任意位置（菜单与汉堡按钮之外）即收起：用捕获阶段，
-// 保证即使内部元素 stopPropagation 也能生效
+// 主进程已收起弹出窗口（点空白 / Esc / 主窗口失焦 / 主窗口移动等）→ 同步复位展开态
+window.mijia.onMenuClosed(() => {
+  menuOpen = false;
+  btnMenu.classList.toggle('active', false);
+  btnMenu.setAttribute('aria-expanded', 'false');
+});
+
+// 点击主窗口内任意位置（汉堡按钮之外）即收起：用捕获阶段，保证即使内部元素 stopPropagation 也能生效。
+// 不依赖 menuOpen 判断，收起请求幂等下发，避免渲染层状态失步导致点击无效。
 window.addEventListener('pointerdown', (e) => {
-  if (!ctxMenu.hidden && !e.target.closest('#ctx-menu')) closeCtxMenu();
-  if (menuEl.hidden) return;
-  if (e.target.closest('#menu') || e.target.closest('#btn-menu')) return;
-  openMenu(false);
+  if (e.target.closest('#btn-menu')) return;
+  closeMenu();
 }, true);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openMenu(false); });
-window.addEventListener('blur', () => openMenu(false));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+// 注意：不要在这里监听主窗口 blur 去收起菜单——弹出窗口显示瞬间主窗口可能瞬时失焦，
+// 而无去抖的 blur 会立即把 menuOpen 置 false，造成渲染层与主进程状态失步，
+// 之后「点击任意位置」就会因提前 return 而失效。主窗口失焦收起统一由主进程处理（带去抖）。
 
 /* ---------------- 标题栏右键菜单 ---------------- */
 
 // 标题栏保持原生 drag 区域（保留系统拖动、双击最大化、边缘吸附等行为），
 // 右键不会派发到渲染层，而是触发主进程的 system-context-menu 事件；
-// 主进程阻止系统菜单后，把鼠标屏幕坐标传回这里，换算成窗口内坐标让菜单跟随鼠标弹出。
+// 主进程阻止系统菜单后，把鼠标屏幕坐标传回这里，让应用内菜单跟随鼠标弹出。
 window.mijia.onTitlebarMenu((pt) => {
   if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
   closeCtxMenu();
-  openMenu(true, { x: pt.x - window.screenX, y: pt.y - window.screenY });
+  showAppMenu({ x: pt.x, y: pt.y }, 'at');   // pt 已是屏幕坐标
 });
 
 /* ---------------- 设备右键操作菜单 ---------------- */
 
 const ctxMenu = document.getElementById('ctx-menu');
+// 右键菜单项的稳定 key（弹出窗口点击后按此找回对应项并触发其点击）
+let ctxKeySeq = 0;
 
 function makeCtxItem(label, icon, onClick, danger) {
   const item = h('button', 'ctx-item' + (danger ? ' danger' : ''));
   item.type = 'button';
+  // data-menu-key 是弹出窗口回传的凭据（见 onMenuAction），点击后由主进程先收起菜单再执行动作
+  item.setAttribute('data-menu-key', 'ctx-' + (++ctxKeySeq));
   item.append(h('span', 'ctx-icon', icon || ''), h('span', 'ctx-label', label));
   item.addEventListener('click', (e) => {
     e.stopPropagation();
-    closeCtxMenu();
     onClick();
   });
   return item;
@@ -2509,22 +2535,26 @@ function openRoomCtxMenu(key, section, x, y) {
   showCtxMenu(x, y);
 }
 
-// 把菜单定位到鼠标处，并避免超出窗口边界
+// 把 #ctx-menu（已填充好菜单项）作为独立弹出窗口展示在鼠标处（x/y 为窗口内坐标），
+// 与汉堡菜单共用同一弹出窗口与样式，同样不受主窗口边界裁剪。
 function showCtxMenu(x, y) {
-  ctxMenu.hidden = false;
-  const pad = 6;
-  const w = ctxMenu.offsetWidth;
-  const hgt = ctxMenu.offsetHeight;
-  const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
-  const left = Math.min(x, vw - w - pad);
-  const top = Math.min(y, vh - hgt - pad);
-  ctxMenu.style.left = Math.max(pad, left) + 'px';
-  ctxMenu.style.top = Math.max(pad, top) + 'px';
+  menuOpen = true;
+  btnMenu.classList.toggle('active', false);
+  btnMenu.setAttribute('aria-expanded', 'false');
+  const clone = ctxMenu.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.removeAttribute('hidden');
+  window.mijia.openMenu({
+    kind: 'ctx',
+    html: clone.outerHTML,
+    anchor: { x: window.screenX + x, y: window.screenY + y },
+    place: 'at',
+    theme: currentMenuTheme(),
+  });
 }
 
 function closeCtxMenu() {
-  if (!ctxMenu.hidden) ctxMenu.hidden = true;
+  if (menuOpen) closeMenu();
 }
 
 function hideDevice(id) {
@@ -2582,164 +2612,20 @@ document.getElementById('mi-hidden').addEventListener('click', () => openHiddenM
 document.getElementById('hidden-close').addEventListener('click', () => openHiddenModal(false));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !hiddenModal.hidden) openHiddenModal(false); });
 
-/* ---------------- 关于 面板 ---------------- */
+/* ---------------- 独立弹窗（登录 / 关于） ---------------- */
 
-// 本软件官网 / 作者主页
-const SITE_URL = 'https://hzdavy.github.io/OpenMexia/';
-const AUTHOR_URL = 'https://github.com/HZDavy';
+// 登录 / 关于已迁到独立窗口（renderer/dialog.html + dialog.ts），不受主窗口尺寸约束。
+// 主窗口只负责：①菜单项触发打开；②弹窗打开时显示黑色遮罩。
 
-const aboutModal = document.getElementById('about-modal');
-const aboutMsgEl = document.getElementById('about-msg');
-const badge3d = document.getElementById('about-badge-3d');
+// 弹窗打开 / 关闭 → 主窗口黑色遮罩显隐
+const modalBackdrop = document.getElementById('modal-backdrop');
+window.mijia.onDialogOpen(() => { if (modalBackdrop) modalBackdrop.hidden = false; });
+window.mijia.onDialogClosed(() => { if (modalBackdrop) modalBackdrop.hidden = true; });
 
-// 硬币厚度：在 3D 空间里沿 Z 轴堆叠多层银色薄片，旋转到侧面时呈现金属侧壁
-(function buildBadgeRim() {
-  const rim = document.getElementById('badge-rim');
-  if (!rim) return;
-  const SLICES = 25;   // 薄片数量（0.5px 一步，侧视时不露缝）
-  const HALF = 6;      // 单侧厚度，总厚 = 2 * HALF = 12px
-  for (let i = 0; i < SLICES; i++) {
-    const t = i / (SLICES - 1);            // 0..1
-    const layer = document.createElement('div');
-    layer.className = 'badge-rim-slice';
-    layer.style.transform = `translateZ(${(-HALF + t * HALF * 2).toFixed(2)}px)`;
-    // 外缘中部更亮、向两面渐暗 → 圆柱侧面的反光带
-    layer.style.filter = `brightness(${(0.62 + 0.5 * Math.sin(t * Math.PI)).toFixed(3)})`;
-    rim.appendChild(layer);
-  }
-})();
+// 应用内菜单 / 托盘菜单的入口（菜单项在弹出窗口里点击后由 onMenuAction 回流到这里）
+document.getElementById('mi-about').addEventListener('click', () => window.mijia.openDialog('about'));
+document.getElementById('mi-cloud').addEventListener('click', () => window.mijia.openDialog('login'));
 
-function setAboutMsg(text, kind) {
-  if (!text) {
-    aboutMsgEl.hidden = true;
-    aboutMsgEl.textContent = '';
-    aboutMsgEl.className = 'about-msg';
-    return;
-  }
-  aboutMsgEl.hidden = false;
-  aboutMsgEl.textContent = text;
-  aboutMsgEl.className = 'about-msg' + (kind ? ' ' + kind : '');
-}
-
-function openAboutModal(open) {
-  aboutModal.hidden = !open;
-  if (open) setAboutMsg('');
-}
-
-document.getElementById('mi-about').addEventListener('click', () => openAboutModal(true));
-document.getElementById('about-close').addEventListener('click', () => openAboutModal(false));
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !aboutModal.hidden) openAboutModal(false); });
-
-// 访问官网 / 点作者名跳转作者主页（交给主进程用系统浏览器打开）
-document.getElementById('about-site').addEventListener('click', () => window.mijia.openExternal(SITE_URL));
-document.getElementById('about-author-link').addEventListener('click', (e) => {
-  e.preventDefault();
-  window.mijia.openExternal(AUTHOR_URL);
-});
-
-// 检查更新
-let checkingUpdate = false;
-document.getElementById('about-update').addEventListener('click', async () => {
-  if (checkingUpdate) return;
-  checkingUpdate = true;
-  setAboutMsg('正在检查更新…');
-  try {
-    const r = await window.mijia.checkUpdate();
-    if (!r || !r.ok) {
-      setAboutMsg('检查更新失败，请稍后重试', 'error');
-    } else if (r.hasUpdate) {
-      setAboutMsg(`发现新版本 v${r.latest}（当前 v${r.current}），已打开下载页`, 'ok');
-      window.mijia.openExternal(r.url || SITE_URL);
-    } else {
-      setAboutMsg(`已是最新版本 v${r.current}`, 'ok');
-    }
-  } catch {
-    setAboutMsg('检查更新失败，请稍后重试', 'error');
-  } finally {
-    checkingUpdate = false;
-  }
-});
-
-// 3D 徽章：鼠标拖动翻转（X/Y 轴），单击也翻转半圈；悬停时随鼠标轻微倾斜跟随。
-// 悬停倾斜叠加在拖动旋转之上（最终角度 = badgeRot + badgeTilt），高光随合成角度移动。
-const badgeRot = { x: 0, y: 0 };
-const badgeTilt = { x: 0, y: 0 };
-const BADGE_TILT_MAX = 10;  // 悬停倾斜最大角度（保持轻微）
-let badgeDrag = null;      // 拖动起点
-let badgePointerId = null;
-let badgeMoved = false;
-
-function applyBadge() {
-  const rx = badgeRot.x + badgeTilt.x;
-  const ry = badgeRot.y + badgeTilt.y;
-  badge3d.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-  // 高光位置随旋转反向偏移，模拟固定光源在徽章表面的反射
-  const nx = Math.max(-1, Math.min(1, ry / 120));
-  const ny = Math.max(-1, Math.min(1, -rx / 120));
-  badge3d.style.setProperty('--lx', (50 - nx * 38).toFixed(1) + '%');
-  badge3d.style.setProperty('--ly', (50 - ny * 38).toFixed(1) + '%');
-}
-
-badge3d.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  badgePointerId = e.pointerId;
-  badgeMoved = false;
-  // 把悬停倾斜并入拖动基准（变换总值不变、无跳变），拖动期间不再叠加倾斜
-  badgeDrag = { x: e.clientX, y: e.clientY, rx: badgeRot.x + badgeTilt.x, ry: badgeRot.y + badgeTilt.y };
-  badgeTilt.x = 0;
-  badgeTilt.y = 0;
-  badge3d.classList.remove('hovering');
-  badge3d.classList.add('dragging');
-  badge3d.setPointerCapture(e.pointerId);
-});
-
-badge3d.addEventListener('pointermove', (e) => {
-  // 未拖动：鼠标悬停随指针位置轻微倾斜（.hovering 的短过渡做平滑跟随；触摸不做悬停）
-  if (!badgeDrag) {
-    if (e.pointerType !== 'mouse') return;
-    const r = badge3d.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) return;
-    const nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
-    const ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
-    badgeTilt.x = -ny * BADGE_TILT_MAX;
-    badgeTilt.y = nx * BADGE_TILT_MAX;
-    badge3d.classList.add('hovering');
-    applyBadge();
-    return;
-  }
-  if (e.pointerId !== badgePointerId) return;
-  const dx = e.clientX - badgeDrag.x;
-  const dy = e.clientY - badgeDrag.y;
-  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) badgeMoved = true;
-  badgeRot.y = badgeDrag.ry + dx * 0.6;
-  badgeRot.x = Math.max(-75, Math.min(75, badgeDrag.rx - dy * 0.6));
-  applyBadge();
-});
-
-// 指针离开：倾斜归零（移除 .hovering 后回到默认 0.55s 缓动，柔和回正）
-badge3d.addEventListener('pointerleave', () => {
-  if (badgeDrag) return;
-  badgeTilt.x = 0;
-  badgeTilt.y = 0;
-  badge3d.classList.remove('hovering');
-  applyBadge();
-});
-
-function endBadgeDrag(e) {
-  if (!badgeDrag || (e && e.pointerId !== badgePointerId)) return;
-  badge3d.classList.remove('dragging');
-  badgeDrag = null;
-  badgePointerId = null;
-  if (!badgeMoved) {
-    // 单击（未拖动）→ 翻转到另一面
-    badgeRot.y += 180;
-    applyBadge();
-  }
-}
-badge3d.addEventListener('pointerup', endBadgeDrag);
-badge3d.addEventListener('pointercancel', endBadgeDrag);
-
-applyBadge();
 
 function applySettings(s) {
   miTop.setAttribute('aria-checked', String(!!s.alwaysOnTop));
@@ -2820,41 +2706,24 @@ document.getElementById('pin-close').addEventListener('click', closePinModal);
 window.mijia.onOpenPinGuide(() => openPinModal(true));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pinModal.hidden) closePinModal(); });
 
-/* ---------------- 登录米家 面板 ---------------- */
+/* ---------------- 登录态（面板已迁至独立弹窗窗口 renderer/dialog.html + dialog.ts） ---------------- */
 
 const mockTag = document.querySelector('.mock-tag');
-const loginModal = document.getElementById('login-modal');
-const loginStateEl = document.getElementById('login-state');
-const loginMsgEl = document.getElementById('login-msg');
-const qrImg = document.getElementById('qr-img');
-const qrPlaceholder = document.getElementById('qr-placeholder');
-const loginTabs = { pwd: document.getElementById('tab-pwd'), qr: document.getElementById('tab-qr') };
-const loginPanes = { pwd: document.getElementById('pane-pwd'), qr: document.getElementById('pane-qr') };
 
-function switchTab(tab) {
-  for (const k of Object.keys(loginTabs)) {
-    loginTabs[k].classList.toggle('active', k === tab);
-    loginPanes[k].hidden = k !== tab;
-  }
-  if (tab !== 'pwd') hideCaptcha();
+// 出错信息去掉 Electron 的 invoke 前缀，只留可读部分
+function readableError(e) {
+  const msg = e && e.message ? e.message : String(e);
+  return msg
+    .replace(/^Error invoking remote method '[^']*':\s*/, '')
+    .replace(/^(Error|TypeError):\s*/, '');
 }
 
-function showLoginMsg(text, kind) {
-  loginMsgEl.hidden = !text;
-  loginMsgEl.textContent = text || '';
-  loginMsgEl.className = 'login-msg' + (kind ? ' ' + kind : '');
-}
-
-function renderLoginState(s) {
+// 登录态只用于决定主窗口显示「欢迎引导」还是真实设备；登录面板本身已迁到独立弹窗
+function applyLoginState(s) {
   if (!s) return;
-  const authed = !!s.hasDevices;
   const wasMock = mockMode;
   if (typeof s.isMock === 'boolean') mockMode = s.isMock;
-  loginStateEl.textContent = authed
-    ? `已登录 · ${s.deviceCount} 台设备${s.cloudAuth ? ' · 云端会话有效' : ''}`
-    : '未登录 · 登录后可同步真实设备';
-  loginStateEl.classList.toggle('ok', authed);
-  mockTag.hidden = true;
+  mockTag.hidden = true; // 不再暴露「演示数据」标签：未登录显示欢迎引导
   // 进入未登录态：立即切到欢迎引导；登录成功后的真实设备会由设备推送渲染
   if (mockMode) renderWelcome();
   else if (wasMock) {
@@ -2865,274 +2734,8 @@ function renderLoginState(s) {
   }
 }
 
-function openLoginModal(open) {
-  loginModal.hidden = !open;
-  if (open) {
-    hideCaptcha();
-    showLoginMsg('');
-    window.mijia.loginStatus().then(renderLoginState).catch(() => {});
-  }
-}
-
-// 出错信息去掉 Electron 的 invoke 前缀，只留可读部分
-function readableError(e) {
-  const msg = e && e.message ? e.message : String(e);
-  return msg
-    .replace(/^Error invoking remote method '[^']*':\s*/, '')
-    .replace(/^(Error|TypeError):\s*/, '');
-}
-
-// 密码登录（多步式：账号密码 → 图形验证码 / 二次安全验证码）
-const captchaField = document.getElementById('login-captcha-field');
-const captchaLabel = document.getElementById('login-captcha-label');
-const captchaInput = document.getElementById('login-captcha');
-const captchaBox = document.getElementById('login-captcha-img');
-let pwdSessionId = null;   // 待继续输入的登录会话
-let pwdStage = null;       // 'captcha' | 'send-captcha' | 'code'
-let pwdMethod = '';        // 二次验证方式：'email' | 'phone'
-
-// 验证码图片：拿到有效图片才显示，否则显示「点击刷新」占位文字（避免出现破损图标）
-function setCaptchaImage(dataUrl) {
-  const ok = typeof dataUrl === 'string' && dataUrl.startsWith('data:image/');
-  if (ok) {
-    captchaBox.style.backgroundImage = `url("${dataUrl}")`;
-    captchaBox.textContent = '';
-    captchaBox.classList.remove('empty');
-  } else {
-    captchaBox.style.backgroundImage = 'none';
-    captchaBox.textContent = '点击刷新';
-    captchaBox.classList.add('empty');
-  }
-}
-
-// 显示图形验证码输入（stage='captcha' 或 'send-captcha' 复用同一输入框）
-function showCaptcha(dataUrl) {
-  captchaField.hidden = false;
-  captchaLabel.textContent = '图形验证码';
-  captchaBox.hidden = false;
-  captchaInput.placeholder = '输入图中字符';
-  setCaptchaImage(dataUrl);
-  captchaInput.value = '';
-  captchaInput.focus();
-}
-
-// 显示二次验证码输入（邮箱 / 短信验证码）：复用同一输入框，隐藏图片按钮
-function showCodeField(method) {
-  pwdMethod = method || 'email';
-  captchaField.hidden = false;
-  captchaLabel.textContent = pwdMethod === 'phone' ? '短信验证码' : '邮箱验证码';
-  captchaBox.hidden = true;
-  captchaBox.style.backgroundImage = 'none';
-  captchaInput.placeholder = '输入收到的验证码';
-  captchaInput.value = '';
-  captchaInput.focus();
-}
-
-function hideCaptcha() {
-  pwdSessionId = null;
-  pwdStage = null;
-  pwdMethod = '';
-  captchaField.hidden = true;
-  captchaLabel.textContent = '图形验证码';
-  captchaBox.hidden = false;
-  captchaBox.style.backgroundImage = 'none';
-  captchaBox.textContent = '点击刷新';
-  captchaBox.classList.remove('empty');
-  captchaInput.placeholder = '输入图中字符';
-  captchaInput.value = '';
-}
-
-// 处理「需要继续输入」类响应（图形验证码 / 二次验证码）；返回 true 表示已接管、无需再走成功分支
-function handleContinue(res) {
-  if (!res || res.ok) return false;
-  if (res.needCode) {
-    pwdSessionId = res.sessionId || pwdSessionId;
-    pwdStage = 'code';
-    showCodeField(res.method);
-    showLoginMsg(res.hint || '请输入验证码');
-    return true;
-  }
-  if (res.needCaptcha) {
-    pwdSessionId = res.sessionId || pwdSessionId;
-    pwdStage = res.twoFactor ? 'send-captcha' : 'captcha';
-    showCaptcha(res.captcha);
-    if (!res.captcha) showLoginMsg('验证码加载失败，请点击刷新', 'error');
-    else if (res.twoFactor) showLoginMsg('为安全起见，请先输入图形验证码以发送验证码');
-    else showLoginMsg('需要图形验证码，请输入图中字符');
-    return true;
-  }
-  return false;
-}
-
-// 登录成功统一收尾
-function finishLoginSuccess(res) {
-  hideCaptcha();
-  document.getElementById('login-pass').value = '';
-  showLoginMsg(`登录成功，已获取 ${res.count} 台设备`, 'ok');
-  renderLoginState({ hasDevices: true, deviceCount: res.count, cloudAuth: false, isMock: false });
-}
-
-// 点「点击刷新」：按当前 stage 重新取一张验证码（图形验证码 / 二次验证发送用的图形验证码）
-async function refreshCaptcha() {
-  if (pwdSessionId) {
-    try {
-      const res = await window.mijia.loginRefreshCaptcha({ sessionId: pwdSessionId });
-      if (handleContinue(res)) return;
-      finishLoginSuccess(res);
-    } catch (e) {
-      showLoginMsg(readableError(e), 'error');
-    }
-    return;
-  }
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  const country = document.getElementById('login-country').value;
-  if (!username || !password) { showLoginMsg('请填写小米账号与密码', 'error'); return; }
-  try {
-    const res = await window.mijia.loginPassword({ username, password, country });
-    if (handleContinue(res)) return;
-    finishLoginSuccess(res);
-  } catch (e) {
-    showLoginMsg(readableError(e), 'error');
-  }
-}
-captchaBox.addEventListener('click', refreshCaptcha);
-
-document.getElementById('login-pwd-btn').addEventListener('click', async () => {
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  const country = document.getElementById('login-country').value;
-  const btn = document.getElementById('login-pwd-btn');
-
-  // 已进入需要继续输入的阶段（图形验证码 / 二次验证码）：本次点击提交验证码
-  if (pwdSessionId) {
-    const code = captchaInput.value.trim();
-    if (!code) { showLoginMsg(pwdStage === 'code' ? '请输入验证码' : '请输入图形验证码', 'error'); return; }
-    btn.disabled = true;
-    showLoginMsg(pwdStage === 'code' ? '正在验证…' : '正在提交…');
-    try {
-      const res = await window.mijia.loginCaptcha({ sessionId: pwdSessionId, code });
-      if (res.needCode) {
-        pwdSessionId = res.sessionId;
-        pwdStage = 'code';
-        showCodeField(res.method);
-        showLoginMsg(res.hint || '验证码不正确，请重新输入', 'error');
-        return;
-      }
-      if (res.needCaptcha) {
-        pwdSessionId = res.sessionId;
-        pwdStage = res.twoFactor ? 'send-captcha' : 'captcha';
-        showCaptcha(res.captcha);
-        if (!res.captcha) showLoginMsg('验证码加载失败，请点击刷新', 'error');
-        else showLoginMsg(res.twoFactor ? '请重新输入图形验证码' : '验证码不正确，请重试', 'error');
-        return;
-      }
-      finishLoginSuccess(res);
-    } catch (e) {
-      hideCaptcha();
-      showLoginMsg(readableError(e), 'error');
-    } finally {
-      btn.disabled = false;
-    }
-    return;
-  }
-
-  if (!username || !password) { showLoginMsg('请填写小米账号与密码', 'error'); return; }
-  btn.disabled = true;
-  showLoginMsg('正在登录…');
-  try {
-    const res = await window.mijia.loginPassword({ username, password, country });
-    if (handleContinue(res)) return;
-    finishLoginSuccess(res);
-  } catch (e) {
-    showLoginMsg(readableError(e), 'error');
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-// 二维码登录（生成二维码 → 等待 App 扫码，完成后返回）
-let qrBusy = false;
-async function startQR() {
-  if (qrBusy) return;
-  qrBusy = true;
-  const btn = document.getElementById('login-qr-btn');
-  btn.disabled = true;
-  showLoginMsg('正在生成二维码…');
-  qrImg.hidden = true;
-  qrPlaceholder.hidden = false;
-  qrPlaceholder.textContent = '正在生成二维码…';
-  try {
-    const res = await window.mijia.loginQR();
-    showLoginMsg(`登录成功，已获取 ${res.count} 台设备`, 'ok');
-    renderLoginState({ hasDevices: true, deviceCount: res.count, cloudAuth: true, isMock: false });
-  } catch (e) {
-    showLoginMsg(readableError(e), 'error');
-    qrPlaceholder.hidden = false;
-    qrPlaceholder.textContent = '二维码已失效，请重新生成';
-  } finally {
-    qrBusy = false;
-    btn.disabled = false;
-  }
-}
-document.getElementById('login-qr-btn').addEventListener('click', startQR);
-loginTabs.qr.addEventListener('click', () => {
-  switchTab('qr');
-  if (!qrBusy && qrImg.hidden && !qrImg.src) startQR();
-});
-loginTabs.pwd.addEventListener('click', () => switchTab('pwd'));
-
-// 主进程推来的二维码
-window.mijia.onQR((info) => {
-  const src = (info && (info.dataUrl || info.qrImageUrl)) || '';
-  if (src) {
-    qrImg.src = src;
-    qrImg.hidden = false;
-    qrPlaceholder.hidden = true;
-    showLoginMsg('请用米家 App 扫描二维码', '');
-  } else {
-    qrImg.hidden = true;
-    qrPlaceholder.hidden = false;
-    qrPlaceholder.textContent = '二维码获取失败，请重试';
-  }
-});
-
-// 刷新设备清单
-document.getElementById('login-refresh').addEventListener('click', async () => {
-  const btn = document.getElementById('login-refresh');
-  btn.disabled = true;
-  showLoginMsg('正在刷新设备清单…');
-  try {
-    const res = await window.mijia.refreshDevices();
-    showLoginMsg(`已刷新，共 ${res.count} 台设备`, 'ok');
-    window.mijia.loginStatus().then(renderLoginState).catch(() => {});
-  } catch (e) {
-    showLoginMsg(readableError(e), 'error');
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-// 退出登录
-document.getElementById('login-logout').addEventListener('click', async () => {
-  const btn = document.getElementById('login-logout');
-  btn.disabled = true;
-  showLoginMsg('正在退出登录…');
-  try {
-    await window.mijia.logout();
-    showLoginMsg('已退出登录', 'ok');
-    renderLoginState({ hasDevices: false, deviceCount: 0, cloudAuth: false, isMock: true });
-  } catch (e) {
-    showLoginMsg(readableError(e), 'error');
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-document.getElementById('login-close').addEventListener('click', () => openLoginModal(false));
-document.getElementById('mi-cloud').addEventListener('click', () => openLoginModal(true));
-window.mijia.onLoginState((s) => renderLoginState(s));
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !loginModal.hidden) openLoginModal(false); });
+// 登录态变化（无论来自独立弹窗登录还是主进程推送）→ 主窗口切换「欢迎引导 / 真实设备」
+window.mijia.onLoginState((s) => applyLoginState(s));
 
 /* ---------------- 选择家庭 面板 ---------------- */
 
@@ -3233,24 +2836,21 @@ window.mijia.onDevices(render);
 window.mijia.onSettings(applySettings);
 window.mijia.onFullscreenState(applyFullscreenState);
 
-window.mijia.init().then(({ devices, settings, isMock, login, hasCustomSize, fullscreen, theme, windowMode, version }) => {
+window.mijia.init().then(({ devices, settings, isMock, login, hasCustomSize, fullscreen, theme, windowMode }) => {
   // 用户此前手动调整过窗口大小：跳过启动时的按内容自适应
   if (hasCustomSize) sized = true;
   applyFullscreenState(fullscreen || null);
   // 窗口/小组件模式：同步菜单文案与「固定到任务栏 / 收起到托盘」的显隐
   applyWindowMode(windowMode || 'widget');
-  // 关于窗口版本号
-  if (version) document.getElementById('about-ver').textContent = 'v' + version;
   // 以主进程持久化的主题为准（首次打开默认深色），并同步本地记忆
   if (theme === 'light' || theme === 'dark') {
     try { localStorage.setItem('mijia.theme', theme); } catch {}
     applyTheme(theme);
   }
   if (typeof isMock === 'boolean') mockMode = isMock;
-  mockTag.hidden = true; // 不再暴露「演示数据」标签：未登录显示欢迎引导
   render(devices);
   applySettings(settings);
-  if (login) renderLoginState({ ...login, isMock });
+  if (login) applyLoginState({ ...login, isMock });
   // DOM 就绪后把菜单图标栅格化并交给主进程，供托盘菜单使用
   sendTrayIcons();
 });
