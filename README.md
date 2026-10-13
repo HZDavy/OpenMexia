@@ -12,6 +12,8 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 
 ![OpenMexia 界面预览](assets/screenshot.png)
 
+![OpenMexia 设备控制预览](assets/screenshot-2.png)
+
 ---
 ## 命名寓意
 
