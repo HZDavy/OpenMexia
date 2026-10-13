@@ -45,7 +45,7 @@ html.light .ctx-menu,
 html.light .pin-card {
   background: #ffffff;
   border-color: var(--line);
-  box-shadow: 0 16px 40px rgba(18, 22, 30, 0.16);
+  box-shadow: 0 14px 30px rgba(18, 22, 30, 0.16);
 }
 html.light .card:hover { border-color: #d4d8de; }
 html.light .card.dragging { box-shadow: 0 14px 30px rgba(18, 22, 30, 0.18); }
@@ -279,7 +279,7 @@ html, body {
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: #1d1d1d;
-  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.66);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
   animation: pin-in 0.16s ease;
 }
 

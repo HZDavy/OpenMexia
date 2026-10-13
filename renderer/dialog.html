@@ -11,7 +11,7 @@
        窗口尺寸 = 卡片内容 + 2×--dpad，卡片固定贴在窗口中心。
        留白的作用是给卡片的圆角与投影让出空间，避免被窗口边缘裁切。
        黑色半透明遮罩已移到主窗口（#modal-backdrop），这里不再画背景。 */
-    :root { --dpad: 18px; }
+    :root { --dpad: 56px; }
 
     html, body {
       margin: 0;
@@ -35,6 +35,17 @@
       animation: none !important;
     }
     body > .pin-modal > .pin-card {
+      /* 关键：卡片宽度必须与窗口宽度脱钩，否则会形成「卡片宽 ⇄ 窗口宽」正反馈。
+         主进程：窗口宽 = 卡片宽 + 2×DIALOG_PAD；而卡片 width:100% → 卡片宽 = 窗口内容宽 - 2×--dpad。
+         由于窗口内容宽比窗口逻辑宽多 1px（DPI 取整），每次尺寸回报都让卡片再宽 1px，
+         于是从 ~250px 一路「卷」到 style.css 的 max-width:316px ——
+         这就是「关于」首次打开时那段由窄向宽的放大动画（之后窗口已到上限才不再出现）。
+         这里把宽度固定为设计宽度 316px，彻底切断反馈环。
+         注意：.pin-modal 是 flex 容器，卡片默认 flex-shrink:1，只写 width 仍会被压缩到容器宽度，
+         必须同时用 flex-basis 固定（flex: 0 0 316px）才真正与窗口宽度脱钩。 */
+      width: 316px !important;
+      flex: 0 0 316px !important;
+      max-width: none !important;
       max-height: none !important;
       overflow: visible !important;
       /* 去掉 style.css 的 pin-in（带 translateY+scale，hidden 显隐切换会重放造成「弹一下→缩一下」）；

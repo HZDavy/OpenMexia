@@ -309,8 +309,11 @@ function toggleWindowMode() {
 
 // 菜单内容四周留出的透明边距（须与 renderer/menu.html 里的 --mpad 一致）：
 // 弹出窗口尺寸 = 菜单内容尺寸 + 2×MENU_PAD，菜单内容固定在窗口左上角 (MENU_PAD, MENU_PAD)。
-// 之所以要留透明边距：菜单带圆角与阴影，若窗口与内容严丝合缝，圆角外的阴影会被窗口边缘切掉。
-const MENU_PAD = 22;
+// 之所以要留透明边距：菜单带圆角与阴影，若窗口与内容严丝合缝，圆角外的阴影会被窗口边缘切掉，
+// 表现为菜单外圈出现一道「矩形硬边」。透明窗口无法把阴影画到窗口之外，所以留白必须
+// ≥ 阴影的最大外扩量 = blur + |y 偏移|（见 menu.html 的 box-shadow：28 + 12 = 40），
+// 再留约 16px 余量：实测高斯拖尾会略微超出 blur 值，余量太小仍会在窗口边缘看到细微硬边。
+const MENU_PAD = 56;
 
 // 弹出菜单窗口不复用：每次弹出都用「一个全新的、已预热好的窗口」，收起即销毁。
 // 为什么不用复用：隐藏的 Electron 窗口不会重绘，会保留上一帧合成结果；复用窗口时
@@ -480,8 +483,9 @@ function closeMenuWindow(notify = true, reason = '?') {
 
 /* ---------------- 独立弹窗（登录 / 关于，与主窗口脱钩、不受主窗口尺寸约束） ---------------- */
 
-// 弹窗窗口四周留白（须与 renderer/dialog.html 的 --dpad 一致），作用同 MENU_PAD：给圆角与投影让位
-const DIALOG_PAD = 18;
+// 弹窗窗口四周留白（须与 renderer/dialog.html 的 --dpad 一致），作用同 MENU_PAD：给圆角与投影让位。
+// 卡片阴影 0 14px 30px 外扩 30+14=44，留 56 可再余 12px，避免高斯拖尾触到窗口边缘。
+const DIALOG_PAD = 56;
 
 let dialogWin: BrowserWindow | null = null;
 let dialogWinReady = false;

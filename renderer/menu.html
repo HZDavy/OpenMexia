@@ -10,7 +10,7 @@
        留白（--mpad）须与主进程的 MENU_PAD 保持一致：
        窗口尺寸 = 菜单内容 + 2×--mpad，菜单内容固定贴在窗口左上角 (--mpad, --mpad)。
        留白的作用是给菜单的圆角与投影让出空间，避免被窗口边缘裁切。 */
-    :root { --mpad: 22px; }
+    :root { --mpad: 56px; }
 
     html, body {
       margin: 0;
@@ -32,11 +32,11 @@
       left: var(--mpad) !important;
       right: auto !important;
       z-index: 1;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55) !important;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55) !important;
     }
     html.light body > .menu,
     html.light body > .ctx-menu {
-      box-shadow: 0 12px 30px rgba(18, 22, 30, 0.18) !important;
+      box-shadow: 0 12px 28px rgba(18, 22, 30, 0.18) !important;
     }
 
     /* 入场动画改由 body.revealed 单次驱动，且只淡入透明度（不做位移/缩放）：

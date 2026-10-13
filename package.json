@@ -1,7 +1,7 @@
 {
   "name": "mijia-widget",
   "productName": "OpenMexia",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "OpenMexia：开源、全平台、多协议的智能家居控制中枢。目标是支持所有智能协议，凡能以开源方式支持的协议都尽力纳入；目前已支持米家（Windows 已发布，macOS / iOS / Android 规划中）",
   "author": "HZDavy",
