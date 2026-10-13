@@ -59,7 +59,9 @@ const mijiaDataDir = (): string => path.join(app.getPath('userData'), 'mijia');
 function toggleOnTop() {
   settings = patchState({ alwaysOnTop: !settings.alwaysOnTop });
   if (win) {
-    win.setAlwaysOnTop(settings.alwaysOnTop, 'floating');
+    // 弹窗打开期间主窗口被临时取消置顶（见 openDialogWindow），此刻不能改回置顶——
+    // 否则会重新引发「点遮罩闪一下」。待弹窗收起时由 closeDialogWindow 按最新设置统一恢复。
+    if (dialogKind === null) win.setAlwaysOnTop(settings.alwaysOnTop, 'floating');
     win.webContents.send('widget:settings', settings);
   }
 }
@@ -551,7 +553,19 @@ function openDialogWindow(kind: DialogKind) {
   w.hide();
   if (dialogWinReady) w.webContents.send('dialog:data', data);
   else dialogPending = data;
-  if (win && !win.isDestroyed()) win.webContents.send('widget:dialog-open', kind);
+  // 弹窗打开期间关闭主窗口的后台节流：弹窗（focusable:true）一显示就会夺走主窗口焦点，
+  // 主窗口随即被判定为「后台/被遮挡」，遮罩等绘制会被暂停，直到用户第一次点击主窗口
+  // 重新获得焦点时才补绘制。这里仅在此期间关闭节流，弹窗收起后（见 closeDialogWindow）立即恢复。
+  if (win && !win.isDestroyed()) {
+    win.webContents.setBackgroundThrottling(false);
+    // 根因修复：Windows 上主窗口('floating')与弹窗('screen-saver')都映射为 HWND_TOPMOST，
+    // 同属置顶组，真正的 z 序由「激活顺序」决定 —— 用户点击主窗口内的黑色遮罩会把主窗口
+    // 激活并抬到置顶组最前，其满屏遮罩会短暂盖住弹窗卡片，观感就是「点一下遮罩闪一下」。
+    // 弹窗打开期间临时取消主窗口置顶：非置顶窗口在系统层面永远无法高于置顶弹窗，从根上排除
+    // 这次 z 序翻转；弹窗收起后（见 closeDialogWindow）再按设置恢复。
+    if (settings.alwaysOnTop) win.setAlwaysOnTop(false);
+    win.webContents.send('widget:dialog-open', kind);
+  }
 }
 
 // 弹窗量好卡片尺寸 → 以主窗口中心为中心定位，仅按显示器工作区钳制
@@ -622,6 +636,12 @@ function closeDialogWindow(notify = true) {
     }, 40);
   }
   dialogKind = null;
+  // 恢复主窗口的默认后台节流与置顶（与 openDialogWindow 的临时改动配对）：
+  // 仅当用户开启了置顶时才恢复置顶，否则保持「不置顶」原状。
+  if (wasOpen && win && !win.isDestroyed()) {
+    win.webContents.setBackgroundThrottling(true);
+    if (settings.alwaysOnTop) win.setAlwaysOnTop(true, 'floating');
+  }
   if (notify && wasOpen && win && !win.isDestroyed()) win.webContents.send('widget:dialog-closed');
 }
 

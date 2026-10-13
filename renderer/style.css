@@ -240,13 +240,16 @@ html, body {
 /* ---------------- 固定到任务栏 引导对话框 ---------------- */
 
 /* 独立弹窗（登录 / 关于）打开时铺满主窗口的黑色半透明遮罩（仅视觉，不拦截独立窗口的点击） */
+/* 注意：这里刻意不加任何淡入动画。独立弹窗会夺走主窗口焦点，主窗口随即被后台节流；
+   若遮罩带 opacity 动画，动画会被暂停在起始帧（opacity:0），于是弹窗显示时看不到遮罩，
+   直到用户第一次点击主窗口（重新获得焦点）动画才补播 —— 观感就是点一下闪一下，且只闪这一次。
+   改为一次性单步显示，遮罩随主窗口的首帧一起全不透明绘制，无论焦点如何变化都不会再闪。 */
 .modal-backdrop {
   position: absolute;
   inset: 0;
   z-index: 38;
   background: rgba(0, 0, 0, 0.55);
   -webkit-app-region: no-drag;
-  animation: pin-fade 0.14s ease;
 }
 .modal-backdrop[hidden] { display: none; }
 
