@@ -20,7 +20,6 @@ contextBridge.exposeInMainWorld('mijia', {
   setTheme: (theme) => ipcRenderer.send('widget:set-theme', { theme }),
   toggleOnTop: () => ipcRenderer.send('widget:toggle-top'),
   pinTaskbar: () => ipcRenderer.send('widget:pin-taskbar'),
-  pinTaskbarDone: () => ipcRenderer.send('widget:pin-taskbar-done'),
   toggleLogin: () => ipcRenderer.send('widget:toggle-login'),
   // 发送窗口到副屏（第一个外接屏幕）
   sendToSecondScreen: () => ipcRenderer.send('widget:send-screen'),
@@ -36,8 +35,6 @@ contextBridge.exposeInMainWorld('mijia', {
   // 上报房间显示偏好供托盘菜单同步；托盘点击切换时主进程回传 'group' | 'name'
   reportRoomState: (state) => ipcRenderer.send('widget:room-state', state),
   onToggleRoom: (cb) => ipcRenderer.on('widget:toggle-room', (_e, which) => cb(which)),
-  // 托盘菜单点了「固定到任务栏」：主进程已让窗口临时出现在任务栏，通知渲染层弹引导
-  onOpenPinGuide: (cb) => ipcRenderer.on('widget:open-pin-guide', () => cb()),
   // 托盘菜单点了「登录米家 / 选择家庭 / 隐藏的设备」：渲染层打开对应面板（'login'|'home'|'hidden'）
   onOpenPanel: (cb) => ipcRenderer.on('widget:open-panel', (_e, name) => cb(name)),
   // 托盘菜单点了「浅色/深色模式」：渲染层执行主题切换

@@ -2685,27 +2685,6 @@ function sendTrayIcons() {
   window.mijia.setMenuIcons(icons);
 }
 
-/* ---------------- 固定到任务栏 引导对话框 ---------------- */
-
-const pinModal = document.getElementById('pin-modal');
-
-// 关闭引导对话框：恢复工具窗口模式（不再占用任务栏）
-function closePinModal() {
-  if (pinModal.hidden) return;
-  pinModal.hidden = true;
-  window.mijia.pinTaskbarDone();
-}
-
-function openPinModal(open) {
-  pinModal.hidden = !open;
-}
-
-document.getElementById('pin-ok').addEventListener('click', closePinModal);
-document.getElementById('pin-close').addEventListener('click', closePinModal);
-// 来自托盘菜单「固定到任务栏」：主进程已让窗口临时出现在任务栏
-window.mijia.onOpenPinGuide(() => openPinModal(true));
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pinModal.hidden) closePinModal(); });
-
 /* ---------------- 登录态（面板已迁至独立弹窗窗口 renderer/dialog.html + dialog.ts） ---------------- */
 
 const mockTag = document.querySelector('.mock-tag');

@@ -59,9 +59,10 @@ const mijiaDataDir = (): string => path.join(app.getPath('userData'), 'mijia');
 function toggleOnTop() {
   settings = patchState({ alwaysOnTop: !settings.alwaysOnTop });
   if (win) {
-    // 弹窗打开期间主窗口被临时取消置顶（见 openDialogWindow），此刻不能改回置顶——
-    // 否则会重新引发「点遮罩闪一下」。待弹窗收起时由 closeDialogWindow 按最新设置统一恢复。
-    if (dialogKind === null) win.setAlwaysOnTop(settings.alwaysOnTop, 'floating');
+    // 主窗口始终跟随「置顶」设置，不再为弹窗做「临时降级」——
+    // 弹窗是主窗口的子窗口（owner 关系），系统保证它恒在主窗口之上，
+    // 因此主窗口保持置顶也不会盖住弹窗、更不会让第三方软件夹在两者之间。
+    win.setAlwaysOnTop(settings.alwaysOnTop, 'floating');
     win.webContents.send('widget:settings', settings);
   }
 }
@@ -155,14 +156,14 @@ function syncFullscreenFromWindow() {
 }
 
 // 固定到任务栏（引导流程，模仿 PlanMonitor 的 _toggle_pin）：
-// 先临时取消 skipTaskbar 让窗口出现在任务栏，再让渲染层弹出引导对话框；
-// 用户点「确定」后再恢复工具窗口模式（skipTaskbar:true）。
+// 先临时取消 skipTaskbar 让窗口出现在任务栏，再打开独立的「固定到任务栏」引导弹窗
+// （与登录 / 关于同一套独立窗口机制）；用户关闭弹窗后由 closeDialogWindow 恢复工具窗口模式。
 function startPinTaskbar() {
   if (!win) return;
   win.setSkipTaskbar(false);
   win.show();
   win.focus();
-  win.webContents.send('widget:open-pin-guide');
+  openDialogWindow('pin');
 }
 
 // 托盘菜单里「登录米家 / 选择家庭 / 隐藏的设备 / 关于」：唤起窗口并让渲染层打开对应面板
@@ -499,6 +500,7 @@ let dialogUserMoved = false;                                     // 用户是否
 // 与菜单窗口最大的区别是 focusable:true —— 因此弹窗获得焦点时主窗口会 blur（只收起菜单，不影响弹窗）。
 function ensureDialogWin(): BrowserWindow {
   if (dialogWin && !dialogWin.isDestroyed()) return dialogWin;
+  const owner = win && !win.isDestroyed() ? win : undefined;
   dialogWin = new BrowserWindow({
     width: 360,
     height: 460,
@@ -516,6 +518,11 @@ function ensureDialogWin(): BrowserWindow {
     hasShadow: false,
     roundedCorners: false,
     alwaysOnTop: true,
+    // 关键：把主窗口设为弹窗的「宿主」（Windows 上的 owner 关系）。
+    // 系统会强制「被拥有窗口恒在拥有者之上」，即使两者同为置顶、即使用户点击主机窗口
+    // 把它抬到置顶组最前，弹窗也仍被压在主机之上——从根上消除「点遮罩时主窗口短暂盖住弹窗」的闪烁，
+    // 同时主窗口保持自身置顶（与「置顶」设置一致），不会出现第三方软件夹在中间的「夹心」。
+    parent: owner,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -562,12 +569,12 @@ function openDialogWindow(kind: DialogKind) {
   // 重新获得焦点时才补绘制。这里仅在此期间关闭节流，弹窗收起后（见 closeDialogWindow）立即恢复。
   if (win && !win.isDestroyed()) {
     win.webContents.setBackgroundThrottling(false);
-    // 根因修复：Windows 上主窗口('floating')与弹窗('screen-saver')都映射为 HWND_TOPMOST，
-    // 同属置顶组，真正的 z 序由「激活顺序」决定 —— 用户点击主窗口内的黑色遮罩会把主窗口
-    // 激活并抬到置顶组最前，其满屏遮罩会短暂盖住弹窗卡片，观感就是「点一下遮罩闪一下」。
-    // 弹窗打开期间临时取消主窗口置顶：非置顶窗口在系统层面永远无法高于置顶弹窗，从根上排除
-    // 这次 z 序翻转；弹窗收起后（见 closeDialogWindow）再按设置恢复。
-    if (settings.alwaysOnTop) win.setAlwaysOnTop(false);
+    // 注意：这里【不再】临时取消主窗口置顶。
+    // 旧做法（弹窗打开期间 win.setAlwaysOnTop(false)）会让别的普通窗口夹在
+    // 「被降级的主窗口」与「始终置顶的弹窗」之间，用户看到的正是这种「夹心」。
+    // 现在主窗口保持与「置顶」设置一致（开启置顶时二者共同置顶）；而弹窗是主窗口的
+    // 子窗口（owner 关系，见 ensureDialogWin），系统保证它恒在主窗口之上，
+    // 因此点击遮罩把主窗口激活时也不会再把弹窗盖住（无「点一下闪一下」）。
     win.webContents.send('widget:dialog-open', kind);
   }
 }
@@ -628,7 +635,8 @@ function repositionDialogWindow() {
 
 // 收起弹窗（幂等）；notify=true 且确实开着时通知主窗口隐藏黑色遮罩
 function closeDialogWindow(notify = true) {
-  const wasOpen = dialogKind !== null;
+  const closedKind = dialogKind;
+  const wasOpen = closedKind !== null;
   if (dialogWin && !dialogWin.isDestroyed() && dialogWin.isVisible()) {
     // 关键：先让弹窗清空内容、回到透明态，等这一帧真实画完后（窗口此刻仍可见）再隐藏。
     // 隐藏窗口不会重绘，会保留上一次「卡片可见」的画面；下次打开复用同一窗口时，
@@ -640,11 +648,16 @@ function closeDialogWindow(notify = true) {
     }, 40);
   }
   dialogKind = null;
-  // 恢复主窗口的默认后台节流与置顶（与 openDialogWindow 的临时改动配对）：
-  // 仅当用户开启了置顶时才恢复置顶，否则保持「不置顶」原状。
   if (wasOpen && win && !win.isDestroyed()) {
+    // 恢复主窗口的默认后台节流（与 openDialogWindow 的临时改动配对）。
+    // 置顶不再需要「恢复」：主窗口在弹窗打开期间始终保持自身的置顶设置。
     win.webContents.setBackgroundThrottling(true);
-    if (settings.alwaysOnTop) win.setAlwaysOnTop(true, 'floating');
+    // 「固定到任务栏」引导结束 → 恢复工具窗口模式（不再占用任务栏）
+    if (closedKind === 'pin') {
+      win.setSkipTaskbar(true);
+      win.show();
+      win.focus();
+    }
   }
   if (notify && wasOpen && win && !win.isDestroyed()) win.webContents.send('widget:dialog-closed');
 }
@@ -761,6 +774,9 @@ function createWindow() {
   // 若在这里也监听主窗口 blur，会与菜单「抢焦点」互相触发，反而造成抖动。
   // 主窗口与菜单窗口都是置顶(topmost)，z 序由「激活顺序」决定。
   win.on('focus', () => {
+    // 弹窗无需在此重新抬升：它是主窗口的子窗口（owner 关系），系统强制其恒在主窗口之上，
+    // 主窗口被点击激活时弹窗会跟着一起抬升并保持在其上方（此前用 moveTop 补偿反而会因
+    // 对已可见的透明窗口做合成重排而产生「点一下闪一下」）。
     if (Date.now() - menuShownAt <= 200) {
       // 菜单刚显示的一瞬间：主窗口若抢先获得前台、进入 TOPMOST 组把刚弹出的菜单压住，
       // 把菜单窗口抬到最前。仅当菜单「尚未显示」时才抬升——对已经可见的透明窗口做 moveTop
@@ -1107,16 +1123,8 @@ function registerIpc() {
     }
     menuIcons = next;
   });
-  // 固定到任务栏（引导流程，模仿 PlanMonitor 的 _toggle_pin）：
-  // 先临时取消 skipTaskbar 让窗口出现在任务栏，由渲染层弹出引导对话框；
-  // 用户点「确定」后再恢复工具窗口模式（skipTaskbar:true）。
+  // 固定到任务栏：打开独立的「固定到任务栏」引导弹窗（关闭弹窗时恢复工具窗口模式，见 closeDialogWindow）
   ipcMain.on('widget:pin-taskbar', () => startPinTaskbar());
-  ipcMain.on('widget:pin-taskbar-done', () => {
-    if (!win) return;
-    win.setSkipTaskbar(true);
-    win.show();
-    win.focus();
-  });
   // 窗口模式 / 小组件模式切换（菜单与托盘共用）
   ipcMain.on('widget:toggle-window-mode', () => toggleWindowMode());
   // 渲染层上报房间显示偏好（groupByRoom / showRoomName），供托盘菜单同步勾选态与文案
@@ -1142,10 +1150,10 @@ function registerIpc() {
     closeMenuWindow();
     if (key && win && !win.isDestroyed()) win.webContents.send('widget:menu-action', key);
   });
-  // ---- 独立弹窗（登录 / 关于） ----
+  // ---- 独立弹窗（登录 / 关于 / 固定到任务栏） ----
   // 主窗口渲染层请求打开 / 关闭
   ipcMain.on('widget:open-dialog', (_e, { kind } = {} as any) => {
-    if (kind === 'login' || kind === 'about') openDialogWindow(kind);
+    if (kind === 'login' || kind === 'about' || kind === 'pin') openDialogWindow(kind);
   });
   ipcMain.on('widget:close-dialog', () => closeDialogWindow());
   // 弹窗量好卡片尺寸 → 定位并显示

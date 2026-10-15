@@ -42,7 +42,7 @@ export interface PopupMenuData extends OpenMenuPayload {
 }
 
 /** 独立弹窗的种类（与主窗口脱钩、不受主窗口尺寸约束） */
-export type DialogKind = 'login' | 'about';
+export type DialogKind = 'login' | 'about' | 'pin';
 
 /** 主进程 → 独立弹窗窗口：渲染哪一张卡片 + 当前主题与版本号 */
 export interface DialogData {
@@ -83,21 +83,19 @@ export type IpcChannel =
   | 'widget:set-theme'
   | 'widget:menu-icons'
   | 'widget:pin-taskbar'
-  | 'widget:pin-taskbar-done'
   | 'widget:open-external'
   | 'widget:toggle-window-mode'
   | 'widget:room-state'
   // ---- 渲染层 → 主进程：弹出菜单（独立窗口） ----
   | 'widget:open-menu'
   | 'widget:close-menu'
-  // ---- 渲染层 → 主进程：独立弹窗（登录 / 关于，与主窗口脱钩） ----
+  // ---- 渲染层 → 主进程：独立弹窗（登录 / 关于 / 固定到任务栏，与主窗口脱钩） ----
   | 'widget:open-dialog'
   | 'widget:close-dialog'
   // ---- 主进程 → 渲染层：主进程主动推送 ----
   | 'widget:devices'
   | 'widget:settings'
   | 'widget:fullscreen-state'
-  | 'widget:open-pin-guide'
   | 'widget:open-panel'
   | 'widget:toggle-theme'
   | 'widget:titlebar-menu'
@@ -147,7 +145,6 @@ export interface IpcApi {
   setTheme(theme: Theme): void;
   toggleOnTop(): void;
   pinTaskbar(): void;
-  pinTaskbarDone(): void;
   toggleLogin(): void;
   sendToSecondScreen(): void;
   fullscreen(mode: Exclude<FullscreenMode, null>): void;
@@ -161,7 +158,6 @@ export interface IpcApi {
   onToggleRoom(cb: (which: 'group' | 'name') => void): void;
 
   // ---- 托盘 / 菜单联动 ----
-  onOpenPinGuide(cb: () => void): void;
   onOpenPanel(cb: (name: 'login' | 'home' | 'hidden') => void): void;
   onToggleTheme(cb: () => void): void;
   onTitlebarMenu(cb: (pt: { x: number; y: number }) => void): void;
@@ -179,7 +175,7 @@ export interface IpcApi {
   // 弹出菜单窗口：主进程已把窗口显示出来 → 开始单次入场淡入（避免 CSS 动画在显隐切换时重放闪烁）
   onMenuShown(cb: () => void): void;
 
-  // ---- 独立弹窗（登录 / 关于，与主窗口脱钩、不受主窗口尺寸约束） ----
+  // ---- 独立弹窗（登录 / 关于 / 固定到任务栏，与主窗口脱钩、不受主窗口尺寸约束） ----
   // 主窗口渲染层：请求打开 / 关闭弹窗，接收弹窗开/关通知（用于控制黑色遮罩）
   openDialog(kind: DialogKind): void;
   closeDialog(): void;

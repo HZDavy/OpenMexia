@@ -198,24 +198,49 @@
     </div>
   </div>
 
+  <!-- 固定到任务栏 -->
+  <div id="pin-modal" class="pin-modal" hidden>
+    <div class="pin-card" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+      <div class="pin-head">
+        <h2 id="pin-title">固定到任务栏</h2>
+        <button id="pin-close" class="icon-btn" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <p class="pin-tip">已临时把本程序放到任务栏，请手动固定：</p>
+      <ol class="pin-steps">
+        <li>在任务栏上右键本程序图标 → 选择「固定到任务栏」</li>
+        <li>完成后在这个对话框点「确定」</li>
+      </ol>
+      <p class="pin-note">点「确定」后会恢复工具窗口模式，不再占用任务栏。</p>
+      <div class="pin-actions">
+        <button id="pin-ok" class="pin-btn">确定</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       const api = window.mijia;
       let currentId = 0;
-      let shownKind = null;     // 'login' | 'about' | null
+      let shownKind = null;     // 'login' | 'about' | 'pin' | null
       let lastW = 0;
       let lastH = 0;
 
       const loginModal = document.getElementById('login-modal');
       const aboutModal = document.getElementById('about-modal');
+      const pinModal = document.getElementById('pin-modal');
       const loginCard = loginModal.querySelector('.pin-card');
       const aboutCard = aboutModal.querySelector('.pin-card');
+      const pinCard = pinModal.querySelector('.pin-card');
 
       /* ---------------- 尺寸回报 ---------------- */
 
       // 量当前卡片尺寸并回传主进程（主进程据此决定弹窗窗口大小并按主窗口居中）
       function reportSize() {
-        const card = shownKind === 'about' ? aboutCard : loginCard;
+        const card = shownKind === 'about' ? aboutCard : shownKind === 'pin' ? pinCard : loginCard;
         if (!card) return;
         const w = Math.ceil(card.offsetWidth);
         const h = Math.ceil(card.offsetHeight);
@@ -231,6 +256,7 @@
         const ro = new ResizeObserver(() => reportSize());
         ro.observe(loginCard);
         ro.observe(aboutCard);
+        ro.observe(pinCard);
       }
 
       /* ---------------- 登录米家 ---------------- */
@@ -680,6 +706,11 @@
 
       applyBadge();
 
+      /* ---------------- 固定到任务栏 ---------------- */
+
+      document.getElementById('pin-close').addEventListener('click', () => api.dialogClose());
+      document.getElementById('pin-ok').addEventListener('click', () => api.dialogClose());
+
       /* ---------------- 弹窗调度（由主进程下发要显示哪一种） ---------------- */
 
       document.addEventListener('keydown', (e) => {
@@ -695,13 +726,17 @@
         document.body.classList.remove('revealed', 'clearing');
         document.documentElement.classList.toggle('light', data.theme === 'light');
 
+        loginModal.hidden = true;
+        aboutModal.hidden = true;
+        pinModal.hidden = true;
+
         if (data.kind === 'login') {
-          aboutModal.hidden = true;
           loginModal.hidden = false;
           switchTab('pwd');
           openLoginModal();
+        } else if (data.kind === 'pin') {
+          pinModal.hidden = false;
         } else {
-          loginModal.hidden = true;
           aboutModal.hidden = false;
           document.getElementById('about-ver').textContent = 'v' + data.version;
           setAboutMsg('');
@@ -723,6 +758,7 @@
         document.body.classList.remove('revealed');
         loginModal.hidden = true;
         aboutModal.hidden = true;
+        pinModal.hidden = true;
         shownKind = null;
         currentId = 0;
         lastW = 0;
