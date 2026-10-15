@@ -65,6 +65,10 @@ function toggleOnTop() {
     win.setAlwaysOnTop(settings.alwaysOnTop, 'floating');
     win.webContents.send('widget:settings', settings);
   }
+  // 弹窗同步跟随置顶设置；它恒在主窗口之上由 owner 关系保证，与此无关。
+  if (dialogWin && !dialogWin.isDestroyed()) {
+    dialogWin.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
+  }
 }
 
 function toggleLogin() {
@@ -517,7 +521,9 @@ function ensureDialogWin(): BrowserWindow {
     focusable: true,
     hasShadow: false,
     roundedCorners: false,
-    alwaysOnTop: true,
+    // 弹窗的置顶状态跟随「置顶」设置：关闭置顶时弹窗同样不置顶，
+    // 但依靠下面的 owner 关系仍恒在主窗口之上。
+    alwaysOnTop: settings.alwaysOnTop,
     // 关键：把主窗口设为弹窗的「宿主」（Windows 上的 owner 关系）。
     // 系统会强制「被拥有窗口恒在拥有者之上」，即使两者同为置顶、即使用户点击主机窗口
     // 把它抬到置顶组最前，弹窗也仍被压在主机之上——从根上消除「点遮罩时主窗口短暂盖住弹窗」的闪烁，
@@ -532,7 +538,7 @@ function ensureDialogWin(): BrowserWindow {
       backgroundThrottling: false,
     },
   });
-  dialogWin.setAlwaysOnTop(true, 'screen-saver');
+  dialogWin.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
   dialogWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   // 用户拖动弹窗（渲染层 .pin-card 的 -webkit-app-region: drag 区域）→ 标记为「已手动移动」，
   // 之后主窗口移动 / 卡片尺寸变化都只保持用户摆放的位置，不再自动回中。
