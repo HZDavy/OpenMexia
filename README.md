@@ -61,6 +61,8 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 
 ## 联动预告：用实体遥控器控制设备
 
+<img src="./assets/readme/integration-banner.svg" width="100%" alt="联动预告：MoteDeck 把遥控器按键变成设备指令，经本机回环 HTTP 交给 OpenMexia，由 OpenMexia 完成米家登录与设备控制">
+
 正在与同作者的 Windows 遥控器工具 [MoteDeck](https://github.com/HZDavy/MoteDeck) 对接：把小米蓝牙语音遥控器 2 Pro（RC003）的按键映射成设备指令，按一下遥控器就能开灯、调亮度或切换模式。
 
 - 分工：MoteDeck 负责按键采集与映射，OpenMexia 负责米家登录、设备状态与控制，两边互不侵入
