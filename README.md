@@ -58,6 +58,18 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 - 网关、温湿度计等不可控设备只展示状态，不显示开关
 
 ---
+
+## 联动预告：用实体遥控器控制设备
+
+正在与同作者的 Windows 遥控器工具 [MoteDeck](https://github.com/HZDavy/MoteDeck) 对接：把小米蓝牙语音遥控器 2 Pro（RC003）的按键映射成设备指令，按一下遥控器就能开灯、调亮度或切换模式。
+
+- 分工：MoteDeck 负责按键采集与映射，OpenMexia 负责米家登录、设备状态与控制，两边互不侵入
+- 通信：OpenMexia 将提供只绑定 `127.0.0.1` 的本地接口，随机端口 + 每次启动生成的 token，调用方接触不到米家凭据
+- 配置：先读取设备与可控项，再由 MoteDeck 选择绑定，OpenMexia 不保存任何按键信息
+- 当前状态：规划中，本地控制接口尚未实现；进展见 [Issues](https://github.com/HZDavy/OpenMexia/issues)
+
+---
+
 ## 下载安装
 
 到 [Releases](https://github.com/HZDavy/OpenMexia/releases) 下载 `OpenMexia-Setup-x.x.x.exe`，运行后按提示安装，可自选目录。
