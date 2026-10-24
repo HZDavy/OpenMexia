@@ -1,6 +1,16 @@
-[![🌐 访问官网](https://img.shields.io/badge/%E2%9C%82%E8%AE%BF%E9%97%AE%E5%AE%98%E7%BD%91-%E7%82%B9%E5%87%BB%E6%89%93%E5%BC%80-2dd47a?style=for-the-badge&logo=internet-explorer&logoColor=white)](https://hzdavy.github.io/OpenMexia/)
-# <img src="https://hzdavy.github.io/OpenMexia/docs/favicon.svg" width="30" height="30" alt="logo"> OpenMexia
-[![Release](https://img.shields.io/github/v/release/HZDavy/OpenMexia?color=%232dd47a&label=Release&logo=github)](https://github.com/HZDavy/OpenMexia/releases) [![License](https://img.shields.io/github/license/HZDavy/OpenMexia?color=blue&label=License)](LICENSE) [![Downloads](https://img.shields.io/github/downloads/HZDavy/OpenMexia/latest/total?color=blueviolet&label=Downloads)](https://github.com/HZDavy/OpenMexia/releases/latest) [![Last-Release](https://img.shields.io/github/release-date/HZDavy/OpenMexia?color=green&label=Last-Release)](https://github.com/HZDavy/OpenMexia/releases/latest) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-0078D6) ![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white) ![Node](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white) [![Website](https://img.shields.io/website?up_color=2dd47a&up_message=online&label=%E5%AE%98%E7%BD%91&url=https%3A%2F%2Fhzdavy.github.io%2FOpenMexia%2F)](https://hzdavy.github.io/OpenMexia/)
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="OpenMexia：开源跨平台智能家居控制中枢，右侧为应用内真实的设备卡片">
+</p>
+
+<p align="center">
+  <a href="https://hzdavy.github.io/OpenMexia/"><img src="https://img.shields.io/badge/%E5%AE%98%E7%BD%91-hzdavy.github.io%2FOpenMexia-22C688?style=flat-square&labelColor=1A1A1D&logo=githubpages&logoColor=FFFFFF" alt="官网"></a>
+  <a href="https://github.com/HZDavy/OpenMexia/releases/latest"><img src="https://img.shields.io/github/v/release/HZDavy/OpenMexia?style=flat-square&label=release&color=22C688&labelColor=1A1A1D" alt="最新版本"></a>
+  <a href="https://github.com/HZDavy/OpenMexia/releases"><img src="https://img.shields.io/github/downloads/HZDavy/OpenMexia/latest/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD&color=22C688&labelColor=1A1A1D" alt="下载量"></a>
+  <img src="https://img.shields.io/badge/Windows%2010%2F11-x64-22C688?style=flat-square&labelColor=1A1A1D" alt="平台">
+  <img src="https://img.shields.io/badge/Electron-44-22C688?style=flat-square&labelColor=1A1A1D&logo=electron&logoColor=FFFFFF" alt="Electron">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/HZDavy/OpenMexia?style=flat-square&label=license&color=22C688&labelColor=1A1A1D" alt="许可"></a>
+</p>
+
 > 目标是支持所有智能协议。目前支持米家。
 
 OpenMexia 是一个开源、跨平台的智能家居控制中枢。把不同厂商、不同协议（Wi-Fi、蓝牙、Zigbee、Matter 等）的设备，收进一个由你本地掌控的客户端。
@@ -100,6 +110,8 @@ npm run dist
 
 ---
 ## 隐私说明
+
+<img src="./assets/readme/local-path.svg" width="100%" alt="数据通路：米家账号扫码登录，凭据保存在本机 userData，经米家官方接口同步设备列表与状态">
 
 - 米家登录凭据与设备数据仅保存在本机应用数据目录（Electron `userData`），不会上传到米家官方接口以外的任何服务器。
 - 项目不内置任何账号、密码或设备 Token。
