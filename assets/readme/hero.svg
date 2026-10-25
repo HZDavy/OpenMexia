@@ -1,130 +1,121 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-labelledby="hdrTitle hdrDesc">
-  <title id="hdrTitle">OpenMexia — 开源跨平台智能家居控制中枢</title>
-  <desc id="hdrDesc">左侧为 OpenMexia 星芒图标与字标，右侧为应用内真实的设备卡片：主灯 100%、空调 24.0℃、温湿度 25.6℃ 49%、台灯 4450K。</desc>
-  <defs>
-    <radialGradient id="omGlow" cx="0.14" cy="0.12" r="0.72">
-      <stop offset="0" stop-color="#22C688" stop-opacity="0.13"/>
-      <stop offset="1" stop-color="#22C688" stop-opacity="0"/>
-    </radialGradient>
-    <style>
-      text {
-        font-family: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
-        -webkit-font-smoothing: antialiased;
-      }
-      .mono {
-        font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
-        letter-spacing: 1.6px;
-      }
-      .name { font-size: 20px; font-weight: 600; fill: #F1EFEB; }
-      .label { font-size: 18px; fill: #8A857F; }
-      .metric { font-size: 32px; font-weight: 800; fill: #F5F3F0; letter-spacing: -0.4px; }
-      .sub { font-size: 18px; fill: #6E6A65; }
-      .status { font-size: 18px; font-weight: 600; }
-    </style>
-  </defs>
+  <title id="hdrTitle">OpenMexia — 开源、本地优先的智能家居控制中枢</title>
+  <desc id="hdrDesc">左侧为 OpenMexia 星芒标记与字标，一句话说明：把不同协议的设备收进一个客户端；下方标注当前支持米家 MIoT、Matter 规划中。右侧为应用内真实设备卡片：吸顶灯（卧室，已关闭，亮度 100%、色温 6100K）、空调（客厅，制冷中，目标温度 24.0℃、模式制冷）、温湿度计（客厅，在线，温度 25.6℃、湿度 49%）、台灯（书房，已开启，亮度 53%、色温 4450K）。底部标注 Windows 10/11 x64、v0.1.1、AGPL-3.0。</desc>
 
-  <rect width="1200" height="420" rx="28" fill="#141416"/>
-  <rect width="1200" height="420" rx="28" fill="url(#omGlow)"/>
-  <rect x="0.5" y="0.5" width="1199" height="419" rx="27.5" fill="none" stroke="#26262B"/>
+  <g font-family="'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', -apple-system, system-ui, sans-serif">
+    <rect width="1200" height="420" rx="28" fill="#141416"/>
+    <rect x="0.5" y="0.5" width="1199" height="419" rx="27.5" fill="none" stroke="#26262B"/>
 
-  <!-- 品牌区 -->
-  <g transform="translate(64 52)">
-    <rect width="64" height="64" rx="15" fill="#22C688"/>
-    <g stroke="#FFFFFF" stroke-width="5.6" stroke-linecap="round">
-      <line x1="14" y1="32" x2="50" y2="32"/>
-      <line x1="32" y1="14" x2="32" y2="50"/>
-      <line x1="19.3" y1="19.3" x2="44.7" y2="44.7"/>
-      <line x1="44.7" y1="19.3" x2="19.3" y2="44.7"/>
+    <!-- 品牌区 -->
+    <g transform="translate(64 52)">
+      <rect width="56" height="56" rx="14" fill="#22C688"/>
+      <g transform="scale(0.875)" stroke="#FFFFFF" stroke-width="5.6" stroke-linecap="round">
+        <line x1="14" y1="32" x2="50" y2="32"/>
+        <line x1="32" y1="14" x2="32" y2="50"/>
+        <line x1="19.3" y1="19.3" x2="44.7" y2="44.7"/>
+        <line x1="44.7" y1="19.3" x2="19.3" y2="44.7"/>
+      </g>
     </g>
-  </g>
-  <text class="mono" x="148" y="90" font-size="18" fill="#8A857F">WINDOWS · ELECTRON 44 · LOCAL-FIRST</text>
+    <text x="136" y="101" font-size="58" font-weight="700" letter-spacing="-1.6" fill="#F5F3EF">OpenMexia</text>
 
-  <g transform="translate(64 194) scale(0.9143)">
-    <path fill="#F7F5F2" d="M37.5 1.171875Q22.36328125 1.171875 13.2568359375 -8.642578125Q4.150390625 -18.45703125 4.150390625 -34.1796875Q4.150390625 -51.07421875 13.427734375 -61.1328125Q22.705078125 -71.19140625 38.623046875 -71.19140625Q53.369140625 -71.19140625 62.3779296875 -61.42578125Q71.38671875 -51.66015625 71.38671875 -35.888671875Q71.38671875 -18.75 62.158203125 -8.7890625Q52.9296875 1.171875 37.5 1.171875ZM38.037109375 -60.986328125Q28.41796875 -60.986328125 22.3876953125 -53.80859375Q16.357421875 -46.630859375 16.357421875 -34.912109375Q16.357421875 -23.2421875 22.216796875 -16.11328125Q28.076171875 -8.984375 37.548828125 -8.984375Q47.607421875 -8.984375 53.41796875 -15.771484375Q59.228515625 -22.55859375 59.228515625 -34.765625Q59.228515625 -47.314453125 53.5888671875 -54.150390625Q47.94921875 -60.986328125 38.037109375 -60.986328125ZM94.482421875 -7.373046875H94.287109375V22.998046875H82.958984375V-50.0H94.287109375V-41.2109375H94.482421875Q100.29296875 -51.171875 111.474609375 -51.171875Q120.99609375 -51.171875 126.318359375 -44.482421875Q131.640625 -37.79296875 131.640625 -26.513671875Q131.640625 -14.013671875 125.634765625 -6.494140625Q119.62890625 1.025390625 109.228515625 1.025390625Q99.658203125 1.025390625 94.482421875 -7.373046875ZM94.189453125 -27.099609375V-20.8984375Q94.189453125 -15.4296875 97.6806640625 -11.62109375Q101.171875 -7.8125 106.54296875 -7.8125Q112.841796875 -7.8125 116.4306640625 -12.7197265625Q120.01953125 -17.626953125 120.01953125 -26.416015625Q120.01953125 -33.7890625 116.6748046875 -37.9638671875Q113.330078125 -42.138671875 107.6171875 -42.138671875Q101.5625 -42.138671875 97.8759765625 -37.841796875Q94.189453125 -33.544921875 94.189453125 -27.099609375ZM185.546875 -21.923828125H151.46484375Q151.66015625 -14.990234375 155.7373046875 -11.23046875Q159.814453125 -7.470703125 166.943359375 -7.470703125Q174.951171875 -7.470703125 181.640625 -12.255859375V-3.125Q174.8046875 1.171875 163.57421875 1.171875Q152.5390625 1.171875 146.2646484375 -5.6396484375Q139.990234375 -12.451171875 139.990234375 -24.8046875Q139.990234375 -36.474609375 146.8994140625 -43.8232421875Q153.80859375 -51.171875 164.0625 -51.171875Q174.31640625 -51.171875 179.931640625 -44.580078125Q185.546875 -37.98828125 185.546875 -26.26953125ZM174.609375 -29.931640625Q174.560546875 -36.03515625 171.728515625 -39.4287109375Q168.896484375 -42.822265625 163.916015625 -42.822265625Q159.033203125 -42.822265625 155.6396484375 -39.2578125Q152.24609375 -35.693359375 151.46484375 -29.931640625ZM240.869140625 0.0H229.541015625V-28.173828125Q229.541015625 -42.1875 219.62890625 -42.1875Q214.453125 -42.1875 211.083984375 -38.3056640625Q207.71484375 -34.423828125 207.71484375 -28.515625V0.0H196.337890625V-50.0H207.71484375V-41.69921875H207.91015625Q213.525390625 -51.171875 224.12109375 -51.171875Q232.275390625 -51.171875 236.572265625 -45.8740234375Q240.869140625 -40.576171875 240.869140625 -30.56640625ZM331.15234375 0.0H319.62890625V-45.3125Q319.62890625 -50.87890625 320.3125 -58.935546875H320.1171875Q319.04296875 -54.345703125 318.212890625 -52.34375L297.314453125 0.0H289.306640625L268.359375 -51.953125Q267.48046875 -54.248046875 266.50390625 -58.935546875H266.30859375Q266.69921875 -54.736328125 266.69921875 -45.21484375V0.0H255.95703125V-70.01953125H272.314453125L290.72265625 -23.388671875Q292.822265625 -18.017578125 293.45703125 -15.380859375H293.701171875Q295.5078125 -20.8984375 296.630859375 -23.583984375L315.380859375 -70.01953125H331.15234375ZM389.453125 -21.923828125H355.37109375Q355.56640625 -14.990234375 359.6435546875 -11.23046875Q363.720703125 -7.470703125 370.849609375 -7.470703125Q378.857421875 -7.470703125 385.546875 -12.255859375V-3.125Q378.7109375 1.171875 367.48046875 1.171875Q356.4453125 1.171875 350.1708984375 -5.6396484375Q343.896484375 -12.451171875 343.896484375 -24.8046875Q343.896484375 -36.474609375 350.8056640625 -43.8232421875Q357.71484375 -51.171875 367.96875 -51.171875Q378.22265625 -51.171875 383.837890625 -44.580078125Q389.453125 -37.98828125 389.453125 -26.26953125ZM378.515625 -29.931640625Q378.466796875 -36.03515625 375.634765625 -39.4287109375Q372.802734375 -42.822265625 367.822265625 -42.822265625Q362.939453125 -42.822265625 359.5458984375 -39.2578125Q356.15234375 -35.693359375 355.37109375 -29.931640625ZM442.041015625 -50.0 425.390625 -24.70703125 441.845703125 0.0H428.7109375L419.921875 -15.478515625Q419.091796875 -16.89453125 417.96875 -19.091796875H417.7734375Q417.578125 -18.65234375 415.72265625 -15.478515625L406.787109375 0.0H393.701171875L410.693359375 -24.51171875L394.580078125 -50.0H407.763671875L416.40625 -33.740234375Q417.3828125 -31.93359375 418.310546875 -30.029296875H418.45703125L429.638671875 -50.0ZM456.0546875 -60.498046875Q453.271484375 -60.498046875 451.2939453125 -62.3046875Q449.31640625 -64.111328125 449.31640625 -66.89453125Q449.31640625 -69.677734375 451.2939453125 -71.533203125Q453.271484375 -73.388671875 456.0546875 -73.388671875Q458.935546875 -73.388671875 460.9375 -71.533203125Q462.939453125 -69.677734375 462.939453125 -66.89453125Q462.939453125 -64.2578125 460.9375 -62.3779296875Q458.935546875 -60.498046875 456.0546875 -60.498046875ZM461.669921875 0.0H450.341796875V-50.0H461.669921875ZM514.84375 0.0H503.857421875V-7.8125H503.662109375Q498.486328125 1.171875 488.4765625 1.171875Q481.103515625 1.171875 476.9287109375 -2.83203125Q472.75390625 -6.8359375 472.75390625 -13.427734375Q472.75390625 -27.587890625 489.0625 -29.931640625L503.90625 -32.03125Q503.90625 -42.724609375 493.75 -42.724609375Q484.814453125 -42.724609375 477.63671875 -36.572265625V-46.484375Q485.546875 -51.171875 495.8984375 -51.171875Q514.84375 -51.171875 514.84375 -32.51953125ZM503.90625 -24.560546875 493.408203125 -23.095703125Q488.525390625 -22.4609375 486.0595703125 -20.7275390625Q483.59375 -18.994140625 483.59375 -14.6484375Q483.59375 -11.474609375 485.8642578125 -9.4482421875Q488.134765625 -7.421875 491.943359375 -7.421875Q497.119140625 -7.421875 500.5126953125 -11.0595703125Q503.90625 -14.697265625 503.90625 -20.21484375Z"/>
-  </g>
+    <!-- 一句话价值 -->
+    <text x="64" y="190" font-size="25" fill="#C9C5BF">把不同协议的设备，收进一个客户端</text>
+    <text x="64" y="228" font-size="25" fill="#8B8781">本地登录，数据只留在本机</text>
 
-  <text x="64" y="244" font-size="26" fill="#C6C1BA">把不同协议的设备，收进一个本地客户端</text>
-  <text x="64" y="280" font-size="26" fill="#8E8A85">一个账号、一套卡片，Windows 先跑起来</text>
+    <!-- 生态状态 -->
+    <rect x="64" y="258" width="176" height="34" rx="17" fill="#1C1C20" stroke="#2C2C32"/>
+    <circle cx="84" cy="275" r="4" fill="#22C688"/>
+    <text x="96" y="280.5" font-size="15" fill="#DCD8D2">米家 MIoT · 已支持</text>
 
-  <g>
-    <rect x="64" y="310" width="104" height="42" rx="21" fill="#1F1F23" stroke="#2E2E34"/>
-    <text x="116" y="337" font-size="18" fill="#D3CFC9" text-anchor="middle">本地登录</text>
-    <rect x="180" y="310" width="104" height="42" rx="21" fill="#1F1F23" stroke="#2E2E34"/>
-    <text x="232" y="337" font-size="18" fill="#D3CFC9" text-anchor="middle">设备卡片</text>
-    <rect x="296" y="310" width="122" height="42" rx="21" fill="#1F1F23" stroke="#2E2E34"/>
-    <text x="357" y="337" font-size="18" fill="#D3CFC9" text-anchor="middle">跨平台路线</text>
-  </g>
+    <rect x="252" y="258" width="152" height="34" rx="17" fill="#1C1C20" stroke="#2C2C32"/>
+    <circle cx="272" cy="275" r="4" fill="#57534F"/>
+    <text x="284" y="280.5" font-size="15" fill="#918C86">Matter · 规划中</text>
 
-  <text x="64" y="392" font-size="18" fill="#6E6A65">Windows 10/11 x64 · 已发布 v0.1.1 · macOS / iOS / Android / Linux / 鸿蒙在路线图上</text>
+    <!-- 仓库信息 -->
+    <line x1="64" y1="316" x2="496" y2="316" stroke="#232327"/>
+    <text x="64" y="350" font-family="'Cascadia Mono', 'Consolas', 'SFMono-Regular', 'Menlo', monospace" font-size="16" letter-spacing="0.4" fill="#7A7671">Windows 10/11 x64 · v0.1.1 · AGPL-3.0</text>
 
-  <!-- 设备卡片：数据取自应用截图 -->
-  <!-- 主灯 -->
-  <g>
-    <rect x="624" y="52" width="248" height="146" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
-    <g transform="translate(642 70)">
-      <rect width="36" height="36" rx="10" fill="#E8B04B"/>
-      <circle cx="18" cy="15" r="7" fill="none" stroke="#FFFFFF" stroke-width="2.4"/>
-      <line x1="15" y1="24.5" x2="21" y2="24.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- 设备卡片：数据取自应用截图 -->
+    <!-- 吸顶灯 -->
+    <g transform="translate(560 52)">
+      <rect width="280" height="150" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
+      <rect x="16" y="16" width="36" height="36" rx="10" fill="#26262B"/>
+      <g transform="translate(16 16)" fill="none" stroke="#E8B04B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 18a8 8 0 0 1 16 0Z"/>
+        <path d="M18 10V7.5"/>
+        <path d="M12 22v3"/>
+        <path d="M18 22v4"/>
+        <path d="M24 22v3"/>
+      </g>
+      <text x="62" y="40" font-size="20" font-weight="600" fill="#F1EEEA">吸顶灯</text>
+      <text x="62" y="60" font-size="14" fill="#807C76">卧室</text>
+      <circle cx="204" cy="34" r="3.6" fill="#6B6660"/>
+      <text x="264" y="39" font-size="15" fill="#8E8983" text-anchor="end">已关闭</text>
+      <line x1="16" y1="78" x2="264" y2="78" stroke="#2A2A2F"/>
+      <text x="16" y="103" font-size="16" fill="#8A857F">亮度</text>
+      <text x="148" y="103" font-size="16" fill="#8A857F">色温</text>
+      <text x="16" y="138" font-size="27" font-weight="700" fill="#F4F1ED">100<tspan font-size="15" font-weight="500" fill="#A29D96">%</tspan></text>
+      <text x="148" y="138" font-size="27" font-weight="700" fill="#F4F1ED">6100<tspan font-size="15" font-weight="500" fill="#A29D96">K</tspan></text>
     </g>
-    <text class="name" x="688" y="97">主灯</text>
-    <circle cx="789" cy="90" r="4" fill="#35D98A"/>
-    <text class="status" x="854" y="96" fill="#35D98A" text-anchor="end">已开启</text>
-    <line x1="642" y1="124" x2="854" y2="124" stroke="#2B2B30"/>
-    <text class="label" x="642" y="150">亮度</text>
-    <text class="metric" x="642" y="182">100%</text>
-  </g>
 
-  <!-- 空调 -->
-  <g>
-    <rect x="888" y="52" width="248" height="146" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
-    <g transform="translate(906 70)">
-      <rect width="36" height="36" rx="10" fill="#7AA7FF"/>
-      <rect x="9.5" y="10.5" width="17" height="9.5" rx="2.6" fill="none" stroke="#FFFFFF" stroke-width="2.4"/>
-      <line x1="13.5" y1="24.5" x2="13.5" y2="27.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
-      <line x1="18" y1="24.5" x2="18" y2="27.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
-      <line x1="22.5" y1="24.5" x2="22.5" y2="27.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- 空调 -->
+    <g transform="translate(856 52)">
+      <rect width="280" height="150" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
+      <rect x="16" y="16" width="36" height="36" rx="10" fill="#26262B"/>
+      <g transform="translate(16 16)" fill="none" stroke="#7AA7FF" stroke-width="2" stroke-linecap="round">
+        <rect x="8" y="11" width="20" height="10" rx="3"/>
+        <path d="M12 25v4"/>
+        <path d="M18 25v4"/>
+        <path d="M24 25v4"/>
+      </g>
+      <text x="62" y="40" font-size="20" font-weight="600" fill="#F1EEEA">空调</text>
+      <text x="62" y="60" font-size="14" fill="#807C76">客厅</text>
+      <circle cx="204" cy="34" r="3.6" fill="#8FB4FF"/>
+      <text x="264" y="39" font-size="15" fill="#8FB4FF" text-anchor="end">制冷中</text>
+      <line x1="16" y1="78" x2="264" y2="78" stroke="#2A2A2F"/>
+      <text x="16" y="103" font-size="16" fill="#8A857F">目标温度</text>
+      <text x="148" y="103" font-size="16" fill="#8A857F">模式</text>
+      <text x="16" y="138" font-size="27" font-weight="700" fill="#F4F1ED">24.0<tspan font-size="15" font-weight="500" fill="#A29D96">℃</tspan></text>
+      <text x="148" y="137" font-size="21" font-weight="600" fill="#9FC0FF">制冷</text>
     </g>
-    <text class="name" x="952" y="97">空调</text>
-    <circle cx="1050" cy="90" r="4" fill="#8FB4FF"/>
-    <text class="status" x="1118" y="96" fill="#8FB4FF" text-anchor="end">制冷中</text>
-    <line x1="906" y1="124" x2="1118" y2="124" stroke="#2B2B30"/>
-    <text class="label" x="906" y="150">设定温度</text>
-    <text class="metric" x="906" y="182">24.0℃</text>
-    <text class="sub" x="1118" y="182" text-anchor="end">制冷</text>
-  </g>
 
-  <!-- 温湿度 -->
-  <g>
-    <rect x="624" y="214" width="248" height="146" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
-    <g transform="translate(642 232)">
-      <rect width="36" height="36" rx="10" fill="#5FD3C4"/>
-      <path d="M18 9C18 9 11 17.2 11 21.6A7 7 0 0 0 25 21.6C25 17.2 18 9 18 9Z" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
-      <line x1="18" y1="18" x2="18" y2="23" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- 温湿度计 -->
+    <g transform="translate(560 218)">
+      <rect width="280" height="150" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
+      <rect x="16" y="16" width="36" height="36" rx="10" fill="#26262B"/>
+      <g transform="translate(16 16)" fill="none" stroke="#5FD3C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8c0 0-7.5 8-7.5 12.7a7.5 7.5 0 0 0 15 0C25.5 16 18 8 18 8Z"/>
+        <path d="M18 16.5v5"/>
+      </g>
+      <text x="62" y="40" font-size="20" font-weight="600" fill="#F1EEEA">温湿度计</text>
+      <text x="62" y="60" font-size="14" fill="#807C76">客厅</text>
+      <circle cx="222" cy="34" r="3.6" fill="#5FD3C4"/>
+      <text x="264" y="39" font-size="15" fill="#5FD3C4" text-anchor="end">在线</text>
+      <line x1="16" y1="78" x2="264" y2="78" stroke="#2A2A2F"/>
+      <text x="16" y="103" font-size="16" fill="#8A857F">温度</text>
+      <text x="148" y="103" font-size="16" fill="#8A857F">湿度</text>
+      <text x="16" y="138" font-size="27" font-weight="700" fill="#F4F1ED">25.6<tspan font-size="15" font-weight="500" fill="#A29D96">℃</tspan></text>
+      <text x="148" y="138" font-size="27" font-weight="700" fill="#F4F1ED">49<tspan font-size="15" font-weight="500" fill="#A29D96">%</tspan></text>
     </g>
-    <text class="name" x="688" y="259">温湿度</text>
-    <circle cx="789" cy="252" r="4" fill="#5FD3C4"/>
-    <text class="status" x="854" y="258" fill="#5FD3C4" text-anchor="end">在线</text>
-    <line x1="642" y1="286" x2="854" y2="286" stroke="#2B2B30"/>
-    <text class="label" x="642" y="312">室内温度</text>
-    <text class="metric" x="642" y="344">25.6℃</text>
-    <text class="sub" x="854" y="344" text-anchor="end">49%</text>
-  </g>
 
-  <!-- 台灯 -->
-  <g>
-    <rect x="888" y="214" width="248" height="146" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
-    <g transform="translate(906 232)">
-      <rect width="36" height="36" rx="10" fill="#F2A65A"/>
-      <path d="M15 20 L18 10.5 L21 20 Z" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
-      <line x1="18" y1="20" x2="18" y2="25" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
-      <line x1="12" y1="26" x2="24" y2="26" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- 台灯 -->
+    <g transform="translate(856 218)">
+      <rect width="280" height="150" rx="16" fill="#1E1E22" stroke="#2C2C32"/>
+      <rect x="16" y="16" width="36" height="36" rx="10" fill="#26262B"/>
+      <g transform="translate(16 16)" fill="none" stroke="#F2A65A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 18 18 9l5 9Z"/>
+        <path d="M18 18v7"/>
+        <path d="M12 26h12"/>
+      </g>
+      <text x="62" y="40" font-size="20" font-weight="600" fill="#F1EEEA">台灯</text>
+      <text x="62" y="60" font-size="14" fill="#807C76">书房</text>
+      <circle cx="204" cy="34" r="3.6" fill="#35D98A"/>
+      <text x="264" y="39" font-size="15" fill="#35D98A" text-anchor="end">已开启</text>
+      <line x1="16" y1="78" x2="264" y2="78" stroke="#2A2A2F"/>
+      <text x="16" y="103" font-size="16" fill="#8A857F">亮度</text>
+      <text x="148" y="103" font-size="16" fill="#8A857F">色温</text>
+      <text x="16" y="138" font-size="27" font-weight="700" fill="#F4F1ED">53<tspan font-size="15" font-weight="500" fill="#A29D96">%</tspan></text>
+      <text x="148" y="138" font-size="27" font-weight="700" fill="#F4F1ED">4450<tspan font-size="15" font-weight="500" fill="#A29D96">K</tspan></text>
     </g>
-    <text class="name" x="952" y="259">台灯</text>
-    <circle cx="1050" cy="252" r="4" fill="#F2B36A"/>
-    <text class="status" x="1118" y="258" fill="#F2B36A" text-anchor="end">已开启</text>
-    <line x1="906" y1="286" x2="1118" y2="286" stroke="#2B2B30"/>
-    <text class="label" x="906" y="312">色温</text>
-    <text class="metric" x="906" y="344">4450K</text>
-    <text class="sub" x="1118" y="344" text-anchor="end">亮度 53%</text>
   </g>
 </svg>
