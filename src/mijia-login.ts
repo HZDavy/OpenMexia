@@ -35,6 +35,7 @@ const MI_USER_AGENT = 'Android-7.1.1-1.0.0-ONEPLUS A3010-136-ABCDEFGHIJKLM APP/x
 // （来自 Yonsm/MiService，基于真实设备 MiIO.chls 抓包）
 const MI_OTP_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 iOS/26.3.1 MiHome/11.3.203 iPhone/iPhone17,2 DeviceId/D84D9205859533D504042022029B988E6F7DD180 UserId/8816080 APP/com.xiaomi.mihome APPV/11.3.203 Platform/iPhone Region/CN /xiaomi/miuibrowser/4.3/smartHome/ios/iPhone17,2/11.3.203 APP/com.xiaomi.mihome APPV/11.3.203 iosPassportSDK/4.2.50 iOS/26.3.1 MK/aVBob25lMTcsMg== DEVT/aVBob25l DEVS/aU9T BRA/QXBwbGU= L/zh_CN';
 const PWD_SESSION_TTL = 5 * 60 * 1000;   // 图形验证码会话有效期：5 分钟
+const REFRESH_COOLDOWN = 60 * 1000;      // 云端强制刷新的最小间隔，避免凭证彻底失效后反复请求
 
 class MijiaLogin {
   dataDir: string;
@@ -47,6 +48,8 @@ class MijiaLogin {
   _api: any;
   _pwdSessions: Map<string, any>;
   _pwdCountry: string;
+  _cloudRefresh: Promise<boolean> | null;   // 进行中的强制刷新（并发请求共用，避免重复刷新）
+  _refreshAt: number;                       // 上次强制刷新的时间戳（冷却用）
 
   /** @param dataDir 应用数据目录（如 userData/mijia） */
   constructor(dataDir: string) {
@@ -62,6 +65,8 @@ class MijiaLogin {
     this._api = null;          // MijiaAPI 实例（二维码登录后复用）
     this._pwdSessions = new Map();   // 待输入图形验证码的密码登录会话（id -> session）
     this._pwdCountry = 'cn';         // 密码登录使用的区号，供刷新设备清单时复用
+    this._cloudRefresh = null;
+    this._refreshAt = 0;
   }
 
   // ---------- 懒加载依赖 ----------
@@ -929,23 +934,58 @@ class MijiaLogin {
 
   // ---------- 云端属性读写（MiioProvider 的云回退用） ----------
 
-  async cloudGet(props: unknown): Promise<unknown> {
+  /**
+   * 云端请求兜底：命中 code=3「auth error」时强制刷新会话并重试一次。
+   *
+   * 背景：@zythum02/mijia-api 的 available 只表示「本地有凭证」，凭证过期后仍返回 true，
+   * 其 refreshToken() 也会因此直接短路返回，于是所有云端请求恒返回 code=3。
+   * 只能走云端的设备（蓝牙温湿度计等）因此永远拿不到数据，界面停在「--」。
+   * 这里显式重走一遍 serviceLogin 刷新 Cookie 并重建会话；失败则一分钟内不再重试，避免刷屏。
+   */
+  async _cloudCall<T>(run: (api: any) => Promise<T>): Promise<T> {
     const api = await this._getApi();
     if (!api.available) throw new Error('云端会话不可用');
-    return api.getDevicesProp(props);
+    try {
+      return await run(api);
+    } catch (e) {
+      if (!isCloudAuthError(e)) throw e;
+      if (Date.now() - this._refreshAt < REFRESH_COOLDOWN) throw e;
+      this._refreshAt = Date.now();
+      if (!(await this._forceRefreshSession(api))) throw e;
+      return run(api);
+    }
+  }
+
+  /** 强制刷新云端会话（并发请求共用同一次刷新）。@returns 是否刷新成功 */
+  _forceRefreshSession(api: any): Promise<boolean> {
+    if (this._cloudRefresh) return this._cloudRefresh;
+    this._cloudRefresh = (async () => {
+      try {
+        if (typeof api._getLocation !== 'function') return false;
+        await api._getLocation();   // 重走 serviceLogin，用 Set-Cookie 换取新凭证
+        if (typeof api._initSession === 'function') api._initSession();
+        if (typeof api._saveAuthData === 'function') api._saveAuthData();
+        return true;
+      } catch {
+        return false;
+      } finally {
+        this._cloudRefresh = null;
+      }
+    })();
+    return this._cloudRefresh;
+  }
+
+  async cloudGet(props: unknown): Promise<unknown> {
+    return this._cloudCall((api) => api.getDevicesProp(props));
   }
 
   async cloudSet(prop: unknown): Promise<unknown> {
-    const api = await this._getApi();
-    if (!api.available) throw new Error('云端会话不可用');
-    return api.setDevicesProp(prop);
+    return this._cloudCall((api) => api.setDevicesProp(prop));
   }
 
   /** 云动作调用（如风扇手动上下左右），param = {did, siid, aiid, value?} */
   async cloudAction(param: unknown): Promise<unknown> {
-    const api = await this._getApi();
-    if (!api.available) throw new Error('云端会话不可用');
-    return api.runAction(param);
+    return this._cloudCall((api) => api.runAction(param));
   }
 
   // ---------- 登出 ----------
@@ -978,6 +1018,17 @@ function friendlyLoginError(e: any): string {
     return '网络连接失败，请检查网络后重试。';
   }
   return msg || '登录失败，请重试。';
+}
+
+/**
+ * 是否为云端「认证失效」错误。
+ * 小米云在凭证过期时统一返回 code=3 / message="auth error"，
+ * 与设备离线、参数错误等业务失败要区分开，只有前者值得强制刷新会话。
+ */
+function isCloudAuthError(e: any): boolean {
+  if (!e) return false;
+  if (Number(e.code) === 3) return true;
+  return /auth error|认证失败|登录已过期/i.test(String(e.message || ''));
 }
 
 /** 剥离小米云响应体前缀 `&&&START&&&` 后解析 JSON（部分端点为 `&&&START&&&{...}`） */
