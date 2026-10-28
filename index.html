@@ -315,15 +315,16 @@ details[open] summary::after{transform:rotate(45deg)}
 .faq-body a{color:var(--green-deep);border-bottom:1px solid rgba(10,168,113,.3)}
 
 /* ---------- integration banner ---------- */
-.intg{padding:0}
+.intg{padding:0 0 96px}
 .intg-box{display:flex;align-items:center;gap:24px;background:linear-gradient(118deg,var(--green-tint),#fff 62%);border:1px solid #d2efe1;border-radius:20px;padding:28px 32px}
-.intg-ic{width:52px;height:52px;border-radius:14px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
-.intg-ic svg{width:26px;height:26px}
+.intg-ic{width:52px;height:52px;flex:none}
+.intg-ic svg{width:52px;height:52px;display:block}
 .intg-tx{flex:1;min-width:0}
 .intg-tx h3{font-size:17px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
 .intg-tx p{font-size:13.5px;color:var(--ink-2);line-height:1.68;text-wrap:pretty}
 .intg-box .btn{flex:none}
 @media (max-width:640px){
+  .intg{padding:0 0 64px}
   .intg-box{flex-direction:column;align-items:flex-start;gap:18px;padding:24px 22px}
   .intg-box .btn{width:100%}
 }
@@ -599,12 +600,12 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 <section class="intg">
   <div class="w">
     <div class="intg-box">
-      <span class="intg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="3"/><circle cx="12" cy="8" r="1.6"/><path d="M10 12.6h4M10 15.6h4M10 18.6h2"/></svg></span>
+      <span class="intg-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="mdBody" x1="3.2" y1="0.8" x2="21" y2="23.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#39424F"/><stop offset=".36" stop-color="#1B212A"/><stop offset=".74" stop-color="#0B0F15"/><stop offset="1" stop-color="#05080B"/></linearGradient><radialGradient id="mdSheen" cx="6.2" cy="3" r="15.8" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".52" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><radialGradient id="mdFloor" cx="12" cy="23.8" r="12.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><linearGradient id="mdPill" x1="9" y1="4.2" x2="15" y2="17.6" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset=".46" stop-color="#F3F7FC"/><stop offset="1" stop-color="#D7E1EE"/></linearGradient></defs><rect width="24" height="24" rx="5.4" fill="url(#mdBody)"/><rect width="24" height="24" rx="5.4" fill="url(#mdSheen)"/><rect width="24" height="24" rx="5.4" fill="url(#mdFloor)"/><g transform="rotate(45 12 12)"><path fill="url(#mdPill)" fill-rule="evenodd" d="M12 4.125A3.375 3.375 0 0 1 15.375 7.5V16.5A3.375 3.375 0 0 1 8.625 16.5V7.5A3.375 3.375 0 0 1 12 4.125ZM12 6.9375A1.6875 1.6875 0 1 1 12 10.3125A1.6875 1.6875 0 1 1 12 6.9375Z"/></g></svg></span>
       <div class="intg-tx">
         <h3><span class="hidden-zh">已支持 MoteDeck 遥控器联动</span><span class="hidden-en">Now works with the MoteDeck remote</span></h3>
         <p><span class="hidden-zh">配合同作者的 MoteDeck，用实体遥控器控制家里的设备：按键执行单个动作，或按住话筒说「打开客厅灯」「空调 26 度」。两边装好后，在 MoteDeck「语音」页点一下「连接 OpenMexia」即可。</span><span class="hidden-en">Pair it with MoteDeck — a physical remote by the same author — and control your devices with real keys, or hold the mic and say “turn on the living room light”. Install both, then click “Connect OpenMexia” in MoteDeck.</span></p>
       </div>
-      <a class="btn btn-green" href="https://github.com/HZDavy/MoteDeck/releases/latest" target="_blank" rel="noopener"><span class="hidden-zh">了解 MoteDeck</span><span class="hidden-en">Get MoteDeck</span></a>
+      <a class="btn btn-green" href="https://hzdavy.github.io/MoteDeck/" target="_blank" rel="noopener"><span class="hidden-zh">了解 MoteDeck</span><span class="hidden-en">Get MoteDeck</span></a>
     </div>
   </div>
 </section>
