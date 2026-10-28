@@ -314,6 +314,20 @@ details[open] summary::after{transform:rotate(45deg)}
 .faq-body{padding:0 30px 26px;font-size:14.5px;color:var(--ink-2);line-height:1.75}
 .faq-body a{color:var(--green-deep);border-bottom:1px solid rgba(10,168,113,.3)}
 
+/* ---------- integration banner ---------- */
+.intg{padding:0}
+.intg-box{display:flex;align-items:center;gap:24px;background:linear-gradient(118deg,var(--green-tint),#fff 62%);border:1px solid #d2efe1;border-radius:20px;padding:28px 32px}
+.intg-ic{width:52px;height:52px;border-radius:14px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.intg-ic svg{width:26px;height:26px}
+.intg-tx{flex:1;min-width:0}
+.intg-tx h3{font-size:17px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
+.intg-tx p{font-size:13.5px;color:var(--ink-2);line-height:1.68;text-wrap:pretty}
+.intg-box .btn{flex:none}
+@media (max-width:640px){
+  .intg-box{flex-direction:column;align-items:flex-start;gap:18px;padding:24px 22px}
+  .intg-box .btn{width:100%}
+}
+
 /* ---------- download ---------- */
 .dl-card{background:var(--bg-soft);border-radius:28px;text-align:center;padding:96px 30px}
 .dl-card h2{font-size:clamp(30px,3.4vw,44px);font-weight:700;letter-spacing:-.025em;margin-bottom:16px}
@@ -495,7 +509,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <div class="plat on">
         <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l7.3-1v7.2H3V5.5zM11.4 4.3 21 3v8.7h-9.6V4.3zM3 12.3h7.3v7.2L3 18.5v-6.2zM11.4 12.3H21V21l-9.6-1.3v-7.4z"/></svg></div>
         <h3>Windows <span class="tag tag-on"><span class="hidden-zh">已发布</span><span class="hidden-en">Available</span></span></h3>
-        <p><span class="hidden-zh">Windows 10 / 11 · <span class="js-ver">v0.1.3</span>，可直接下载安装</span><span class="hidden-en"><span class="js-ver">v0.1.3</span> for Windows 10 / 11 — download it now</span></p>
+        <p><span class="hidden-zh">Windows 10 / 11 · <span class="js-ver">v0.1.11</span>，可直接下载安装</span><span class="hidden-en"><span class="js-ver">v0.1.11</span> for Windows 10 / 11 — download it now</span></p>
       </div>
       <div class="plat">
         <div class="pic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.5c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.9-.9-3.1-.8-1.6 0-3 .9-3.9 2.4-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.4 1.2-.1 1.6-.8 3-.8s1.8.8 3.1.8c1.3 0 2.1-1.1 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.5-1-2.5-3.9zM14.2 5.9c.6-.8 1.1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 .1 2-.5 2.7-1.3z"/></svg></div>
@@ -577,6 +591,20 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
         <h3><span class="hidden-zh">全屏与副屏</span><span class="hidden-en">Fullscreen &amp; 2nd screen</span></h3>
         <p class="d"><span class="hidden-zh">两种全屏模式可做信息墙，多显示器下一键发送到副屏。</span><span class="hidden-en">Two fullscreen modes for a dashboard wall; send it to another monitor in one click.</span></p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INTEGRATION BANNER ================= -->
+<section class="intg">
+  <div class="w">
+    <div class="intg-box">
+      <span class="intg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="3"/><circle cx="12" cy="8" r="1.6"/><path d="M10 12.6h4M10 15.6h4M10 18.6h2"/></svg></span>
+      <div class="intg-tx">
+        <h3><span class="hidden-zh">已支持 MoteDeck 遥控器联动</span><span class="hidden-en">Now works with the MoteDeck remote</span></h3>
+        <p><span class="hidden-zh">配合同作者的 MoteDeck，用实体遥控器控制家里的设备：按键执行单个动作，或按住话筒说「打开客厅灯」「空调 26 度」。两边装好后，在 MoteDeck「语音」页点一下「连接 OpenMexia」即可。</span><span class="hidden-en">Pair it with MoteDeck — a physical remote by the same author — and control your devices with real keys, or hold the mic and say “turn on the living room light”. Install both, then click “Connect OpenMexia” in MoteDeck.</span></p>
+      </div>
+      <a class="btn btn-green" href="https://github.com/HZDavy/MoteDeck/releases/latest" target="_blank" rel="noopener"><span class="hidden-zh">了解 MoteDeck</span><span class="hidden-en">Get MoteDeck</span></a>
     </div>
   </div>
 </section>
@@ -704,9 +732,9 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
       <p class="s"><span class="hidden-zh">免费开源，扫码即用。</span><span class="hidden-en">Free, open source, ready after one scan.</span></p>
       <a class="btn btn-dark btn-lg" href="https://github.com/HZDavy/OpenMexia/releases/latest" target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span class="hidden-zh">下载 OpenMexia <span class="js-ver">v0.1.3</span></span><span class="hidden-en">Download OpenMexia <span class="js-ver">v0.1.3</span></span>
+        <span class="hidden-zh">下载 OpenMexia <span class="js-ver">v0.1.11</span></span><span class="hidden-en">Download OpenMexia <span class="js-ver">v0.1.11</span></span>
       </a>
-      <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 109 MB</div>
+      <div class="dl-meta">Windows 10 / 11 · 64 位 · NSIS 安装包 · 约 110 MB</div>
       <div class="dl-meta" style="margin-top:8px"><span class="hidden-zh">macOS / iOS / Android / watchOS / Wear OS / Linux / HarmonyOS 版本规划中，欢迎在 GitHub 关注进展</span><span class="hidden-en">macOS / iOS / Android / watchOS / Wear OS / Linux &amp; HarmonyOS on the roadmap — follow the progress on GitHub</span></div>
       <div class="dl-warn"><span class="hidden-zh">未购买代码签名证书，首次运行如出现 SmartScreen 提示，选择「更多信息」→「仍要运行」。</span><span class="hidden-en">The installer is unsigned. If SmartScreen appears, choose “More info” → “Run anyway”.</span></div>
     </div>
@@ -826,7 +854,7 @@ footer{background:var(--bg-soft);border-top:1px solid var(--line);padding:64px 0
 // 官网版本号：自动读取 GitHub 最新 Release 的 tag（如 v0.1.3），页面内所有 .js-ver 同步；
 // API 不可用（离线 / 限流）时回退到 FALLBACK，避免显示为空。发版后无需再手动改官网。
 (function(){
-  var FALLBACK = 'v0.1.3';
+  var FALLBACK = 'v0.1.11';
   function apply(v){ if(v) document.querySelectorAll('.js-ver').forEach(function(el){ el.textContent = v; }); }
   apply(FALLBACK);
   fetch('https://api.github.com/repos/HZDavy/OpenMexia/releases/latest', {headers:{'Accept':'application/vnd.github+json'}})
