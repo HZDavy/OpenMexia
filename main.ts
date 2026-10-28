@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
 import { createProvider } from './src/devices';
+import { startLocalApi } from './src/local-api';
+import type { LocalApiHandle } from './src/local-api';
 import { MijiaLogin } from './src/mijia-login';
 import * as QRCode from 'qrcode';
 import type { FullscreenMode, Settings, Theme, WindowMode } from './shared/types';
@@ -38,9 +40,10 @@ const EDGE_GAP = 20; // 窗口贴边留白（拖拽/移动时的边界钳制）
 let win: BrowserWindow;
 let tray: Tray | null = null;
 let provider: Awaited<ReturnType<typeof createProvider>>;
+let localApi: LocalApiHandle | null = null;   // 给 MoteDeck 用的本机联动接口
 let providerReady: Promise<unknown> = Promise.resolve();   // 设备源首次构建完成信号（窗口先显示，数据后到）
 let login: MijiaLogin;   // MijiaLogin：登录 / 设备清单 / 云端回退
-let settings: Settings = { alwaysOnTop: true, launchAtLogin: false };
+let settings: Settings = { alwaysOnTop: true, launchAtLogin: false, launchInTray: false };
 // 渲染层首次按内容自适应高度时置位，避免这段程序化 resize 被当作「用户调整的大小」持久化
 let sizingProgrammatically = false;
 // 托盘菜单图标：由渲染层把与应用内菜单同一套 SVG 栅格化成 PNG dataURL 后传回
@@ -71,10 +74,32 @@ function toggleOnTop() {
   }
 }
 
+function broadcastSettings() {
+  if (win && !win.isDestroyed()) win.webContents.send('widget:settings', settings);
+}
+
+function applyLoginItem() {
+  // launchInTray 只对小组件模式有意义：开机时不弹界面，只留在托盘。
+  app.setLoginItemSettings({
+    openAtLogin: settings.launchAtLogin,
+    args: settings.launchInTray ? ['--hidden'] : [],
+  });
+}
+
 function toggleLogin() {
-  settings = patchState({ launchAtLogin: !settings.launchAtLogin });
-  app.setLoginItemSettings({ openAtLogin: settings.launchAtLogin, args: [] });
-  if (win) win.webContents.send('widget:settings', settings);
+  // 「开机自动启动」与「开机启动（托盘）」是两个互斥选项：
+  // 勾上这个就打开界面，另一个自动取消。
+  const next = !(settings.launchAtLogin && !settings.launchInTray);
+  settings = patchState({ launchAtLogin: next, launchInTray: false });
+  applyLoginItem();
+  broadcastSettings();
+}
+
+function toggleLaunchInTray() {
+  const next = !(settings.launchAtLogin && settings.launchInTray);
+  settings = patchState({ launchAtLogin: next, launchInTray: next });
+  applyLoginItem();
+  broadcastSettings();
 }
 
 // 发送到副屏（参考 PlanMonitor 的「→ 副屏」）：识别窗口当前所在显示器，
@@ -296,6 +321,14 @@ function applyWindowMode(mode: WindowMode) {
     if (win && !win.isDestroyed()) win.setSkipTaskbar(true);
   } else {
     if (tray) { tray.destroy(); tray = null; }
+    // 「开机启动（托盘）」只属于小组件模式：切回窗口模式时自动取消，
+    // 否则下次开机窗口不会出现，用户又找不到托盘。
+    if (settings.launchInTray || (loadState().launchInTray === true)) {
+      settings = { ...settings, launchInTray: false };
+      patchState({ launchInTray: false });
+      applyLoginItem();
+      broadcastSettings();
+    }
     if (win && !win.isDestroyed()) {
       win.setSkipTaskbar(false);
       // 若窗口正处于「收起到托盘」的隐藏态，切到无托盘的窗口模式会再也唤不回 → 直接显示
@@ -705,7 +738,12 @@ function createWindow() {
   settings = {
     alwaysOnTop: state.alwaysOnTop !== false,
     launchAtLogin: state.launchAtLogin === true,
+    launchInTray: state.launchInTray === true,
   };
+  // 开机启动（托盘）：系统启动时带 --hidden 参数，只创建托盘、不弹界面。
+  const startHidden = windowMode(state) === 'widget'
+    && state.launchInTray === true
+    && process.argv.includes('--hidden');
 
   win = new BrowserWindow({
     width,
@@ -745,8 +783,11 @@ function createWindow() {
   win.once('ready-to-show', () => {
     if (settings.alwaysOnTop) win.setAlwaysOnTop(true, 'floating');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    win.show();
+    if (!startHidden) win.show();
   });
+
+  // 每次打开面板都立刻探测一次在线状态，不用等下一轮轮询。
+  win.on('show', pollDevicesOnShow);
 
   win.on('moved', () => {
     if (sizingProgrammatically) return;   // 全屏/程序化移动不写入状态
@@ -836,6 +877,19 @@ function forwardDevices(devices: any[]) {
   if (win && !win.isDestroyed()) win.webContents.send('widget:devices', devices);
 }
 
+let lastShowPollAt = 0;
+/** 打开面板时立刻探测一次在线状态，别再等下一轮 5 秒轮询。 */
+function pollDevicesOnShow() {
+  const now = Date.now();
+  if (now - lastShowPollAt < 2000) return;
+  lastShowPollAt = now;
+  const source: any = provider;
+  if (!source || typeof source.tick !== 'function') return;
+  try {
+    Promise.resolve(source.tick()).catch(() => { /* 单次探测失败不影响面板 */ });
+  } catch { /* 忽略 */ }
+}
+
 // 当前选定的家庭 id（持久化于 widget-state.json；空串 = 展示全部家庭）
 function currentHomeId(): string {
   const v = loadState().currentHomeId;
@@ -884,10 +938,16 @@ function buildTrayMenu(): Electron.Menu {
       click: startPinTaskbar,
     },
     {
-      label: `开机自动启动${settings.launchAtLogin ? ' ✓' : ''}`,
+      label: `开机自动启动${settings.launchAtLogin && !settings.launchInTray ? ' ✓' : ''}`,
       ...icon('login'),
       click: toggleLogin,
     },
+    // 「开机启动（托盘）」只在小组件模式出现，和「开机自动启动」互斥。
+    ...(windowMode() === 'widget' ? [{
+      label: `开机启动（托盘）${settings.launchInTray ? ' ✓' : ''}`,
+      ...icon('login'),
+      click: toggleLaunchInTray,
+    }] : []),
     {
       label: '登录米家 / 设备',
       ...icon('cloud'),
@@ -1107,6 +1167,7 @@ function registerIpc() {
   });
   ipcMain.on('widget:toggle-top', () => toggleOnTop());
   ipcMain.on('widget:toggle-login', () => toggleLogin());
+  ipcMain.on('widget:toggle-launch-in-tray', () => toggleLaunchInTray());
   ipcMain.on('widget:send-screen', () => sendToSecondScreen());
   // 全屏：'normal' 普通全屏（任务栏可见）/ 'cover' 隐藏任务栏全屏 / null 退出全屏
   ipcMain.on('widget:fullscreen', (_e, { mode } = {}) => applyFullscreen(mode || null));
@@ -1214,6 +1275,13 @@ if (!app.requestSingleInstanceLock()) {
     prepareMenuSpare();   // 预热弹出菜单窗口，首次弹出即零等待
     // 托盘只在小组件模式存在；窗口模式无托盘、窗口常驻任务栏
     if (windowMode() === 'widget') createTray();
+    // MoteDeck 联动：只监听本机回环，启动即写好 discovery 文件供对方读取
+    localApi = startLocalApi({
+      userDataDir: app.getPath('userData'),
+      appVersion: app.getVersion(),
+      appPid: process.pid,
+      dispatcher: () => (provider as any) || null,
+    });
   });
 
   app.on('window-all-closed', () => {
@@ -1224,6 +1292,10 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('before-quit', () => {
     app.isQuitting = true;
+    if (localApi) {
+      localApi.close();
+      localApi = null;
+    }
     if (provider) provider.stop();
     if (menuWin && !menuWin.isDestroyed()) menuWin.destroy();
     if (menuSpare && !menuSpare.isDestroyed()) menuSpare.destroy();

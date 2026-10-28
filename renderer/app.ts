@@ -2262,6 +2262,7 @@ let menuOpen = false;
 const miTop = document.getElementById('mi-top');
 const miPin = document.getElementById('mi-pin');
 const miLogin = document.getElementById('mi-login');
+const miLoginTray = document.getElementById('mi-login-tray');
 const miReset = document.getElementById('mi-reset');
 const miFs = document.getElementById('mi-fs');
 const miFsCover = document.getElementById('mi-fs-cover');
@@ -2328,6 +2329,7 @@ btnMenu.addEventListener('click', (e) => {
 miTop.addEventListener('click', () => window.mijia.toggleOnTop());
 miPin.addEventListener('click', () => window.mijia.pinTaskbar());
 miLogin.addEventListener('click', () => window.mijia.toggleLogin());
+miLoginTray.addEventListener('click', () => window.mijia.toggleLaunchInTray());
 miReset.addEventListener('click', () => window.mijia.sendToSecondScreen());
 miFs.addEventListener('click', () => window.mijia.fullscreen('normal'));
 miFsCover.addEventListener('click', () => window.mijia.fullscreen('cover'));
@@ -2374,6 +2376,8 @@ function applyWindowMode(mode) {
   // 窗口模式下窗口本就常驻任务栏、且没有托盘：移除「固定到任务栏」与「收起到托盘」
   miPin.hidden = !widget;
   miHide.hidden = !widget;
+  // 「开机启动（托盘）」只有小组件模式才有
+  miLoginTray.hidden = !widget;
 }
 
 miMode.addEventListener('click', () => window.mijia.toggleWindowMode());
@@ -2629,7 +2633,10 @@ document.getElementById('mi-cloud').addEventListener('click', () => window.mijia
 
 function applySettings(s) {
   miTop.setAttribute('aria-checked', String(!!s.alwaysOnTop));
-  miLogin.setAttribute('aria-checked', String(!!s.launchAtLogin));
+  // 「开机自动启动」和「开机启动（托盘）」互斥：勾了托盘那个，这里就不打勾。
+  miLogin.setAttribute('aria-checked',
+    String(!!s.launchAtLogin && !s.launchInTray));
+  miLoginTray.setAttribute('aria-checked', String(!!s.launchInTray));
 }
 
 /* ---------------- 托盘菜单图标（用同一套 SVG 离屏栅格化为 PNG 给主进程） ---------------- */

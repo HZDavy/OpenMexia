@@ -11,6 +11,9 @@ import type {
 } from '../shared/types';
 import type { MijiaLogin } from './mijia-login';
 
+/** 连续这么多次探测失败才把设备标成离线（轮询 5 秒一轮，约 15 秒）。 */
+const POLL_FAILURES_BEFORE_OFFLINE = 3;
+
 /**
  * 设备数据源（可插拔）。
  *
@@ -312,6 +315,7 @@ class MiioProvider extends EventEmitter {
   timer: ReturnType<typeof setInterval> | null;
   pollMs: number;
   _polling: boolean;
+  _pollFailures: Map<string, number>;
   _miioReady: boolean;
   _localSubnets: Set<string>;
 
@@ -328,6 +332,7 @@ class MiioProvider extends EventEmitter {
     this.timer = null;
     this.pollMs = 5000;
     this._polling = false;
+    this._pollFailures = new Map();
     this._miioReady = false;
     // 本机网卡的 /24 前缀集合：只有与设备同网段时，局域网直连的探测结果才可信
     this._localSubnets = hostSubnets();
@@ -567,27 +572,50 @@ class MiioProvider extends EventEmitter {
     }
   }
 
+  /** 探测成功：清零失败计数并标记在线。 */
+  _markOnline(dev: Device) {
+    dev.online = true;
+    this._pollFailures.delete(dev.id);
+  }
+
+  /**
+   * 探测失败：云端明确判定离线时立即置离线；超时、会话异常等不确定的失败
+   * 累计到阈值再置离线——设备真断网几天不会一直显示在线，偶发抖动也不会误判。
+   */
+  _markPollFailure(dev: Device, offline: boolean) {
+    if (offline) {
+      dev.online = false;
+      this._pollFailures.delete(dev.id);
+      return;
+    }
+    const count = (this._pollFailures.get(dev.id) || 0) + 1;
+    this._pollFailures.set(dev.id, count);
+    if (count >= POLL_FAILURES_BEFORE_OFFLINE) dev.online = false;
+  }
+
   async _pollDevice(dev: Device) {
     const b = this.binds.get(dev.id);
     if (!b || !b.reads.length) return;   // 无规格可读：保持云端清单给出的在线状态
     const params = b.reads.map((r) => ({ did: b.did, siid: r.siid, piid: r.piid }));
 
     // 1) 局域网直连（仅当设备与本机同网段时才尝试，避免跨网段必然超时）
-    //    局域网直连失败原因多样（AP 隔离 / token 失效 / 设备休眠唤醒延迟），均不能判定离线，
-    //    因此失败时继续走云端做权威判定，而不是直接置离线。
+    //    同网段设备局域网读不到，通常就是它真的不在线；云端对离线设备会回放缓存值，
+    //    所以这一步的结果不能再用「云端读成功」覆盖掉。
+    let lanAttempted = false;
     if (this._lanUsable(b) && this._sameSubnet(b.ip)) {
+      lanAttempted = true;
       // Yeelight 灯具优先走传统局域网协议读取（MIoT-spec 读在部分固件上必超时）
       if (b.lanProto === 'yeelight') {
         try {
           await this._yeelightRead(b, dev);
-          dev.online = true;
+          this._markOnline(dev);
           return;
         } catch { /* 回退 MIoT-spec / 云端 */ }
       }
       try {
         const res = await this.mihome.miioProtocol.send(b.ip, 'get_properties', params, { retries: 0 });
         this._applyResults(dev, b, res);
-        dev.online = true;
+        this._markOnline(dev);
         return;
       } catch { /* 转云端 */ }
     }
@@ -599,13 +627,24 @@ class MiioProvider extends EventEmitter {
       try {
         const res = await this._cloudGet(b, params);
         this._applyResults(dev, b, res);
-        dev.online = true;
+        if (lanAttempted) {
+          // 同网段设备局域网已经读不到：云端这时多半只是在回放旧缓存，
+          // 不能凭它把设备当成在线，累计几次就按离线展示。
+          this._markPollFailure(dev, false);
+        } else {
+          this._markOnline(dev);
+        }
       } catch (e: any) {
-        // 仅当云端「明确」判定设备离线时才置离线（如路由器 3040「已离线」、-2「device offline」）；
-        // 应答超时 / BLE 不支持 RPC / 会话异常等一律保持原状态，避免把在线设备误判为离线。
-        if (e && e.deviceOffline) dev.online = false;
+        // 云端明确判定离线（如路由器 3040「已离线」、-2「device offline」）立即置离线；
+        // 应答超时 / 会话异常等不确定的失败累计到阈值才置离线，避免偶发抖动误判。
+        this._markPollFailure(dev, !!(e && e.deviceOffline));
       }
+      return;
     }
+
+    // 既没有局域网条件也没有云端会话：连续探测不到就按离线展示，避免设备
+    // 断网后一直沿用清单里的旧「在线」状态。
+    this._markPollFailure(dev, false);
   }
 
   /* ---------------- 读写底层 ---------------- */

@@ -121,6 +121,8 @@ export interface Device {
 export interface Settings {
   alwaysOnTop: boolean;
   launchAtLogin: boolean;
+  /** 开机启动（托盘）：只在小组件模式下可用，与 launchAtLogin 互斥。 */
+  launchInTray: boolean;
 }
 
 /** 家庭 */

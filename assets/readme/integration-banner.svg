@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-labelledby="t d">
-  <title id="t">MoteDeck 与 OpenMexia 联动预告</title>
+  <title id="t">MoteDeck 与 OpenMexia 联动</title>
   <desc id="d">MoteDeck 把遥控器按键变成指令，经本机 127.0.0.1 回环 HTTP 交给 OpenMexia，由 OpenMexia 完成米家登录与设备控制。</desc>
   <defs>
     <linearGradient id="glassBody" x1="3.2" y1="0.8" x2="21" y2="23.2" gradientUnits="userSpaceOnUse">
@@ -26,8 +26,8 @@
 
   <rect width="1200" height="300" rx="18" fill="#EEEDEA"/>
 
-  <text x="64" y="52" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="18" letter-spacing="1.6" fill="#6B6862">联动预告 · INTEGRATION PREVIEW</text>
-  <text x="1136" y="52" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif" font-size="18" fill="#8A867F">规划中，尚未发布</text>
+  <text x="64" y="52" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="18" letter-spacing="1.6" fill="#6B6862">联动 MOTEDECK · INTEGRATION</text>
+  <text x="1136" y="52" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif" font-size="18" fill="#8A867F">已随 0.1.11 发布</text>
 
   <g transform="translate(64 120) scale(2.6667)">
     <rect width="24" height="24" rx="5.4" fill="url(#glassBody)"/>

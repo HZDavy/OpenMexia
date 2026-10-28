@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('mijia', {
   toggleOnTop: () => ipcRenderer.send('widget:toggle-top'),
   pinTaskbar: () => ipcRenderer.send('widget:pin-taskbar'),
   toggleLogin: () => ipcRenderer.send('widget:toggle-login'),
+  toggleLaunchInTray: () => ipcRenderer.send('widget:toggle-launch-in-tray'),
   // 发送窗口到副屏（第一个外接屏幕）
   sendToSecondScreen: () => ipcRenderer.send('widget:send-screen'),
   // 全屏：'normal' 普通全屏（任务栏可见）/ 'cover' 隐藏任务栏全屏 / null 退出全屏

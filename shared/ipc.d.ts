@@ -146,6 +146,7 @@ export interface IpcApi {
   toggleOnTop(): void;
   pinTaskbar(): void;
   toggleLogin(): void;
+  toggleLaunchInTray(): void;
   sendToSecondScreen(): void;
   fullscreen(mode: Exclude<FullscreenMode, null>): void;
   onFullscreenState(cb: (mode: FullscreenMode) => void): void;

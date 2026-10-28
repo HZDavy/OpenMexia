@@ -34,7 +34,7 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 
 | 平台 | 状态 | 说明 |
 |---|---|---|
-| Windows 10 / 11（x64） | ✅ 已发布 v0.1.1 | NSIS 安装包，见 [Releases](https://github.com/HZDavy/OpenMexia/releases) |
+| Windows 10 / 11（x64） | ✅ 已发布 v0.1.11 | NSIS 安装包，见 [Releases](https://github.com/HZDavy/OpenMexia/releases) |
 | macOS | 🚧 规划中 | 桌面端基于 Electron，下一个目标平台 |
 | iOS（iPhone / iPad） | 📋 计划中 | 复用同一套设备核心，卡片交互一致 |
 | Android（手机 / 平板） | 📋 计划中 | 同 iOS |
@@ -62,23 +62,26 @@ Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图�
 - 设备卡片瀑布流布局，支持拖动排序、双击（或右键）收折
 - 控制项：开关、亮度、色温、风扇风速 / 模式 / 扫风、空调目标温度、净饮机水温等
 - 窗口常驻置顶，可拖动缩放，自动记住位置、大小与各项设置
-- 系统托盘菜单，支持开机自启
+- 系统托盘菜单，支持开机自启；小组件模式还可以选「开机启动（托盘）」，开机时不弹界面
+- 在线状态更准：打开面板立刻探测一次，探测失败连续累计才判定离线
+- 云端会话过期后自动刷新并重试，只能走云端的设备不再一直停在「--」
+- 本机联动接口，供 MoteDeck 读取设备清单与执行遥控器指令
 - 两种全屏：普通全屏（任务栏可见）/ 覆盖全屏
 - 多显示器：一键发送到副屏
 - 网关、温湿度计等不可控设备只展示状态，不显示开关
 
 ---
 
-## 联动预告：用实体遥控器控制设备
+## 联动 MoteDeck：用实体遥控器控制设备
 
-<img src="./assets/readme/integration-banner.svg" width="100%" alt="联动预告：MoteDeck 把遥控器按键变成设备指令，经本机回环 HTTP 交给 OpenMexia，由 OpenMexia 完成米家登录与设备控制">
+<img src="./assets/readme/integration-banner.svg" width="100%" alt="联动 MoteDeck：遥控器按键变成设备指令，经本机回环 HTTP 交给 OpenMexia，由 OpenMexia 完成米家登录与设备控制">
 
-正在与同作者的 Windows 遥控器工具 [MoteDeck](https://github.com/HZDavy/MoteDeck) 对接：把小米蓝牙语音遥控器 2 Pro（RC003）的按键映射成设备指令，按一下遥控器就能开灯、调亮度或切换模式。
+已随 `0.1.11` 发布：同作者的 Windows 遥控器工具 [MoteDeck](https://github.com/HZDavy/MoteDeck)（`0.1.4` 及以上）可以把小米蓝牙语音遥控器 2 Pro（RC003）的按键映射成设备指令，按一下遥控器就能开灯、调亮度或切换模式；配合 MoteDeck 的本机离线语音识别，还能直接说「打开客厅灯」「亮度调到 50」「空调 26 度」。
 
 - 分工：MoteDeck 负责按键采集与映射，OpenMexia 负责米家登录、设备状态与控制，两边互不侵入
-- 通信：OpenMexia 将提供只绑定 `127.0.0.1` 的本地接口，随机端口 + 每次启动生成的 token，调用方接触不到米家凭据
-- 配置：先读取设备与可控项，再由 MoteDeck 选择绑定，OpenMexia 不保存任何按键信息
-- 当前状态：规划中，本地控制接口尚未实现；进展见 [Issues](https://github.com/HZDavy/OpenMexia/issues)
+- 通信：OpenMexia 只监听 `127.0.0.1`，端口随机、token 每次启动重新生成，写入 `userData/mote-deck.json` 并随退出删除，调用方接触不到米家凭据
+- 能力：读取设备与可控项、执行单次设备动作、以及一句话语音指令（设备名 + 动作或数值）
+- 配置：在 MoteDeck 的「语音」页点「连接 OpenMexia」即可；OpenMexia 不保存任何按键信息
 
 ---
 
