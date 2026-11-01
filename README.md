@@ -132,6 +132,26 @@ npm run dist
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/zythum"><img src="https://avatars.githubusercontent.com/u/705198?v=4?s=80" width="80px;" alt="朱一"/><br /><sub><b>朱一</b></sub></a><br /><a href="https://github.com/HZDavy/OpenMexia/commits?author=zythum" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/maxinminax"><img src="https://avatars.githubusercontent.com/u/4716949?v=4?s=80" width="80px;" alt="maxinminax"/><br /><sub><b>maxinminax</b></sub></a><br /><a href="https://github.com/HZDavy/OpenMexia/commits?author=maxinminax" title="Code">💻</a></td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td align="center" size="13px" colspan="8">
+        <img src="https://raw.githubusercontent.com/all-contributors/all-contributors-cli/1b8533af435da9854653492b1327a23a4dbd0a10/assets/logo-small.svg">
+          <a href="https://all-contributors.js.org/docs/en/bot/usage">Add your contributions</a>
+        </img>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->

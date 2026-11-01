@@ -9,5 +9,20 @@
   "contributorsPerLine": 8,
   "linkToUsage": true,
   "skipCi": true,
-  "contributors": []
+  "contributors": [
+    {
+      "login": "zythum",
+      "name": "朱一",
+      "avatar_url": "https://avatars.githubusercontent.com/u/705198?v=4",
+      "profile": "https://github.com/zythum",
+      "contributions": ["code"]
+    },
+    {
+      "login": "maxinminax",
+      "name": "maxinminax",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4716949?v=4",
+      "profile": "https://github.com/maxinminax",
+      "contributions": ["code"]
+    }
+  ]
 }
