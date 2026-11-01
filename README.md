@@ -125,6 +125,26 @@ npm run dist
 本项目为个人学习交流用途的非官方软件，与小米 / 米家官方无任何关联，亦未获其授权或背书。所用接口均来自公开开源项目，可能随时变更或失效。使用本软件产生的账号风险与损失由使用者自行承担。请在遵守米家相关服务条款的前提下使用。
 
 ---
+
+## 贡献者
+
+不管是提 issue 报告问题、提建议，还是改代码、写文档，都算贡献。感谢每一位帮过忙的人：
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+想把谁加进名单，在该 issue 或 PR 里评论一句即可：
+
+```
+@all-contributors please add @用户名 for bug
+```
+
+贡献类型：`bug`（报告问题）、`ideas`（提建议）、`code`（代码）、`doc`（文档）、`design`（设计）、`test`（测试）、`review`（评审）等，可一次填多个。
+
+---
 ## License
 
 本项目基于 **GNU AGPL-3.0-or-later** 发布，全文见 [LICENSE](LICENSE)。
