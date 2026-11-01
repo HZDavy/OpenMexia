@@ -151,3 +151,14 @@ npm run dist
 | [node-mihome](https://github.com/maxinminax/node-mihome) | MIT |
 | [qrcode](https://github.com/soldair/node-qrcode) | MIT |
 | [Electron](https://github.com/electron/electron) | MIT |
+
+## 上游致谢
+
+米家设备的协议解析与局域网通信，建立在这两个开源项目之上。感谢原作者的贡献。
+
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/zythum"><img src="https://avatars.githubusercontent.com/u/705198?v=4" width="64px;" alt="zythum"/><br /><sub><b>朱一</b></sub></a><br /><sub>mijia-api</sub></td>
+    <td align="center"><a href="https://github.com/maxinminax"><img src="https://avatars.githubusercontent.com/u/4716949?v=4" width="64px;" alt="maxinminax"/><br /><sub><b>maxinminax</b></sub></a><br /><sub>node-mihome</sub></td>
+  </tr>
+</table>
