@@ -44,3 +44,13 @@ npm run dist       # 构建 Windows x64 NSIS 安装包，产物在 release/
 
 向本仓库提交代码或文档，表示贡献者有权提供这些内容，并同意按项目现行的
 `AGPL-3.0-or-later` 许可证发布。第三方代码和素材必须同时保留原始许可与归属。
+
+## 贡献者名单
+
+README 的「贡献者」区块由 [all-contributors](https://allcontributors.org/) 维护。在任意 issue 或 PR 里评论：
+
+```
+@all-contributors please add @用户名 for bug
+```
+
+常见类型：`bug`（报告问题）、`ideas`（提建议）、`code`（代码）、`doc`（文档）、`design`（设计）、`test`（测试）、`review`（评审），可一次填多个。机器人会开一个 PR，合并后才真正进入名单。

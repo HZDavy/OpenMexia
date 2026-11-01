@@ -128,8 +128,6 @@ npm run dist
 
 ## 贡献者
 
-不管是提 issue 报告问题、提建议，还是改代码、写文档，都算贡献。感谢每一位帮过忙的人：
-
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
@@ -155,14 +153,6 @@ npm run dist
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
-
-想把谁加进名单，在该 issue 或 PR 里评论一句即可：
-
-```
-@all-contributors please add @用户名 for bug
-```
-
-贡献类型：`bug`（报告问题）、`ideas`（提建议）、`code`（代码）、`doc`（文档）、`design`（设计）、`test`（测试）、`review`（评审）等，可一次填多个。
 
 ---
 ## License
