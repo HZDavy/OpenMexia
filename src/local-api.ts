@@ -123,6 +123,82 @@ function toDeviceInfo(device: Device): DeviceInfo {
   };
 }
 
+/** 房间级动作的前缀：一间屋子在多设备场景下当成一台「虚拟设备」对外提供。 */
+const ROOM_PREFIX = 'room:';
+
+interface RoomControl extends ControlOption {
+  /** 只动哪一类设备；不填表示房间里所有能开关的设备。 */
+  type?: string;
+}
+
+const ROOM_CONTROLS: RoomControl[] = [
+  { op: 'room_power_on', label: '全部开机' },
+  { op: 'room_power_off', label: '全部关机' },
+  { op: 'room_lights_on', label: '灯光全开', type: 'light' },
+  { op: 'room_lights_off', label: '灯光全关', type: 'light' },
+];
+
+interface RoomGroup {
+  id: string;
+  name: string;
+  devices: Device[];
+}
+
+/** 按房间名把设备分组；没有房间归属的设备不参与。 */
+function roomGroups(snapshot: Device[]): RoomGroup[] {
+  const groups = new Map<string, RoomGroup>();
+  for (const device of snapshot) {
+    const name = String(device.roomName || '').trim();
+    if (!name) continue;
+    const group = groups.get(name);
+    if (group) group.devices.push(device);
+    else groups.set(name, { id: `${ROOM_PREFIX}${name}`, name, devices: [device] });
+  }
+  return [...groups.values()];
+}
+
+/** 只有一间屋里有两台以上能开关的设备时，才值得提供房间级动作。 */
+function roomControls(devices: Device[]): ControlOption[] {
+  const powerable = devices.filter((device) => POWER_TYPES.includes(device.type));
+  if (powerable.length < 2) return [];
+  const options = [ROOM_CONTROLS[0], ROOM_CONTROLS[1]];
+  if (powerable.some((device) => device.type === 'light')) {
+    options.push(ROOM_CONTROLS[2], ROOM_CONTROLS[3]);
+  }
+  return options.map(({ op, label }) => ({ op, label }));
+}
+
+function toRoomInfo(group: RoomGroup): DeviceInfo {
+  const online = group.devices.filter((device) => device.online !== false);
+  return {
+    id: group.id,
+    name: group.name,
+    type: 'room',
+    model: '',
+    roomName: group.name,
+    online: online.length > 0,
+    on: online.some((device) => device.on !== false),
+    controls: roomControls(group.devices),
+  };
+}
+
+/** 一次性把某个房间（可再按类型缩小）的设备全部开机 / 关机。 */
+function runRoomAction(dispatcher: DeviceDispatcher, roomId: string, op: string): void {
+  const group = roomGroups(dispatcher.snapshot()).find((item) => item.id === roomId);
+  if (!group) throw new HttpError(404, '找不到这个房间');
+  const control = ROOM_CONTROLS.find((item) => item.op === op);
+  if (!control) throw new HttpError(400, '这个房间不支持该操作');
+  const targets = group.devices.filter(
+    (device) =>
+      device.online !== false &&
+      POWER_TYPES.includes(device.type) &&
+      (!control.type || device.type === control.type),
+  );
+  if (!targets.length) throw new HttpError(409, '这个房间没有可控制的设备');
+  const isOn = op === 'room_power_on' || op === 'room_lights_on';
+  for (const device of targets) dispatcher.setPower(device.id, isOn);
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
@@ -137,6 +213,10 @@ function nextListItem(device: Device, current: any): any {
 async function runAction(dispatcher: DeviceDispatcher, deviceKey: string, op: string): Promise<void> {
   const snapshot = dispatcher.snapshot();
   const wanted = String(deviceKey || '').trim();
+  if (wanted.startsWith(ROOM_PREFIX)) {
+    runRoomAction(dispatcher, wanted, op);
+    return;
+  }
   const device = snapshot.find((item) => item.id === wanted) ||
     snapshot.find((item) => item.name === wanted);
   if (!device) throw new HttpError(404, '找不到这台设备');
@@ -374,6 +454,43 @@ function matchOp(device: Device, text: string): string | null {
   return null;
 }
 
+/**
+ * 「关掉书房所有灯」这类整屋指令：句子里点到房间名时，把该房间的设备
+ * （可以再用「灯 / 风扇 / 空调」缩小范围）一起当目标。
+ * 只有凑够两台才走批量，单台仍交给 findDevice，避免抢走精确指令。
+ */
+function findRoomTargets(
+  snapshot: Device[],
+  text: string,
+): { group: RoomGroup; devices: Device[] } | null {
+  const groups = roomGroups(snapshot)
+    .filter((group) => text.includes(group.name))
+    .sort((a, b) => b.name.length - a.name.length);
+  if (!groups.length) return null;
+  const group = groups[0];
+  const type = Object.keys(TYPE_WORDS).find((key) =>
+    (TYPE_WORDS[key] || []).some((word) => text.includes(word)),
+  );
+  const devices = group.devices.filter(
+    (device) =>
+      device.online !== false &&
+      POWER_TYPES.includes(device.type) &&
+      (!type || device.type === type),
+  );
+  return devices.length >= 2 ? { group, devices } : null;
+}
+
+/** 批量只做开关：句子里先找「关」，再找「开」。 */
+function matchPowerOp(text: string): 'power_on' | 'power_off' | null {
+  if (['关闭', '关掉', '关机', '关灯', '停掉', '关'].some((word) => text.includes(word))) {
+    return 'power_off';
+  }
+  if (['打开', '开机', '启动', '开启', '开灯', '开'].some((word) => text.includes(word))) {
+    return 'power_on';
+  }
+  return null;
+}
+
 /** 一句话 → 一次设备动作。 */
 async function runCommand(
   dispatcher: DeviceDispatcher,
@@ -381,7 +498,23 @@ async function runCommand(
 ): Promise<{ device: string; op: string }> {
   const clean = normalizeCommand(text);
   if (!clean) throw new HttpError(400, '没有听到内容');
-  const device = findDevice(dispatcher.snapshot(), clean);
+  const snapshot = dispatcher.snapshot();
+  const device = findDevice(snapshot, clean);
+  const room = findRoomTargets(snapshot, clean);
+  // 说到「所有 / 全部」，或者命中的只是「灯」这类泛称时，整屋优先；
+  // 点名了具体设备（比如「吸顶灯」）仍按单台走。
+  const genericName =
+    device !== null &&
+    Object.values(TYPE_WORDS).some((words) => words.includes(device.name));
+  if (room && (/所有|全部|都|整个/.test(clean) || !device || genericName)) {
+    const wholeOp = matchPowerOp(clean);
+    if (wholeOp) {
+      for (const item of room.devices) {
+        dispatcher.setPower(item.id, wholeOp === 'power_on');
+      }
+      return { device: `${room.group.name} ${room.devices.length} 台设备`, op: wholeOp };
+    }
+  }
   if (!device) throw new HttpError(404, '没有听出是哪台设备');
   const numeric = matchNumeric(device, clean);
   if (numeric) {
@@ -465,8 +598,12 @@ export function startLocalApi(options: LocalApiOptions): LocalApiHandle {
       }
       if (request.method === 'GET' && url.pathname === '/v1/devices') {
         const dispatcher = options.dispatcher();
-        const devices = dispatcher ? dispatcher.snapshot().map(toDeviceInfo) : [];
-        sendJson(response, 200, { devices });
+        const snapshot = dispatcher ? dispatcher.snapshot() : [];
+        // 多设备房间额外挂一条「房间 · 动作」，遥控器那边不用改就能选到整屋控制。
+        const rooms = roomGroups(snapshot)
+          .filter((group) => roomControls(group.devices).length > 0)
+          .map(toRoomInfo);
+        sendJson(response, 200, { devices: [...snapshot.map(toDeviceInfo), ...rooms] });
         return;
       }
       if (request.method === 'POST' && url.pathname === '/v1/action') {
