@@ -13,9 +13,11 @@
 
 > 目标是支持所有智能协议。目前支持米家。
 
-OpenMexia 是一个开源、跨平台的智能家居控制中枢。把不同厂商、不同协议（Wi-Fi、蓝牙、Zigbee、Matter 等）的设备，收进一个由你本地掌控的客户端。
+OpenMexia 是一个以本地掌控为核心的跨平台智能家居控制中枢，目前支持米家（MIoT）：通过米家账号扫码登录，自动同步设备与状态，把不同厂商、不同协议（Wi-Fi、蓝牙、Zigbee、Matter 等）的设备收进一个由你本地掌控的客户端。
 
-Windows 桌面版已发布；macOS、iOS、Android、Linux、鸿蒙在路线图上。各平台共用一套账号与卡片，只做原生适配，不重做体验。
+提供基于 Electron 的 Windows 10 / 11 x64 桌面版本，macOS、iOS、Android、Linux 与鸿蒙在路线图上；各平台共用一套账号与卡片，只做原生适配，不重做体验。
+
+安装包从 [Releases](https://github.com/HZDavy/OpenMexia/releases) 下载，功能与使用说明见下方。
 
 ---
 ## 界面预览
