@@ -17,6 +17,9 @@ OpenMexia 是一个以本地掌控为核心的跨平台智能家居控制中枢�
 
 安装包从 [Releases](https://github.com/HZDavy/OpenMexia/releases) 下载，功能与使用说明见下方。
 
+> [!NOTE]
+> 本项目自身代码几乎全部由 AI 协助开发，可能存在疏漏，由此给您带来的不便敬请谅解。
+
 ---
 ## 界面预览
 
