@@ -11,8 +11,6 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/HZDavy/OpenMexia?style=flat-square&label=license&color=22C688&labelColor=1A1A1D" alt="许可"></a>
 </p>
 
-> 目标是支持所有智能协议。目前支持米家。
-
 OpenMexia 是一个以本地掌控为核心的跨平台智能家居控制中枢，目前支持米家（MIoT）：通过米家账号扫码登录，自动同步设备与状态，把不同厂商、不同协议（Wi-Fi、蓝牙、Zigbee、Matter 等）的设备收进一个由你本地掌控的客户端。
 
 提供基于 Electron 的 Windows 10 / 11 x64 桌面版本，macOS、iOS、Android、Linux 与鸿蒙在路线图上；各平台共用一套账号与卡片，只做原生适配，不重做体验。
