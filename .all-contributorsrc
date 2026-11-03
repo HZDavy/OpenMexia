@@ -3,11 +3,25 @@
   "projectOwner": "HZDavy",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "files": ["README.md"],
+  "files": [
+    "README.md"
+  ],
   "imageSize": 80,
   "commit": false,
   "contributorsPerLine": 8,
   "linkToUsage": true,
   "skipCi": true,
-  "contributors": []
+  "contributors": [
+    {
+      "login": "LOGIC-kk",
+      "name": "LOGICCC",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22408613?v=4",
+      "profile": "https://github.com/LOGIC-kk",
+      "contributions": [
+        "bug"
+      ]
+    }
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular"
 }
