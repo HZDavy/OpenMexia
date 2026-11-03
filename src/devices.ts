@@ -15,6 +15,17 @@ import type { MijiaLogin } from './mijia-login';
 const POLL_FAILURES_BEFORE_OFFLINE = 3;
 
 /**
+ * 多键面板的虚拟子设备 did 后缀：`<父did>.sN`，N 是该路按键在规格里的 siid。
+ * 云端把每个按键单独派生一台设备，名字就是用户在米家 App 里给该按键起的名字。
+ */
+const SUB_DEVICE_DID = /\.s(\d+)$/;
+
+/** 虚拟子设备的云端读写只能发父 did（发子 did 会被云端拒绝且延迟约 6 秒） */
+function targetDid(b: { did: string; parentDid?: string }): string {
+  return b.parentDid || b.did;
+}
+
+/**
  * 设备数据源（可插拔）。
  *
  * 接口契约（渲染层完全无感知数据来源）：
@@ -43,6 +54,8 @@ interface Bind {
   ip?: string;
   token?: string;
   parentId?: string;
+  /** 虚拟子设备的父 did（多键面板按键）；自身的云端读写要发这台 */
+  parentDid?: string;
   type: DeviceType;
   props: Record<string, DeviceProperty>;
   reads: { siid: number; piid: number }[];
@@ -86,6 +99,18 @@ class MockProvider extends EventEmitter {
         on: true,
         power: 42.6,
         todayKwh: 0.38,
+      },
+      {
+        // 多键开关示例：双开（左键为主开关，右键是附加按键），用于预览多键卡片
+        id: 'switch-study',
+        type: 'plug',
+        name: '书房双开',
+        model: '小米智能开关 双开',
+        online: true,
+        on: true,
+        power: 0,
+        todayKwh: 0,
+        extraSwitches: [{ field: 'switch2On', label: '右键', on: false }],
       },
       {
         id: 'light-study',
@@ -250,6 +275,15 @@ class MockProvider extends EventEmitter {
   setField(id: string, field: string, value: any) {
     const d = this.devices.find((x) => x.id === id);
     if (!d) return;
+    // 多键开关的附加按键（如右键）：状态存在 extraSwitches 里，不能直接挂到设备上
+    if (Array.isArray(d.extraSwitches)) {
+      const key = d.extraSwitches.find((item: any) => item.field === field);
+      if (key) {
+        key.on = !!value;
+        this.emit('update', this.snapshot());
+        return;
+      }
+    }
     d[field] = value;
     if (field === 'iceMakerOn') {
       // 模拟：开启 3 秒后进入「制冰中」，再 6 秒「冰满」
@@ -355,9 +389,25 @@ class MiioProvider extends EventEmitter {
     if (this.homeId && list.some((d: DeviceRecord) => String(d.homeId || '') !== '')) {
       list = list.filter((d: DeviceRecord) => String(d.homeId || '') === this.homeId);
     }
+    // 多键面板在云端会派生出虚拟子设备（did 形如 <父did>.sN），每个按键一台，
+    // 云端返回的 name 就是用户在米家 App 里给该按键起的名字。按键卡片直接用这台
+    // 子设备，父设备本身不再单独出卡片（否则同一路会出现两个开关）。
+    // 子设备没有自己的 model 时沿用父设备的型号取规格。
+    const subParents = new Set<string>();
+    const modelById = new Map<string, string>();
     for (const d of list) {
-      const info = await getSpec(d.model, this.specCacheDir);
-      const { type, props, reads, actions } = analyze(info, d.model);
+      modelById.set(String(d.id), String(d.model || ''));
+      const m = SUB_DEVICE_DID.exec(String(d.id));
+      if (m) subParents.add(String(d.id).slice(0, m.index));
+    }
+    list = list.filter((d: DeviceRecord) => !subParents.has(String(d.id)));
+    for (const d of list) {
+      const sub = SUB_DEVICE_DID.exec(String(d.id));
+      const parentDid = sub ? String(d.id).slice(0, sub.index) : '';
+      const channel = sub ? Number(sub[1]) : undefined;
+      const model = String(d.model || '') || (parentDid ? modelById.get(parentDid) || '' : '');
+      const info = await getSpec(model, this.specCacheDir);
+      const { type, props, reads, actions, switches } = analyze(info, model, channel);
       // 从规格里取「取值区间」或「枚举项」，供渲染层滑杆使用
       const rangeOf = (f: string): [number, number] | null => {
         const p = props[f];
@@ -371,7 +421,7 @@ class MiioProvider extends EventEmitter {
         id: d.id,
         type,
         name: d.name,
-        model: d.model,
+        model,
         // 房间归属（来自云端 gethome / homelist 的 roomlist），供按房间分类展示
         roomId: String(d.roomId || ''),
         roomName: String(d.roomName || ''),
@@ -379,6 +429,8 @@ class MiioProvider extends EventEmitter {
         // 用真实探测结果校正。清单里标为离线的设备先按离线展示，避免「离线却显示在线」。
         online: d.online !== false,
         on: false,
+        // 多键开关的附加按键（双开右键 / 三开中键、右键），单键设备为空数组
+        extraSwitches: switches.map((item) => ({ ...item, on: false })),
         brightness: 0,
         colorTemperature: 0,
         colorTempRange: rangeOf('colorTemperature'),
@@ -391,7 +443,9 @@ class MiioProvider extends EventEmitter {
         speedSteplessRange: rangeOf('speedStepless'),
         speedSteplessList: listOf('speedStepless'),
         power: 0,
-        todayKwh: 0,
+        // 规格里没有「今日用电」属性的设备（如多数多键开关）留 null，界面据此不显示该栏，
+        // 避免把默认 0 当成真实读数
+        todayKwh: props.todayKwh ? 0 : null,
         temperature: null,
         humidity: null,
         battery: null,
@@ -440,6 +494,7 @@ class MiioProvider extends EventEmitter {
         ip: d.ip,
         token: d.token,
         parentId: d.parentId,
+        parentDid,
         type,
         props,
         reads,
@@ -448,7 +503,7 @@ class MiioProvider extends EventEmitter {
         // set_bright / set_ct_abx），而不实现 MIoT-spec 的 get_properties/set_properties。
         // 例如吸顶灯（yeelink.light.ceiling22）走 MIoT 读必 2s 超时、写必 4s 超时，
         // 表现为「卡且控制不了」。这里对 Yeelight 灯具标注局域网协议，读写优先走传统协议。
-        lanProto: String(d.model || '').startsWith('yeelink.light.') ? 'yeelight' : null,
+        lanProto: String(model || '').startsWith('yeelink.light.') ? 'yeelight' : null,
       });
     }
     return this;
@@ -550,7 +605,7 @@ class MiioProvider extends EventEmitter {
     if (!act) return;
     const dev = this._dev(id);
     try {
-      await this._cloudAction(b as Bind, { did: (b as Bind).did, siid: act.siid, aiid: act.aiid });
+      await this._cloudAction(b as Bind, { did: targetDid(b), siid: act.siid, aiid: act.aiid });
       if (dev) dev.online = true;
     } catch (e: any) {
       // 与轮询一致：仅在云端「明确」判定离线时才置离线，避免动作偶发失败把在线设备误判为离线
@@ -596,7 +651,7 @@ class MiioProvider extends EventEmitter {
   async _pollDevice(dev: Device) {
     const b = this.binds.get(dev.id);
     if (!b || !b.reads.length) return;   // 无规格可读：保持云端清单给出的在线状态
-    const params = b.reads.map((r) => ({ did: b.did, siid: r.siid, piid: r.piid }));
+    const params = b.reads.map((r) => ({ did: targetDid(b), siid: r.siid, piid: r.piid }));
 
     // 1) 局域网直连（仅当设备与本机同网段时才尝试，避免跨网段必然超时）
     //    同网段设备局域网读不到，通常就是它真的不在线；云端对离线设备会回放缓存值，
@@ -682,7 +737,7 @@ class MiioProvider extends EventEmitter {
 
     // 3) 云端回退
     try {
-      await this._cloudSet(b, { did: b.did, siid: p.siid, piid: p.piid, value });
+      await this._cloudSet(b, { did: targetDid(b), siid: p.siid, piid: p.piid, value });
       if (dev) { dev.online = true; this._setField(dev, field, value, b); }
     } catch (e: any) {
       // 与轮询一致：仅在云端「明确」判定离线时才置离线，避免写入偶发失败把在线设备误判为离线
@@ -743,11 +798,12 @@ class MiioProvider extends EventEmitter {
     const cloud = this.mihome.miCloudProtocol;
     if (!cloud.isLoggedIn) throw new Error('无可用云端会话');
     const country = (this.login && this.login._pwdCountry) || 'cn';
+    const did = targetDid(b);
     // BLE 设备走 MIoT-spec 云端点（/home/rpc 对蓝牙设备直接拒绝）
-    const isBle = /^blt\./i.test(String(b.did || ''));
+    const isBle = /^blt\./i.test(String(did || ''));
     const data = isBle
       ? await cloud.request('/miotspec/prop/get', { params, datasource: 1 }, country)
-      : await cloud.request(`/home/rpc/${b.did}`, { method: 'get_properties', params }, country);
+      : await cloud.request(`/home/rpc/${did}`, { method: 'get_properties', params }, country);
     if (data && data.result) {
       return Array.isArray(data.result) ? data.result : [data.result];
     }
@@ -774,10 +830,11 @@ class MiioProvider extends EventEmitter {
     const cloud = this.mihome.miCloudProtocol;
     if (!cloud.isLoggedIn) throw new Error('无可用云端会话');
     const country = (this.login && this.login._pwdCountry) || 'cn';
-    const isBle = /^blt\./i.test(String(b.did || ''));
+    const did = targetDid(b);
+    const isBle = /^blt\./i.test(String(did || ''));
     return isBle
       ? cloud.request('/miotspec/prop/set', { params: [param] }, country)
-      : cloud.miioCall(b.did, 'set_properties', [param]);
+      : cloud.miioCall(did, 'set_properties', [param]);
   }
 
   /**
@@ -878,7 +935,14 @@ class MiioProvider extends EventEmitter {
       case 'connectedDeviceNumber': dev.connectedDeviceNumber = Math.round(Number(value) || 0); break;
       case 'downloadSpeed': dev.downloadSpeed = round1(Number(value) || 0); break;
       case 'uploadSpeed': dev.uploadSpeed = round1(Number(value) || 0); break;
-      default: break;
+      default: {
+        // 多键开关的附加按键（switch2On / switch3On …）
+        const key = Array.isArray(dev.extraSwitches)
+          ? dev.extraSwitches.find((item) => item.field === field)
+          : null;
+        if (key) key.on = !!value;
+        break;
+      }
     }
   }
 }

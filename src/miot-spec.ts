@@ -145,8 +145,10 @@ const ACTION_ALIASES: Record<string, string[]> = {
  * 把规格解析为小组件可用的「读写绑定」。
  * @param info 设备规格（含 model / properties / actions）
  * @param model 设备型号；缺省时取 info.model
+ * @param channel 虚拟子设备（did 形如 `<父did>.sN`）的通道号，N 即该路 siid；
+ *   传了就只解析这一路按键，供多键面板的按键卡片使用
  */
-function analyze(info: MiotInfo | null, model?: string): SpecAnalysis {
+function analyze(info: MiotInfo | null, model?: string, channel?: number): SpecAnalysis {
   const props: Record<string, DeviceProperty> = {};
   const byName = new Map<string, MiotProperty>();
   if (info && Array.isArray(info.properties)) {
@@ -196,6 +198,59 @@ function analyze(info: MiotInfo | null, model?: string): SpecAnalysis {
     }
   }
 
+  // 多键开关（双开 / 三开 / 面板）：每个按键是各自服务里的一条 on 属性，
+  // 规格去重后叫 on-2 / on-3（也见过 switch-on / switch2-on / relay-on）。
+  // 云端还会把每个按键派生成虚拟子设备（did 形如 <父did>.sN，N 即该路 siid，
+  // 名字就是用户在米家 App 里给按键起的名字）。传 channel 时只保留这一路；
+  // 不传时把主键之外的按键补成 switch2On / switch3On，供父设备卡片外显各键。
+  const isKeyProp = (name: string): boolean => {
+    const n = String(name || '').replace(/_/g, '-').toLowerCase();
+    if (n === 'on') return true;
+    if (/^on-\d+$/.test(n)) return true;
+    // favorite-on、guest-wifi-on、indicator-light-on 这类同名去重属性不是按键，排除
+    return /^(?:switch|relay)[\w-]*-on$/.test(n);
+  };
+  const keyProps = ((info && info.properties) || [])
+    .filter((p) => !!p.method && String(p.rw || '').includes('w') && isKeyProp(String(p.name || '')))
+    .sort((a, b) => a.method!.siid - b.method!.siid || a.method!.piid - b.method!.piid);
+  const toProp = (p: MiotProperty): DeviceProperty => ({
+    siid: p.method!.siid,
+    piid: p.method!.piid,
+    rw: p.rw || 'rw',
+    range: null,
+    list: null,
+  });
+  const switches: { field: string; label: string }[] = [];
+
+  if (channel != null) {
+    // 虚拟子设备：只认自己这一路。优先 siid 与 did 后缀一致，否则按顺序兜底
+    const own = keyProps.find((p) => p.method!.siid === channel)
+      || keyProps[channel - 2]
+      || keyProps[0];
+    if (own) {
+      for (const field of Object.keys(props)) delete props[field];
+      props.on = toProp(own);
+    }
+  } else {
+    // 规格里没有独立的 on（多键面板常见）时，第一个按键充当主键，否则整机没有开关
+    if (!props.on && keyProps.length) props.on = toProp(keyProps[0]);
+    const primaryKey = props.on ? `${props.on.siid}.${props.on.piid}` : '';
+    const keyCount = keyProps.length;
+    let index = 0;
+    for (const p of keyProps) {
+      const key = `${p.method!.siid}.${p.method!.piid}`;
+      if (key === primaryKey) continue;
+      // 双开只有左右两键，三开是左中右；再多就按序号称呼
+      const label = keyCount === 2 ? '右键'
+        : keyCount === 3 ? (index === 0 ? '中键' : '右键')
+        : `按键 ${index + 2}`;
+      const field = `switch${index + 2}On`;
+      props[field] = toProp(p);
+      switches.push({ field, label });
+      index += 1;
+    }
+  }
+
   const canWrite = (f: string): boolean => !!(props[f] && props[f].rw.includes('w'));
   const canRead = (f: string): boolean => !!(props[f] && props[f].rw.includes('r'));
 
@@ -232,7 +287,7 @@ function analyze(info: MiotInfo | null, model?: string): SpecAnalysis {
     reads.push({ siid: props[f].siid, piid: props[f].piid });
   }
 
-  return { type, props, reads, actions };
+  return { type, props, reads, actions, switches };
 }
 
 /** 从云端设备项推断一个可读的展示名（规格里带产品名） */

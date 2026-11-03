@@ -40,12 +40,23 @@ export interface DeviceAction {
   aiid: number;
 }
 
+/** 多键开关里的一个附加按键（双开的右键、三开的中键 / 右键等） */
+export interface ExtraSwitch {
+  /** 合成的读写字端（如 switch2On），复用同一套 siid/piid 读写路径 */
+  field: string;
+  /** 展示名：右键 / 中键 / 按键 N */
+  label: string;
+  on: boolean;
+}
+
 /** miot-spec.analyze() 的返回结构 */
 export interface SpecAnalysis {
   type: DeviceType;
   props: Record<string, DeviceProperty>;
   reads: { siid: number; piid: number }[];
   actions: Record<string, DeviceAction>;
+  /** 多键开关的附加按键（单键设备为空数组） */
+  switches: { field: string; label: string }[];
 }
 
 /** 渲染层使用的设备对象（devices.js 构建，轮询过程中持续更新） */
@@ -59,6 +70,8 @@ export interface Device {
   roomName: string;
   online: boolean;
   on: boolean;
+  /** 多键开关的附加按键（单键设备为空数组），每个按键独立开关 */
+  extraSwitches: ExtraSwitch[];
 
   brightness: number;
   colorTemperature: number;
@@ -73,7 +86,8 @@ export interface Device {
   speedSteplessList: PropertyItem[] | null;
 
   power: number;
-  todayKwh: number;
+  /** 今日用电（kWh）；为 null 表示该设备规格里没有电量属性，界面不显示这一栏 */
+  todayKwh: number | null;
   temperature: number | null;
   humidity: number | null;
   battery: number | null;

@@ -123,6 +123,28 @@ function toDeviceInfo(device: Device): DeviceInfo {
   };
 }
 
+/**
+ * 多键开关的附加按键（双开右键 / 三开中键、右键）单独对外成一台「虚拟设备」，
+ * id 形如「设备id#switch2On」，遥控器端不用改结构就能给每个按键单独绑动作。
+ */
+function extraSwitchInfos(device: Device): DeviceInfo[] {
+  const keys = Array.isArray(device.extraSwitches) ? device.extraSwitches : [];
+  return keys.map((key) => ({
+    id: `${device.id}#${key.field}`,
+    name: `${device.name} · ${key.label}`,
+    type: 'plug',
+    model: device.model,
+    roomName: device.roomName || '',
+    online: device.online !== false,
+    on: key.on === true,
+    controls: [
+      { op: 'power_toggle', label: '开关切换' },
+      { op: 'power_on', label: '开机' },
+      { op: 'power_off', label: '关机' },
+    ],
+  }));
+}
+
 /** 房间级动作的前缀：一间屋子在多设备场景下当成一台「虚拟设备」对外提供。 */
 const ROOM_PREFIX = 'room:';
 
@@ -196,7 +218,12 @@ function runRoomAction(dispatcher: DeviceDispatcher, roomId: string, op: string)
   );
   if (!targets.length) throw new HttpError(409, '这个房间没有可控制的设备');
   const isOn = op === 'room_power_on' || op === 'room_lights_on';
-  for (const device of targets) dispatcher.setPower(device.id, isOn);
+  for (const device of targets) {
+    dispatcher.setPower(device.id, isOn);
+    // 多键开关的附加按键一起开 / 关，整屋控制才不会漏掉右键、中键
+    const keys = Array.isArray(device.extraSwitches) ? device.extraSwitches : [];
+    for (const key of keys) dispatcher.setField?.(device.id, key.field, isOn);
+  }
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -210,11 +237,42 @@ function nextListItem(device: Device, current: any): any {
   return list[(index + 1) % list.length].value;
 }
 
+/** 多键开关的单个按键：只支持开 / 关 / 切换，直接写到对应的附加按键字段。 */
+function runSwitchKeyAction(dispatcher: DeviceDispatcher, deviceKey: string, op: string): void {
+  const cut = deviceKey.indexOf('#');
+  const deviceId = deviceKey.slice(0, cut);
+  const field = deviceKey.slice(cut + 1);
+  const device = dispatcher.snapshot().find((item) => item.id === deviceId);
+  if (!device) throw new HttpError(404, '找不到这台设备');
+  const keys = Array.isArray(device.extraSwitches) ? device.extraSwitches : [];
+  const key = keys.find((item) => item.field === field);
+  if (!key) throw new HttpError(404, '找不到这个按键');
+  if (device.online === false) throw new HttpError(409, '设备当前离线');
+  if (!dispatcher.setField) throw new HttpError(501, '当前设备源不支持按键控制');
+  if (op === 'power_on') {
+    dispatcher.setField(device.id, field, true);
+    return;
+  }
+  if (op === 'power_off') {
+    dispatcher.setField(device.id, field, false);
+    return;
+  }
+  if (op === 'power_toggle') {
+    dispatcher.setField(device.id, field, !key.on);
+    return;
+  }
+  throw new HttpError(400, '这个按键只支持开关');
+}
+
 async function runAction(dispatcher: DeviceDispatcher, deviceKey: string, op: string): Promise<void> {
   const snapshot = dispatcher.snapshot();
   const wanted = String(deviceKey || '').trim();
   if (wanted.startsWith(ROOM_PREFIX)) {
     runRoomAction(dispatcher, wanted, op);
+    return;
+  }
+  if (wanted.includes('#')) {
+    runSwitchKeyAction(dispatcher, wanted, op);
     return;
   }
   const device = snapshot.find((item) => item.id === wanted) ||
@@ -309,7 +367,8 @@ async function runAction(dispatcher: DeviceDispatcher, deviceKey: string, op: st
 
 /** 去掉空格和标点，方便做「说到的设备名 / 动作词」匹配。 */
 function normalizeCommand(text: string): string {
-  return text.replace(/[\s，。！？、,.!?；;：:]/g, '');
+  // 「·」用来分隔设备名和按键名（如「书房双开 · 右键」），口语里不会念出来，一并去掉
+  return text.replace(/[\s，。！？、,.!?；;：:·｜|]/g, '');
 }
 
 /** 中文数字（零〇一二两三四五六七八九十百千万）转成整数。 */
@@ -407,6 +466,26 @@ const TYPE_WORDS: Record<string, string[]> = {
   purifier: ['净化器', '净饮机', '饮水机', '净水器'],
 };
 
+/**
+ * 找句子里点名的「设备名 + 按键名」，如「书房双开右键」。
+ * 必须先于 findDevice 判断：否则「书房双开右键」会先命中「书房双开」，只开左键。
+ */
+function findSwitchTarget(
+  snapshot: Device[],
+  text: string,
+): { device: Device; field: string; label: string } | null {
+  for (const device of snapshot) {
+    const keys = Array.isArray(device.extraSwitches) ? device.extraSwitches : [];
+    for (const key of keys) {
+      const full = normalizeCommand(`${device.name}${key.label}`);
+      if (full && text.includes(full)) {
+        return { device, field: key.field, label: key.label };
+      }
+    }
+  }
+  return null;
+}
+
 /** 找句子提到的设备，多个命中时取名字最长的那台。 */
 function findDevice(snapshot: Device[], text: string): Device | null {
   const hits = snapshot
@@ -499,6 +578,18 @@ async function runCommand(
   const clean = normalizeCommand(text);
   if (!clean) throw new HttpError(400, '没有听到内容');
   const snapshot = dispatcher.snapshot();
+  // 点名了具体按键（如「书房双开右键」）时直接落到那个按键，不能再当作整台设备处理
+  const switchTarget = findSwitchTarget(snapshot, clean);
+  if (switchTarget) {
+    const keyOp = matchPowerOp(clean);
+    if (!keyOp) throw new HttpError(400, '这个按键只支持开或关');
+    runSwitchKeyAction(
+      dispatcher,
+      `${switchTarget.device.id}#${switchTarget.field}`,
+      keyOp,
+    );
+    return { device: `${switchTarget.device.name} ${switchTarget.label}`, op: keyOp };
+  }
   const device = findDevice(snapshot, clean);
   const room = findRoomTargets(snapshot, clean);
   // 说到「所有 / 全部」，或者命中的只是「灯」这类泛称时，整屋优先；
@@ -603,7 +694,9 @@ export function startLocalApi(options: LocalApiOptions): LocalApiHandle {
         const rooms = roomGroups(snapshot)
           .filter((group) => roomControls(group.devices).length > 0)
           .map(toRoomInfo);
-        sendJson(response, 200, { devices: [...snapshot.map(toDeviceInfo), ...rooms] });
+        // 多键开关的每个附加按键也当成一台独立设备，遥控器可单独绑定
+        const devices = snapshot.flatMap((device) => [toDeviceInfo(device), ...extraSwitchInfos(device)]);
+        sendJson(response, 200, { devices: [...devices, ...rooms] });
         return;
       }
       if (request.method === 'POST' && url.pathname === '/v1/action') {

@@ -86,6 +86,13 @@ function setFill(slider) {
 
 /* ---------------- 卡片构建 ---------------- */
 
+// 多键开关里某个按键当前是否开启
+function extraSwitchOn(device, field) {
+  const list = device && Array.isArray(device.extraSwitches) ? device.extraSwitches : [];
+  const hit = list.find((item) => item.field === field);
+  return !!(hit && hit.on);
+}
+
 // 开关按钮（plug / light / fan 共用）
 function makeSwitch(device) {
   const sw = h('button', 'switch');
@@ -351,10 +358,29 @@ function buildCard(device) {
     const hero = makeHero('功率', 'W');
     entry.refs.value = hero.value;
     const meta = h('div', 'meta');
-    entry.refs.kwh = h('div', 'meta-row', '<span>今日用电</span><b>--</b>');
+    // 规格里没有「今日用电」属性时（todayKwh 为 null）整栏不显示，避免把默认 0 当成真实读数
+    if (device.todayKwh !== null) {
+      entry.refs.kwh = h('div', 'meta-row', '<span>今日用电</span><b>--</b>');
+      meta.append(entry.refs.kwh);
+    }
     entry.refs.state = h('div', 'meta-row', '<span>状态</span><b>--</b>');
-    meta.append(entry.refs.kwh, entry.refs.state);
+    meta.append(entry.refs.state);
     body.append(hero.hero, meta);
+
+    // 多键开关（双开 / 三开）：每个附加按键单独一行开关，各自独立控制
+    const extraKeys = Array.isArray(device.extraSwitches) ? device.extraSwitches : [];
+    if (extraKeys.length) {
+      sw.title = '左键';
+      entry.refs.extraSwitches = [];
+      for (const key of extraKeys) {
+        const chip = makeChip('关', () => {
+          const cur = extraSwitchOn(entry.last, key.field);
+          window.mijia.setField(device.id, key.field, !cur);
+        });
+        entry.refs.extraSwitches.push({ field: key.field, chip });
+        body.append(ctrlRow(key.label, chip));
+      }
+    }
     el.append(body);
   }
 
@@ -771,11 +797,18 @@ function updateCard(entry, d) {
   if (d.type === 'plug') {
     r.value.querySelector('.value').textContent = d.on ? Math.round(isNum(d.power) ? d.power : 0) : 0;
     r.value.querySelector('.unit').textContent = 'W';
-    r.kwh.querySelector('b').textContent = isNum(d.todayKwh) ? d.todayKwh.toFixed(2) + ' kWh' : '--';
+    if (r.kwh) r.kwh.querySelector('b').textContent = isNum(d.todayKwh) ? d.todayKwh.toFixed(2) + ' kWh' : '--';
     r.state.querySelector('b').textContent = d.on ? '已开启' : '已关闭';
     r.switch.classList.toggle('on', !!d.on);
     r.switch.setAttribute('aria-checked', String(!!d.on));
     r.switch.disabled = d.online === false;
+    // 多键开关的附加按键：同步各自的开/关状态
+    for (const ref of r.extraSwitches || []) {
+      const on = extraSwitchOn(d, ref.field);
+      ref.chip.classList.toggle('on', on);
+      ref.chip.textContent = on ? '开' : '关';
+      ref.chip.disabled = d.online === false;
+    }
   }
 
   if (d.type === 'light') {
