@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://hzdavy.github.io/OpenMexia/"><img src="https://img.shields.io/badge/%E5%AE%98%E7%BD%91-hzdavy.github.io%2FOpenMexia-22C688?style=flat-square&labelColor=1A1A1D&logo=githubpages&logoColor=FFFFFF" alt="官网"></a>
   <a href="https://github.com/HZDavy/OpenMexia/releases/latest"><img src="https://img.shields.io/github/v/release/HZDavy/OpenMexia?style=flat-square&label=release&color=22C688&labelColor=1A1A1D" alt="最新版本"></a>
-  <a href="https://github.com/HZDavy/OpenMexia/releases"><img src="https://img.shields.io/github/downloads/HZDavy/OpenMexia/latest/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD&color=22C688&labelColor=1A1A1D" alt="下载量"></a>
+  <a href="https://github.com/HZDavy/OpenMexia/releases"><img src="https://img.shields.io/github/downloads/HZDavy/OpenMexia/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD&color=22C688&labelColor=1A1A1D" alt="下载量"></a>
   <img src="https://img.shields.io/badge/Windows%2010%2F11-x64-22C688?style=flat-square&labelColor=1A1A1D" alt="平台">
   <img src="https://img.shields.io/badge/Electron-44-22C688?style=flat-square&labelColor=1A1A1D&logo=electron&logoColor=FFFFFF" alt="Electron">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/HZDavy/OpenMexia?style=flat-square&label=license&color=22C688&labelColor=1A1A1D" alt="许可"></a>
