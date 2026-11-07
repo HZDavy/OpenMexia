@@ -2,40 +2,24 @@
   <title id="t">MoteDeck 与 OpenMexia 联动</title>
   <desc id="d">MoteDeck 把遥控器按键变成指令，经本机 127.0.0.1 回环 HTTP 交给 OpenMexia，由 OpenMexia 完成米家登录与设备控制。</desc>
   <defs>
-    <linearGradient id="glassBody" x1="3.2" y1="0.8" x2="21" y2="23.2" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#39424F"/>
-      <stop offset="0.36" stop-color="#1B212A"/>
-      <stop offset="0.74" stop-color="#0B0F15"/>
-      <stop offset="1" stop-color="#05080B"/>
-    </linearGradient>
-    <radialGradient id="glassSheen" cx="6.2" cy="3" r="15.8" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
-      <stop offset="0.52" stop-color="#FFFFFF" stop-opacity="0.06"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="glassFloor" cx="12" cy="23.8" r="12.2" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="pillBody" x1="9" y1="4.2" x2="15" y2="17.6" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="0.46" stop-color="#F3F7FC"/>
-      <stop offset="1" stop-color="#D7E1EE"/>
-    </linearGradient>
   </defs>
 
   <rect width="1200" height="300" rx="18" fill="#EEEDEA"/>
 
-  <text x="64" y="52" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="18" letter-spacing="1.6" fill="#6B6862">联动 MOTEDECK · INTEGRATION</text>
-  <text x="1136" y="52" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif" font-size="18" fill="#8A867F">已随 0.1.11 发布</text>
+  <text x="64" y="52" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="18" letter-spacing="1.6" fill="#6B6862">联动 OPENMEXIA · INTEGRATION</text>
+  <text x="1136" y="52" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif" font-size="18" fill="#8A867F">已随 0.1.4 发布</text>
 
   <g transform="translate(64 120) scale(2.6667)">
-    <rect width="24" height="24" rx="5.4" fill="url(#glassBody)"/>
-    <rect width="24" height="24" rx="5.4" fill="url(#glassSheen)"/>
-    <rect width="24" height="24" rx="5.4" fill="url(#glassFloor)"/>
-    <g transform="rotate(45 12 12)">
-      <path fill="url(#pillBody)" fill-rule="evenodd" d="M12 4.125A3.375 3.375 0 0 1 15.375 7.5V16.5A3.375 3.375 0 0 1 8.625 16.5V7.5A3.375 3.375 0 0 1 12 4.125ZM12 6.9375A1.6875 1.6875 0 1 1 12 10.3125A1.6875 1.6875 0 1 1 12 6.9375Z"/>
+    <svg x="0" y="0" width="24" height="24" viewBox="73 73 878 880" preserveAspectRatio="xMidYMid slice"><path fill="#000" d="M374.55 81.02 H649.45 C733.88 81.02 776.1 81.02 821.26 95.74 C871.33 113.42 910.6 152.69 928.27 202.76 C943.0 247.92 943.0 290.14 943.0 374.57 V651.43 C943.0 735.86 943.0 778.08 928.27 823.24 C910.6 873.31 871.33 912.58 821.26 930.26 C776.1 944.98 733.88 944.98 649.45 944.98 H374.55 C290.12 944.98 247.9 944.98 202.74 930.26 C152.67 912.58 113.4 873.31 95.73 823.24 C81.0 778.08 81.0 735.86 81.0 651.43 V374.57 C81.0 290.14 81.0 247.92 95.73 202.76 C113.4 152.69 152.67 113.42 202.74 95.74 C247.9 81.02 290.12 81.02 374.55 81.02 Z"/><g>
+    <path fill="white" d="M239 671 C225 628 219 586 220 543 C220 376 342 246 507 246 C683 246 778 361 806 566 C811 602 814 639 815 676 L780 777 H270 Z"/>
+    <g fill="black">
+      <ellipse cx="380" cy="531" rx="47" ry="48"/>
+      <path d="M550 485 C572 450 612 434 649 456" fill="none" stroke="black" stroke-width="36" stroke-linecap="round"/>
+      <path d="M448 626 C495 653 555 633 578 585" fill="none" stroke="black" stroke-width="36" stroke-linecap="round"/>
     </g>
+    <path fill="white" stroke="black" stroke-width="14" stroke-linejoin="round" d="M147 778 C141 747 155 718 181 696 C207 674 235 667 259 671 C307 675 353 711 375 754 C393 789 383 823 358 846 C335 867 303 869 275 859 C247 850 231 831 212 809 C195 789 176 777 147 778 Z"/>
+    <path fill="white" stroke="black" stroke-width="14" stroke-linejoin="round" d="M884 778 C891 744 876 714 850 692 C826 673 797 668 774 671 C725 676 683 706 659 749 C637 788 644 825 668 848 C690 868 722 868 750 857 C777 846 794 827 813 807 C831 787 853 777 884 778 Z"/>
+  </g></svg>
   </g>
 
   <g transform="translate(148 130) scale(0.339)"><path fill="#111111" d="M123.0,4.0 L135.0,4.0 L140.0,7.0 L141.0,8.0 L141.0,122.0 L135.0,123.0 L112.0,122.0 L112.0,47.0 L106.0,51.0 L93.0,62.0 L82.0,71.0 L69.0,82.0 L58.0,91.0 L46.0,101.0 L44.0,101.0 L44.0,65.0 L57.0,54.0 L71.0,43.0 L85.0,31.0 L95.0,23.0 L108.0,12.0 L116.0,6.0 Z M400.0,6.0 L454.0,6.0 L469.0,9.0 L485.0,17.0 L495.0,26.0 L501.0,33.0 L507.0,45.0 L509.0,52.0 L510.0,68.0 L507.0,84.0 L500.0,97.0 L491.0,107.0 L482.0,114.0 L471.0,119.0 L460.0,122.0 L453.0,123.0 L400.0,123.0 Z M428.0,32.0 L428.0,96.0 L453.0,96.0 L463.0,93.0 L472.0,87.0 L478.0,78.0 L480.0,72.0 L480.0,56.0 L476.0,47.0 L469.0,39.0 L459.0,34.0 L449.0,32.0 Z M688.0,6.0 L714.0,6.0 L715.0,67.0 L730.0,51.0 L742.0,38.0 L745.0,35.0 L777.0,35.0 L775.0,39.0 L767.0,47.0 L760.0,55.0 L744.0,71.0 L743.0,73.0 L741.0,73.0 L745.0,79.0 L758.0,95.0 L769.0,109.0 L780.0,123.0 L780.0,124.0 L747.0,124.0 L737.0,112.0 L728.0,100.0 L722.0,93.0 L718.0,95.0 L715.0,98.0 L714.0,124.0 L688.0,124.0 Z M12.0,8.0 L25.0,9.0 L34.0,15.0 L47.0,27.0 L55.0,34.0 L60.0,38.0 L58.0,42.0 L44.0,54.0 L37.0,58.0 L35.0,56.0 L34.0,122.0 L5.0,122.0 L4.0,120.0 L4.0,12.0 L6.0,9.0 Z M254.0,11.0 L280.0,11.0 L281.0,12.0 L281.0,35.0 L303.0,35.0 L303.0,58.0 L281.0,58.0 L282.0,93.0 L285.0,98.0 L290.0,100.0 L303.0,99.0 L303.0,121.0 L292.0,124.0 L278.0,124.0 L268.0,121.0 L261.0,116.0 L256.0,108.0 L254.0,100.0 L254.0,58.0 L241.0,58.0 L241.0,35.0 L254.0,35.0 Z M188.0,33.0 L202.0,33.0 L214.0,36.0 L224.0,41.0 L234.0,50.0 L241.0,62.0 L243.0,70.0 L243.0,88.0 L239.0,100.0 L231.0,111.0 L222.0,118.0 L210.0,123.0 L199.0,125.0 L191.0,125.0 L177.0,122.0 L165.0,116.0 L158.0,110.0 L151.0,99.0 L147.0,86.0 L147.0,72.0 L151.0,59.0 L157.0,49.0 L166.0,41.0 L176.0,36.0 Z M189.0,57.0 L181.0,61.0 L177.0,66.0 L174.0,73.0 L174.0,85.0 L178.0,93.0 L185.0,99.0 L191.0,101.0 L200.0,101.0 L209.0,97.0 L215.0,89.0 L217.0,81.0 L216.0,71.0 L211.0,63.0 L206.0,59.0 L201.0,57.0 Z M342.0,33.0 L358.0,33.0 L371.0,37.0 L382.0,45.0 L388.0,53.0 L393.0,64.0 L394.0,69.0 L394.0,86.0 L382.0,87.0 L331.0,87.0 L335.0,95.0 L340.0,99.0 L350.0,102.0 L359.0,101.0 L365.0,98.0 L370.0,93.0 L374.0,94.0 L389.0,106.0 L387.0,111.0 L377.0,119.0 L364.0,124.0 L357.0,125.0 L346.0,125.0 L330.0,121.0 L320.0,115.0 L313.0,108.0 L307.0,97.0 L304.0,86.0 L304.0,72.0 L307.0,61.0 L312.0,51.0 L322.0,41.0 L334.0,35.0 Z M348.0,53.0 L339.0,56.0 L334.0,61.0 L331.0,66.0 L331.0,70.0 L367.0,70.0 L368.0,66.0 L363.0,58.0 L357.0,54.0 Z M550.0,33.0 L566.0,33.0 L579.0,37.0 L590.0,45.0 L596.0,53.0 L601.0,65.0 L602.0,70.0 L602.0,86.0 L590.0,87.0 L539.0,87.0 L543.0,95.0 L548.0,99.0 L552.0,101.0 L561.0,102.0 L569.0,100.0 L576.0,96.0 L578.0,93.0 L582.0,94.0 L595.0,105.0 L597.0,106.0 L596.0,110.0 L588.0,117.0 L578.0,122.0 L572.0,124.0 L565.0,125.0 L553.0,125.0 L541.0,122.0 L531.0,117.0 L521.0,108.0 L514.0,94.0 L512.0,85.0 L512.0,72.0 L514.0,63.0 L520.0,51.0 L530.0,41.0 L542.0,35.0 Z M556.0,53.0 L547.0,56.0 L542.0,60.0 L539.0,66.0 L539.0,69.0 L544.0,70.0 L575.0,70.0 L576.0,67.0 L572.0,59.0 L565.0,54.0 Z M643.0,34.0 L661.0,34.0 L671.0,37.0 L680.0,42.0 L685.0,46.0 L683.0,51.0 L669.0,65.0 L665.0,63.0 L657.0,59.0 L648.0,59.0 L641.0,62.0 L636.0,67.0 L633.0,74.0 L633.0,86.0 L637.0,94.0 L643.0,99.0 L649.0,101.0 L656.0,101.0 L666.0,96.0 L669.0,94.0 L685.0,110.0 L684.0,114.0 L676.0,120.0 L667.0,124.0 L656.0,126.0 L640.0,125.0 L629.0,121.0 L619.0,114.0 L612.0,106.0 L607.0,95.0 L605.0,87.0 L605.0,73.0 L608.0,62.0 L613.0,52.0 L623.0,42.0 L635.0,36.0 Z"/></g>
