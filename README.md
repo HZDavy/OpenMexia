@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="OpenMexia：开源、本地优先的智能家居控制中枢，右侧为智能家电实物照片">
+  <img src="./assets/readme/hero.svg" width="100%" alt="OpenMexia：开源、本地优先的智能家居控制中枢，右侧为透明背景的智能家电实物抠图">
 </p>
 
 <p align="center">
