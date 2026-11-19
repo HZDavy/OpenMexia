@@ -213,6 +213,7 @@
             kind,
             id: 1,
             version: info && info.version ? info.version : '',
+            web: true,
             theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
           },
         }, location.origin);

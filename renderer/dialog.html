@@ -744,7 +744,8 @@
           pinModal.hidden = false;
         } else {
           aboutModal.hidden = false;
-          document.getElementById('about-ver').textContent = 'v' + data.version;
+          // Web 版由桥接层带上 web:true，版本号后加 · Web 以便和桌面版区分
+          document.getElementById('about-ver').textContent = 'v' + data.version + (data.web ? ' · Web' : '');
           setAboutMsg('');
         }
         // 同步量一次并回传（窗口此刻仍隐藏，主进程据此决定窗口尺寸后再显示）
