@@ -14,6 +14,6 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["main.ts", "preload.ts", "src/**/*", "shared/**/*", "renderer/global.d.ts"],
+  "include": ["main.ts", "preload.ts", "server.ts", "src/**/*", "shared/**/*", "renderer/global.d.ts"],
   "exclude": ["node_modules", "build", "release", "dist"]
 }

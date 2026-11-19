@@ -315,6 +315,8 @@
     <div id="modal-backdrop" class="modal-backdrop" hidden></div>
   </div>
 
+  <!-- Web 版桥接层：Electron 里 window.mijia 已由 preload 提供，本脚本会自动跳过 -->
+  <script src="web-bridge.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

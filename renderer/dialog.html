@@ -20,9 +20,13 @@
       height: 100%;
       background: transparent !important;
       overflow: hidden;
-      color-scheme: dark;
     }
-    html.light { color-scheme: light; }
+    /* style.css 里 html 声明了 color-scheme: dark，会让浏览器把 iframe 画布涂成深色，
+       Web 版嵌进页面后表现为弹窗周围出现一整块黑底。这里把根元素的配色声明改回 normal，
+       再把深色配色挂到 body 上，保留输入框等控件的深色外观。 */
+    html { color-scheme: normal; }
+    body { color-scheme: dark; }
+    html.light body { color-scheme: light; }
 
     /* 用 style.css 里 .pin-modal / .pin-card 的现有样式：
        去掉遮罩背景与入场动画（尺寸由窗口决定），卡片尺寸不再受窗口高度挤压 */
@@ -221,6 +225,8 @@
     </div>
   </div>
 
+  <!-- Web 版桥接层：Electron 里 window.mijia 已由 preload 提供，本脚本会自动跳过 -->
+  <script src="web-bridge.js"></script>
   <script>
     (function () {
       const api = window.mijia;

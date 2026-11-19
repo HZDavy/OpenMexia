@@ -13,8 +13,9 @@
   "main": "build/main.js",
   "scripts": {
     "start": "npm run build && electron .",
+    "start:web": "npm run build && node build/server.js",
     "typecheck": "tsc --noEmit",
-    "build:renderer": "esbuild renderer/app.ts --bundle --format=iife --target=es2022 --outfile=build/renderer/app.js",
+    "build:renderer": "esbuild renderer/app.ts --bundle --format=iife --target=es2022 --outfile=build/renderer/app.js && esbuild renderer/web-bridge.ts --bundle --format=iife --target=es2022 --outfile=build/renderer/web-bridge.js",
     "build": "tsc && npm run build:renderer && node scripts/copy-static.js",
     "dist": "npm run build && electron-builder --win --x64"
   },
