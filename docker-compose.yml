@@ -1,0 +1,21 @@
+services:
+  openmexia-web:
+    build: .
+    image: openmexia-web:latest
+    container_name: openmexia-web
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      # 监听非本机地址时必须设置口令，否则服务端会拒绝启动。
+      # 在项目根目录新建 .env，写一行 OPENMEXIA_WEB_TOKEN=你的口令 即可。
+      OPENMEXIA_WEB_TOKEN: "${OPENMEXIA_WEB_TOKEN:?请先设置 OPENMEXIA_WEB_TOKEN（可写在 .env 里）}"
+      OPENMEXIA_DATA_DIR: "/data"
+    volumes:
+      # 米家凭据与设备清单；换容器不丢登录状态
+      - ./data:/data
+    # 局域网设备发现异常时（尤其是 Linux），可以改用宿主网络：
+    # network_mode: host
+    # 用了 host 模式后，删除上面的 ports 映射，直接访问宿主机的 8787 端口。

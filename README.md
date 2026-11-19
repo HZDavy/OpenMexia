@@ -121,6 +121,10 @@ npm run dist
 
 米家登录、设备清单、局域网直连与云端回退这些核心逻辑都是纯 Node 实现，桌面版只是把界面装进了 Electron。因此同一份代码也能直接跑成本地 Web 服务：服务端持有米家凭据并代你控制设备，浏览器只负责显示界面，界面与桌面版一致。
 
+Web 版需要一台能长期运行、并且和米家设备处在同一局域网的机器（本机、NAS、软路由、家里的小主机都行）。它不适合部署到 Vercel / Cloudflare 这类 Serverless 平台——这些平台没有常驻进程，也访问不到家里的设备。
+
+### 方式一：本机直接运行
+
 需要 Node.js 18+，在项目目录执行：
 
 ```bash
@@ -130,7 +134,7 @@ npm run start:web
 
 然后用浏览器打开 http://127.0.0.1:8787 。首次进入与桌面版一样，点「登录米家 / 设备」扫码登录，设备卡片就会同步出来。
 
-可用环境变量调整（PowerShell 示例见下）：
+各部署方式通用的环境变量：
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -139,7 +143,7 @@ npm run start:web
 | `OPENMEXIA_WEB_TOKEN` | 空 | 访问口令；监听非本机地址时必填 |
 | `OPENMEXIA_DATA_DIR` | Windows：`%APPDATA%\OpenMexia` | 凭据与设备清单目录，与桌面版共用同一份数据 |
 
-让手机 / 平板在同一 Wi-Fi 下访问：
+### 方式二：局域网访问（手机 / 平板）
 
 ```powershell
 $env:HOST="0.0.0.0"; $env:OPENMEXIA_WEB_TOKEN="换成你自己的口令"; npm run start:web
@@ -147,11 +151,72 @@ $env:HOST="0.0.0.0"; $env:OPENMEXIA_WEB_TOKEN="换成你自己的口令"; npm ru
 
 然后在手机浏览器打开 `http://电脑的局域网IP:8787/?token=你的口令`。带一次 token 后服务端会写入 Cookie，后续刷新不用再拼参数。
 
-说明与边界：
+### 方式三：Docker 部署（推荐长期运行）
+
+仓库自带 `Dockerfile` 与 `docker-compose.yml`，需要 Docker 20.10+ / Compose v2：
+
+```bash
+# 1. 在项目目录新建 .env，内容一行：
+#    OPENMEXIA_WEB_TOKEN=换成你自己的口令
+
+# 2. 构建并启动
+docker compose up -d --build
+```
+
+打开 `http://宿主机IP:8787/?token=你的口令` 即可。
+
+- 登录状态与设备清单保存在 `./data`（容器内为 `/data`），重建容器不会丢
+- 换端口改 compose 里 `8787:8787` 左边的数字
+- 局域网设备发现异常时（多见于 Linux），把 compose 里的 `network_mode: host` 注释打开，并删掉 `ports` 映射
+- 不想用 compose 也可以：`docker build -t openmexia-web .`，再 `docker run -d -p 8787:8787 -e OPENMEXIA_WEB_TOKEN=你的口令 -v ./data:/data openmexia-web`
+
+### 方式四：作为后台服务常驻（不用 Docker）
+
+先构建一次（`npm install && npm run build`），再让系统托管 `node build/server.js`：
+
+Linux（systemd）：
+
+```ini
+[Unit]
+Description=OpenMexia Web
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/OpenMexia
+Environment=HOST=0.0.0.0
+Environment=OPENMEXIA_WEB_TOKEN=换成你自己的口令
+ExecStart=/usr/bin/node build/server.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+保存为 `/etc/systemd/system/openmexia-web.service`，执行 `systemctl enable --now openmexia-web`。
+
+Windows：用 [NSSM](https://nssm.cc/) 把 `node build/server.js` 注册成服务，并在 NSSM 的 Environment 页填上面两个环境变量；或者用「任务计划程序」在开机时启动。
+
+跨平台也可以直接用 pm2：`pm2 start build/server.js --name openmexia-web`。
+
+### 反向代理与 HTTPS
+
+服务端只提供 HTTP，外网访问请放在带证书的反向代理后面。nginx 示例：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8787;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_buffering off;  # 设备状态走 SSE，必须关闭缓冲
+}
+```
+
+### 说明与边界
 
 - 浏览器版没有托盘、窗口置顶、发送到副屏、开机自启、任务栏固定这些桌面能力；设备控制、扫码登录、应用内菜单、关于与检查更新均可用，全屏使用浏览器原生全屏。
 - 服务端可以直接控制家里的设备，默认只监听本机。不建议直接暴露到公网；确需外网访问时，请放在带 HTTPS 与身份验证的反向代理之后。
-- 长期运行可配合 pm2、nssm 等进程守护工具把 `node build/server.js` 注册成后台服务（先执行一次 `npm run build`）。
+- Web 版的「关于」里版本号会带 `· Web` 标记，便于和桌面版区分。
 
 ---
 ## 隐私说明
